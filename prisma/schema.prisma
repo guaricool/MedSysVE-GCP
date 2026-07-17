@@ -1,0 +1,1596 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum StaffRole {
+  SECRETARY
+  ASSISTANT
+  NURSE
+}
+
+enum ClinicRole {
+  OWNER
+  STAFF
+  CONTRACTOR
+}
+
+/// Role of a non-doctor administrator who manages a Clinic's dashboard.
+/// Distinct from `Doctor` and from `ClinicRole` (which is the doctor-facing
+/// affiliation table).
+///
+/// - OWNER: the admin who registered the Clinic via /register. Cannot be
+///   removed; only one OWNER per Clinic. Can add MANAGER admins, rotate the
+///   invitation code, manage staff, and view billing.
+/// - MANAGER: sub-admins added by the OWNER. Same dashboard access but cannot
+///   remove the OWNER or other MANAGERs, and cannot delete the clinic.
+enum ClinicAdminRole {
+  OWNER
+  MANAGER
+}
+
+enum IdentificationType {
+  CEDULA_V
+  CEDULA_E
+  PASAPORTE
+}
+
+enum ParentRelationship {
+  PADRE
+  MADRE
+  TUTOR_LEGAL
+  OTRO
+}
+
+enum SexoType {
+  MASCULINO
+  FEMENINO
+  OTRO
+}
+
+model Doctor {
+  id                     String                    @id @default(cuid())
+  cedula                 String                    @unique
+  /// Encrypted (AES-256-GCM).
+  cedulaCifrada          String?
+  nombre                 String
+  /// Encrypted (AES-256-GCM). NULL until backfill completes; readers should
+  /// fall back to `nombre` (plaintext) when this is NULL for backwards compat.
+  nombreCifrado          String?                   @db.Text
+  apellido               String
+  apellidoCifrado        String?                   @db.Text
+  email                  String                    @unique
+  passwordHash           String
+  telefono               String?
+  telefonoCifrado        String?                   @db.Text
+  fotoUrl                String?
+  selloUrl               String?
+  especialidadPrincipal  String
+  subEspecialidades      String[]                  @default([])
+  bio                    String?                   @db.Text
+  idiomas                String[]                  @default([])
+  rif                    String?
+  /// Encrypted (AES-256-GCM).
+  rifCifrado             String?
+  datosFiscales          Json?
+  plan                   String                    @default("free")
+  stripeCustomerId       String?                   @unique
+  stripeSubscriptionId   String?                   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  isAdmin                Boolean                   @default(false)
+  // ──── 2FA / TOTP ────
+  /// Base32-encoded TOTP secret. NEVER returned to client (only used for QR enrollment).
+  totpSecret             String?
+  totpEnabled            Boolean                   @default(false)
+  totpEnabledAt          DateTime?
+  /// Last successful TOTP verify timestamp (replay protection window).
+  totpLastUsed           DateTime?
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  workspaces             Workspace[]
+  clinicAffiliations     DoctorClinicAffiliation[]
+  referidosRecibidos     Document[]                @relation("referidosRecibidos")
+  backupCodes            TwoFactorBackupCode[]
+  consentAcceptances     ConsentAcceptance[]
+  dataExportRequests     DataExportRequest[]
+  dataDeletionRequests   DataDeletionRequest[]
+  usedInvitationCodes    ClinicInvitationCode[]
+  featureOverrides       DoctorFeatureOverride[]  @relation("OverrideDoctor")
+  featureOverridesSet    DoctorFeatureOverride[]  @relation("OverrideSetBy")
+  reportPreferences      DoctorReportPreferences?
+
+  /// Version of the legal terms the doctor has accepted. Bumped when ToS,
+  /// Privacy or Cookies change. Null = never accepted. The proxy.ts or
+  /// dashboard layout forces re-acceptance when this lags behind the
+  /// current published LegalVersion.
+  currentLegalVersion String?
+
+  @@index([email])
+}
+
+/// One-time backup codes for 2FA recovery. Hash is bcrypt; the plaintext
+/// is shown to the user ONCE during enrollment and never stored.
+model TwoFactorBackupCode {
+  id        String    @id @default(cuid())
+  doctorId  String
+  doctor    Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([doctorId])
+}
+
+model Clinic {
+  id                     String                    @id @default(cuid())
+  nombre                 String
+  nombreCifrado          String?                   @db.Text
+  slug                   String?                   @unique
+  rif                    String?                   @unique
+  razonSocial            String?
+  razonSocialCifrada     String?                   @db.Text
+  direccion              String?
+  direccionCifrada       String?                   @db.Text
+  telefono               String?
+  telefonoCifrado        String?                   @db.Text
+  email                  String?
+  emailCifrado           String?                   @db.Text
+  website                String?
+  logoUrl                String?
+  bannerUrl              String?
+  descripcion            String?
+  servicios              String[]                  @default([])
+  redesSociales          Json?
+  /// Estado de Venezuela donde opera la clínica (ej: "Zulia", "Miranda").
+  /// Nullable para clínicas existentes pre-location-feature; el gate UI
+  /// pide completar antes de habilitar referidos hacia/desde esta clínica.
+  estado                 String?
+  /// Ciudad principal de la clínica (ej: "Maracaibo", "Caracas"). Se matchea
+  /// por igualdad (no fuzzy) en el doctor picker de referidos para evitar
+  /// matches cross-estado como Maracaibo/Zulia vs Ciudad Bolívar/Bolívar.
+  ciudad                 String?
+  /// Códigos de invitación generados por el admin para doctores incluidos en el plan (máximo 2).
+  invitationCodes        ClinicInvitationCode[]
+  activa                 Boolean                   @default(true)
+  plan                   String                    @default("free")
+  stripeCustomerId       String?                   @unique
+  stripeSubscriptionId   String?                   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  affiliations           DoctorClinicAffiliation[]
+  workspaces             Workspace[]
+  posts                  ClinicPost[]
+  /// Non-doctor administrators who manage the clinic's dashboard.
+  /// Distinct from `DoctorClinicAffiliation` (which is doctor-to-clinic).
+  /// The OWNER row is created at clinic registration; additional MANAGERs
+  /// can be invited later by the OWNER via the dashboard.
+  clinicAdmins           ClinicAdmin[]
+
+  @@index([estado, ciudad])
+}
+
+model ClinicInvitationCode {
+  id          String   @id @default(cuid())
+  clinicId    String
+  code        String   @unique // e.g. CLINIC-A3F8K2
+  used        Boolean  @default(false)
+  usedById    String? // Doctor ID if used
+  isExtraSeat Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  clinic Clinic  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  usedBy Doctor? @relation(fields: [usedById], references: [id], onDelete: SetNull)
+
+  @@index([clinicId])
+}
+
+/// Non-doctor user who manages a Clinic. Can add secretarias/asistentes/
+/// enfermeras (Staff), rotate the invitation code, manage billing, and view
+/// audit logs. Distinct from Doctor — clinic admins do NOT have a medical
+/// license and never appear in the doctor referral picker.
+///
+/// Created when the first admin registers a Clinic via /register
+/// (accountType = "clinic-admin"). Subsequent MANAGERs are invited by the
+/// OWNER via the clinic dashboard.
+///
+/// Login uses the same NextAuth credentials provider as Doctor/Staff — the
+/// authorize() callback tries Doctor → Staff → ClinicAdmin in that order.
+model ClinicAdmin {
+  id             String          @id @default(cuid())
+  /// Login email. Unique across all ClinicAdmin rows. Lowercased on write.
+  email          String          @unique
+  /// bcrypt cost-12 hash of the password. Never returned to the client.
+  passwordHash   String
+  nombre         String
+  apellido       String
+  telefono       String?
+  /// OWNER = primary admin who registered the clinic (one per clinic).
+  /// MANAGER = sub-admin added later by the OWNER.
+  role           ClinicAdminRole @default(OWNER)
+  clinicId       String
+  clinic         Clinic          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  activo         Boolean         @default(true)
+  lastLoginAt    DateTime?
+  /// Tracks consecutive failed login attempts (reset on success). Used by
+  /// the auth lockout middleware.
+  failedAttempts Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  /// Only one OWNER per clinic is enforced in application code (in
+  /// clinicAdmin.ts — see `assertNoExistingOwner`). Prisma doesn't support
+  /// partial unique constraints natively, so we don't try to express it
+  /// here. Multiple MANAGERs are allowed (no DB constraint).
+
+  @@index([clinicId])
+  @@index([email])
+}
+
+model DoctorClinicAffiliation {
+  id        String     @id @default(cuid())
+  doctorId  String
+  doctor    Doctor     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  clinicId  String
+  clinic    Clinic     @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  rol       ClinicRole @default(STAFF)
+  activo    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([doctorId, clinicId])
+  @@index([clinicId])
+}
+
+model Workspace {
+  id                     String                  @id @default(cuid())
+  nombre                 String
+  nombreCifrado          String?                 @db.Text
+  direccion              String?
+  direccionCifrada       String?                 @db.Text
+  telefono               String?
+  telefonoCifrado        String?                 @db.Text
+  logoUrl                String?
+  membreteUrl            String?
+  rif                    String?
+  razonSocial            String?
+  razonSocialCifrada     String?                 @db.Text
+  direccionFiscal        String?
+  direccionFiscalCifrada String?                 @db.Text
+  /// Estado de Venezuela donde opera este consultorio. Requerido para que el
+  /// doctor aparezca en el picker de referidos de otros doctores de su zona.
+  /// Nullable para workspaces existentes pre-feature.
+  estado                 String?
+  /// Ciudad donde opera el consultorio. Match exacto en el doctor picker.
+  ciudad                 String?
+  tasaBcvActual          Decimal?                @db.Decimal(10, 4)
+  tasaBcvAt              DateTime?
+  recordatorioHoras      Int                     @default(24)
+  recordatorioWa         Boolean                 @default(false)
+  recordatorioEmail      Boolean                 @default(true)
+  autoCreateHistoryOnEncounter Boolean           @default(false)
+  emailAppointmentReminders   Boolean           @default(true)
+  allowedIps                 String?
+  doctorId               String
+  doctor                 Doctor                  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  clinicId               String?
+  clinic                 Clinic?                 @relation(fields: [clinicId], references: [id])
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  staff                  Staff[]
+  patientRegs            PatientRegistration[]
+  encounters             Encounter[]
+  appointments           Appointment[]
+  invoices               Invoice[]
+  availability           DoctorAvailability[]
+  mensajes               Mensaje[]
+  alergias               Alergia[]
+  templates              EncounterTemplate[]
+  patientTags            PatientTag[]
+  availabilityExceptions AvailabilityException[]
+  documentTemplates      DocumentTemplate[]
+  announcements          Announcement[]
+  staffNotes             StaffNote[]
+  vaccines               Vaccine[]
+  waitingEntries         WaitingEntry[]
+  notifications          Notification[]
+  tasks                  Task[]
+  insuranceProviders     InsuranceProvider[]
+  consentTemplates       ConsentTemplate[]
+  patientConsents        PatientConsent[]
+  auditLogs              AuditLog[]
+  auditEvents            AuditEvent[]
+  expressOrders          ExpressOrder[]
+
+
+  @@index([doctorId])
+  @@index([clinicId])
+  @@index([estado, ciudad])
+}
+
+model Staff {
+  id            String    @id @default(cuid())
+  cedula        String
+  nombre        String
+  apellido      String
+  email         String
+  pinAccesoHash String? // bcrypt hash — never store plaintext
+  rol           StaffRole
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  activo        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tasks         Task[]
+
+  @@unique([cedula, workspaceId])
+  @@unique([email, workspaceId])
+  @@index([workspaceId])
+}
+
+model Patient {
+  id                   String                @id @default(cuid())
+  /// Tenant scope. Each doctor/workspace owns its own Patient records —
+  /// the same person registered with two doctors exists as two Patients
+  /// (one per workspace). Cross-workspace lookup by cédula uses hmacCedula
+  /// at registration time to autofill personal info; clinical data NEVER
+  /// crosses the workspace boundary.
+  workspaceId          String?
+  tipoIdentificacion   IdentificationType?
+  /// Encrypted (AES-256-GCM). Plaintext is NEVER stored.
+  numeroIdentificacion String?
+  /// HMAC index for searchable encryption on numeroIdentificacion.
+  /// Allows WHERE hmacCedula = ? queries without storing plaintext.
+  hmacCedula           String?
+  sinCedula            Boolean               @default(false)
+  nombre               String
+  /// Encrypted (AES-256-GCM) — preferred for new writes.
+  nombreCifrado        String?               @db.Text
+  /// HMAC index for searchable patient by nombre (case-insensitive).
+  hmacNombre           String?
+  apellido             String
+  apellidoCifrado      String?               @db.Text
+  hmacApellido         String?
+  fechaNacimiento      DateTime
+  sexo                 SexoType
+  grupoSanguineo       String?
+  direccion            String?               @db.Text
+  direccionCifrada     String?               @db.Text
+  telefono             String?
+  telefonoCifrado      String?               @db.Text
+  hmacTelefono         String?
+  email                String?
+  emailCifrado         String?               @db.Text
+  hmacEmail            String?
+  portalPasswordHash   String?
+  repCedula            String?
+  repNombreCompleto    String?
+  repParentesco        ParentRelationship?
+  repTelefono          String?
+  repEmail             String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  registrations        PatientRegistration[]
+
+  // NOTE: a Patient is unique within a workspace by (tipoIdentificacion, numeroIdentificacion).
+  // The same person registered with two different doctors exists as two Patients (one per
+  // workspace). The @@unique on (tipoIdentificacion, numeroIdentificacion) was REMOVED
+  // because it was the source of a tenant leak — Doctor B could see Doctor A's patient
+  // row simply because both shared the same cédula in the global Patient table.
+  //
+  // The hmacCedula index is kept (without unique constraint) so a future autofill query
+  // can search across workspaces at registration time without leaking data.
+  @@unique([workspaceId, tipoIdentificacion, numeroIdentificacion])
+  @@index([workspaceId])
+  @@index([hmacCedula])
+  @@index([hmacNombre])
+  @@index([hmacApellido])
+  @@index([hmacTelefono])
+  @@index([hmacEmail])
+}
+
+model PatientRegistration {
+  id             String             @id @default(cuid())
+  idDisplay      String
+  patientId      String
+  patient        Patient            @relation(fields: [patientId], references: [id])
+  workspaceId    String
+  workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  notasInternas  String?
+  antecedentes   Json?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  encounters     Encounter[]
+  documents      Document[]
+  appointments   Appointment[]
+  invoices       Invoice[]
+  labResults     LabResult[]
+  mensajes       Mensaje[]
+  alergias       Alergia[]
+  tags           PatientTag[]
+  vaccines       Vaccine[]
+  waitingEntries WaitingEntry[]
+  tasks          Task[]
+  insurances     PatientInsurance[]
+  consents       PatientConsent[]
+
+  @@unique([workspaceId, idDisplay])
+  @@unique([workspaceId, patientId])
+  @@index([workspaceId])
+  @@index([patientId])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 2 — Núcleo Clínico
+// ---------------------------------------------------------------------------
+
+enum EncounterStatus {
+  DRAFT
+  SIGNED
+  AMENDED
+}
+
+enum DiagnosisTipo {
+  PRINCIPAL
+  SECUNDARIO
+}
+
+enum DocumentTipo {
+  INFORME
+  REPOSO
+  REFERIDO
+  CERTIFICADO
+  RECETA
+}
+
+model Encounter {
+  id                    String @id @default(cuid())
+  workspaceId           String
+  patientRegistrationId String
+  doctorId              String
+
+  appointmentId String?
+
+  motivoCifrado    String? @db.Text
+  /// HMAC-SHA-256 index for searchable motivo (see lib/field-crypto.ts).
+  /// Computed at write time using FIELD_HMAC_KEY.
+  motivoHmac       String?
+  /// Encrypted with AES-256-GCM (field-level encryption).
+  /// Plaintext is NEVER written to disk.
+  historiaClinicaCifrada String? @db.Text
+  planCifrado      String? @db.Text
+  /// Legacy plaintext fields kept for migration. Will be removed after
+  /// migration runs in production. Until then, routers write to *Cifrada only.
+  historiaClinica  String? @db.Text
+  plan             String? @db.Text
+  vitales          Json?
+  examenFisico     Json?
+  reportOverride   Json?
+  datosEspecialidad Json?
+
+  status        EncounterStatus @default(DRAFT)
+  signedAt      DateTime?
+  signedBy      String?
+  /// HMAC-SHA-256 binding {encounterId, signedBy, signedAt, content}.
+  /// Computed at sign time using FIELD_ENCRYPTION_KEY. Tampering with
+  /// any of these fields invalidates the signature. Stored alongside
+  /// the encounter so post-hoc integrity checks don't need the plaintext.
+  signatureHash String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  /// Audit S9 (2026-07-07): optimistic locking counter. Incremented on every
+  /// successful update. Mutations that pass `version` check it against the
+  /// current row, and the updateMany returns 0 rows on mismatch → router
+  /// throws TRPCError CONFLICT so callers can re-fetch + re-apply. Without
+  /// this, two doctors (or a doctor + auto-save debounce) editing the same
+  /// encounter concurrently would last-write-wins and silently drop edits.
+  /// See docs/AUDIT_BACKLOG.md #12 and server/routers/encounter.ts.
+  version    Int     @default(0)
+
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+  appointment         Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  diagnoses     Diagnosis[]
+  prescriptions Prescription[]
+  labOrders     LabOrder[]
+  imagingOrders ImagingOrder[]
+  documents     Document[]
+  invoices      Invoice[]
+  labResults    LabResult[]
+  consents      PatientConsent[]
+  scales        EncounterScale[]
+
+  @@index([workspaceId])
+  @@index([patientRegistrationId])
+  @@index([doctorId])
+}
+
+model EncounterScale {
+  id          String    @id @default(cuid())
+  encounterId String
+  tipo        String    // "WOMAC" | "QUICKDASH" | "IKDC"
+  valores     Json      // Individual question scores / responses
+  puntuacion  Float     // Overall calculated score
+  createdAt   DateTime  @default(now())
+
+  encounter   Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+}
+
+model Diagnosis {
+  id          String        @id @default(cuid())
+  encounterId String
+  codigoCie10 String
+  descripcion String
+  tipo        DiagnosisTipo @default(PRINCIPAL)
+  createdAt   DateTime      @default(now())
+
+  encounter Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+}
+
+model Medication {
+  id                 String   @id @default(cuid())
+  nombreGenerico     String
+  nombresComerciales String[]
+  concentraciones    String[]
+  formaFarmaceutica  String
+  viaAdministracion  String
+  dosisDefaults      Json?
+  categoria          String
+  isCustom           Boolean  @default(false)
+  activo             Boolean  @default(true)
+  workspaceId        String?
+  createdAt          DateTime @default(now())
+
+  prescriptionItems PrescriptionItem[]
+
+  @@index([nombreGenerico])
+  @@index([categoria])
+  @@index([workspaceId])
+}
+
+model Prescription {
+  id          String   @id @default(cuid())
+  encounterId String
+  pdfUrl      String?
+  impresa     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  encounter Encounter          @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  items     PrescriptionItem[]
+
+  @@index([encounterId])
+}
+
+model PrescriptionItem {
+  id                     String  @id @default(cuid())
+  prescriptionId         String
+  medicationId           String
+  concentracion          String
+  dosis                  String
+  frecuencia             String
+  duracion               String
+  indicacionesEspeciales String?
+  overrideAlerta         Boolean @default(false)
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  medication   Medication   @relation(fields: [medicationId], references: [id])
+
+  @@index([prescriptionId])
+  @@index([medicationId])
+}
+
+model LabOrder {
+  id                   String   @id @default(cuid())
+  encounterId          String
+  estudios             String[]
+  indicacionesClinicas String?
+  urgente              Boolean  @default(false)
+  pdfUrl               String?
+  createdAt            DateTime @default(now())
+
+  encounter Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+}
+
+model LabResult {
+  id                    String              @id @default(cuid())
+  patientRegistrationId String
+  patientRegistration   PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+  encounterId           String?
+  encounter             Encounter?          @relation(fields: [encounterId], references: [id])
+  titulo                String
+  fecha                 DateTime
+  resultado             String              @db.Text
+  /// Structured lab values for charting & trend analysis.
+  /// Shape: [{ parametro, valor, unidad?, rangoReferencia?, interpretado? }]
+  valores               Json?
+  notas                 String?
+  /// Encrypted (AES-256-GCM). Preferred for new writes. Readers fall back to
+  /// `notas` (plaintext) when this is NULL — legacy rows.
+  notasCifradas         String?             @db.Text
+  createdAt             DateTime            @default(now())
+
+  @@index([patientRegistrationId])
+  @@index([encounterId])
+}
+
+model ImagingOrder {
+  id                   String   @id @default(cuid())
+  encounterId          String
+  tipoImagen           String
+  region               String
+  indicacionesClinicas String?
+  urgente              Boolean  @default(false)
+  pdfUrl               String?
+  resultadoUrl         String?
+  resultadoNotas       String?
+  createdAt            DateTime @default(now())
+
+  encounter Encounter          @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  items     ImagingOrderItem[]
+
+  @@index([encounterId])
+}
+
+/// One row per imaging study inside an order. Lets a doctor order several
+/// studies at once (e.g. "RX hombro + RX rodilla + Eco rodilla derecha") and
+/// have them all show on one printed PDF, mirroring Dr. Pierluissis's
+/// handwritten format. `orden` controls display order within the PDF.
+model ImagingOrderItem {
+  id             String   @id @default(cuid())
+  imagingOrderId String
+  tipoImagen     String
+  region         String
+  notas          String?
+  orden          Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  imagingOrder ImagingOrder @relation(fields: [imagingOrderId], references: [id], onDelete: Cascade)
+
+  @@index([imagingOrderId])
+}
+
+model Document {
+  id                    String       @id @default(cuid())
+  encounterId           String?
+  patientRegistrationId String
+  tipo                  DocumentTipo
+  contenidoHtml         String       @db.Text
+  /// Encrypted (AES-256-GCM). Preferred for new writes. Readers fall back to
+  /// `contenidoHtml` (plaintext) when this is NULL — legacy rows.
+  contenidoHtmlCifrado  String?      @db.Text
+  aiDraft               String?      @db.Text
+  aiDraftCifrado        String?      @db.Text
+  pdfUrl                String?
+  firmadoAt             DateTime?
+  firmadoPor            String?
+  visibleEnPortal       Boolean      @default(false)
+
+  /// Per-consulta override of the doctor's default report preferences.
+  /// Populated when the doctor opens the override modal at "Generar informe"
+  /// time and picks non-default sections or adds section-specific instructions.
+  /// Shape: { seccionesExtra?: string[]; seccionesQuitadas?: string[];
+  ///          instrucciones?: Record<ReportSectionKey, string> }.
+  /// The doctor's `DoctorReportPreferences` is the source of truth — this
+  /// field only stores the delta for that one consulta.
+  reportOverride        Json?
+
+  referidoANombre       String?
+  referidoAEspecialidad String?
+  referidoATelefono     String?
+  referidoADoctorId     String?
+  referidoStatus        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter?          @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+  referidoADoctor     Doctor?             @relation("referidosRecibidos", fields: [referidoADoctorId], references: [id], onDelete: SetNull)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([referidoADoctorId])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 3 — Citas + Facturación
+// ---------------------------------------------------------------------------
+
+enum AppointmentType {
+  CONSULTA
+  SEGUIMIENTO
+  EMERGENCIA
+  PROCEDIMIENTO
+  VIDEOCONSULTA
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  SCHEDULED
+  CONFIRMED
+  CANCELLED
+  NO_SHOW
+  COMPLETED
+}
+
+enum PaymentMethod {
+  EFECTIVO_USD
+  EFECTIVO_BS
+  TRANSFERENCIA_BS
+  ZELLE
+  BINANCE_USDT
+  PAGOMOVIL
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+model Appointment {
+  id                    String  @id @default(cuid())
+  workspaceId           String
+  patientRegistrationId String?
+
+  titulo          String?
+  tipo            AppointmentType   @default(CONSULTA)
+  status          AppointmentStatus @default(SCHEDULED)
+  fechaHora       DateTime
+  duracionMinutos Int               @default(30)
+  notas           String?
+  serieId         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  /// Audit S9 (2026-07-07): optimistic locking counter. Incremented on every
+  /// successful update. Mutations that pass `version` check it against the
+  /// current row, and the updateMany returns 0 rows on mismatch → router
+  /// throws TRPCError CONFLICT so callers can re-fetch + re-apply. Without
+  /// this, two doctors (or a doctor + auto-save debounce) editing the same
+  /// encounter concurrently would last-write-wins and silently drop edits.
+  /// See docs/AUDIT_BACKLOG.md #12 and server/routers/encounter.ts.
+  version   Int      @default(0)
+
+  workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration? @relation(fields: [patientRegistrationId], references: [id], onDelete: SetNull)
+  encounters          Encounter[]
+  waitingEntry        WaitingEntry?
+
+  @@index([workspaceId])
+  @@index([patientRegistrationId])
+  @@index([fechaHora])
+  @@index([serieId])
+}
+
+model Invoice {
+  id                    String  @id @default(cuid())
+  workspaceId           String
+  patientRegistrationId String
+  encounterId           String?
+
+  numero              String
+  descripcion         String?
+  /// Encrypted (AES-256-GCM). Preferred for new writes. Readers fall back to
+  /// `descripcion` (plaintext) when this is NULL — legacy rows.
+  descripcionCifrada  String?       @db.Text
+  montoUsd            Decimal       @db.Decimal(10, 2)
+  tasaBcv             Decimal       @db.Decimal(10, 4)
+  montoBs             Decimal       @db.Decimal(14, 2)
+  metodoPago          PaymentMethod @default(EFECTIVO_USD)
+  status              InvoiceStatus @default(PENDING)
+  pdfUrl              String?
+  fechaPago           DateTime?
+  insuranceProviderId String?
+  montoSeguro         Decimal?      @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id])
+  encounter           Encounter?          @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  insuranceProvider   InsuranceProvider?  @relation(fields: [insuranceProviderId], references: [id])
+  pagos               Pago[]
+  items               InvoiceItem[]
+
+  @@unique([workspaceId, numero])
+  @@index([workspaceId])
+  @@index([patientRegistrationId])
+  @@index([encounterId])
+}
+
+model Pago {
+  id         String        @id @default(cuid())
+  invoiceId  String
+  invoice    Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  monto      Decimal       @db.Decimal(10, 2)
+  metodoPago PaymentMethod
+  fecha      DateTime      @default(now())
+  notas      String?
+  createdAt  DateTime      @default(now())
+
+  @@index([invoiceId])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 5 — Horario + Analytics
+// ---------------------------------------------------------------------------
+
+model DoctorAvailability {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  diaSemana       Int // 0=Dom, 1=Lun, ..., 6=Sab
+  horaInicio      String // "08:00"
+  horaFin         String // "17:00"
+  duracionMinutos Int      @default(30)
+  activo          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, diaSemana])
+  @@index([workspaceId])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 16 — Mensajes + Alergias
+// ---------------------------------------------------------------------------
+
+enum MensajeAutor {
+  DOCTOR
+  PATIENT
+}
+
+model Mensaje {
+  id                    String       @id @default(cuid())
+  workspaceId           String
+  patientRegistrationId String
+  autor                 MensajeAutor
+  texto                 String       @db.Text
+  /// Encrypted (AES-256-GCM). Preferred for new writes. Readers fall back to
+  /// `texto` (plaintext) when this is NULL — legacy rows.
+  textoCifrado          String?      @db.Text
+  leido                 Boolean      @default(false)
+  creadoAt              DateTime     @default(now())
+
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([patientRegistrationId])
+  @@index([creadoAt])
+}
+
+enum AlergiaGravedad {
+  LEVE
+  MODERADA
+  SEVERA
+}
+
+model Alergia {
+  id                    String          @id @default(cuid())
+  workspaceId           String
+  patientRegistrationId String
+  sustancia             String
+  reaccion              String?
+  gravedad              AlergiaGravedad @default(LEVE)
+  activa                Boolean         @default(true)
+  createdAt             DateTime        @default(now())
+
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([patientRegistrationId])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 19 — Plantillas de consulta + Etiquetas de paciente
+// ---------------------------------------------------------------------------
+
+model EncounterTemplate {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  nombre            String
+  descripcion       String?
+  motivo            String?
+  historiaClinica   String?  @db.Text
+  plan              String?  @db.Text
+  examenFisico      Json?
+  datosEspecialidad Json?
+  especialidad      String?
+  createdAt         DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model PatientTag {
+  id                    String   @id @default(cuid())
+  workspaceId           String
+  patientRegistrationId String
+  etiqueta              String
+  color                 String   @default("blue")
+  createdAt             DateTime @default(now())
+
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([patientRegistrationId])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 20 — Excepciones horario + Plantillas de documentos
+// ---------------------------------------------------------------------------
+
+model AvailabilityException {
+  id          String   @id @default(cuid())
+  workspaceId String
+  fecha       DateTime
+  motivo      String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([fecha])
+}
+
+model DocumentTemplate {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  tipo          DocumentTipo
+  nombre        String
+  contenidoHtml String       @db.Text
+  especialidad  String?
+  createdAt     DateTime     @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([tipo])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 21 — Invoice items + Anuncios
+// ---------------------------------------------------------------------------
+
+model InvoiceItem {
+  id                String   @id @default(cuid())
+  invoiceId         String
+  descripcion       String
+  cantidad          Int      @default(1)
+  precioUnitarioUsd Decimal  @db.Decimal(10, 2)
+  createdAt         DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  workspaceId String
+  titulo      String
+  mensaje     String   @db.Text
+  activo      Boolean  @default(true)
+  creadoAt    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 22 — Pizarrón de equipo
+// ---------------------------------------------------------------------------
+
+model StaffNote {
+  id          String   @id @default(cuid())
+  workspaceId String
+  autorId     String
+  autorNombre String
+  texto       String   @db.Text
+  creadoAt    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([creadoAt])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 26 — Sala de Espera
+// ---------------------------------------------------------------------------
+
+model WaitingEntry {
+  id                    String    @id @default(cuid())
+  workspaceId           String
+  patientRegistrationId String
+  appointmentId         String?   @unique
+  turno                 Int
+  estado                String    @default("ESPERANDO")
+  notas                 String?
+  llegadaAt             DateTime  @default(now())
+  llamadoAt             DateTime?
+  createdAt             DateTime  @default(now())
+
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+  appointment         Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([patientRegistrationId])
+  @@index([llegadaAt])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 25 — Vacunas
+// ---------------------------------------------------------------------------
+
+model Vaccine {
+  id                    String    @id @default(cuid())
+  workspaceId           String
+  patientRegistrationId String
+  vacuna                String
+  fechaAplicacion       DateTime
+  dosis                 String?
+  lote                  String?
+  proximaDosis          DateTime?
+  notas                 String?
+  aplicadoPor           String?
+  createdAt             DateTime  @default(now())
+
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([patientRegistrationId])
+  @@index([fechaAplicacion])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 24 — Clínica Posts/Noticias
+// ---------------------------------------------------------------------------
+
+model ClinicPost {
+  id          String   @id @default(cuid())
+  clinicId    String
+  titulo      String
+  contenido   String   @db.Text
+  imagenUrl   String?
+  publicadoAt DateTime @default(now())
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId])
+  @@index([publicadoAt])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 29 — Notificaciones Internas
+// ---------------------------------------------------------------------------
+
+enum NotificationType {
+  APPOINTMENT_REQUEST
+  PORTAL_MESSAGE
+  /// Created in the RECEIVING doctor's workspace when another doctor sends
+  /// them a referral. Distinct from REFERRAL_ACCEPTED (notified to the sender
+  /// after the receiver acts) and REFERRAL_REJECTED.
+  REFERRAL_RECEIVED
+  REFERRAL_ACCEPTED
+  REFERRAL_REJECTED
+  IMAGING_RESULT
+  SYSTEM
+}
+
+model Notification {
+  id           String           @id @default(cuid())
+  workspaceId  String
+  tipo         NotificationType
+  titulo       String
+  mensaje      String
+  leida        Boolean          @default(false)
+  referenciaId String?
+  createdAt    DateTime         @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, leida])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 30 — Sistema de Tareas del Equipo
+// ---------------------------------------------------------------------------
+
+enum TaskPriority {
+  ALTA
+  MEDIA
+  BAJA
+}
+
+model Task {
+  id                    String       @id @default(cuid())
+  workspaceId           String
+  titulo                String
+  descripcion           String?      @db.Text
+  prioridad             TaskPriority @default(MEDIA)
+  asignadoAId           String?
+  patientRegistrationId String?
+  fechaVencimiento      DateTime?
+  completada            Boolean      @default(false)
+  completadaAt          DateTime?
+  createdAt             DateTime     @default(now())
+
+  workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  asignadoA           Staff?               @relation(fields: [asignadoAId], references: [id])
+  patientRegistration PatientRegistration? @relation(fields: [patientRegistrationId], references: [id])
+
+  @@index([workspaceId, completada])
+  @@index([fechaVencimiento])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 32 — Seguros Médicos (HMO)
+// ---------------------------------------------------------------------------
+
+model InsuranceProvider {
+  id          String   @id @default(cuid())
+  workspaceId String
+  nombre      String
+  codigo      String?
+  telefono    String?
+  email       String?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  coverages PatientInsurance[]
+  invoices  Invoice[]
+
+  @@index([workspaceId])
+}
+
+model PatientInsurance {
+  id                    String    @id @default(cuid())
+  patientRegistrationId String
+  providerId            String
+  numeroPóliza         String
+  titular               String?
+  coberturaPct          Int       @default(100)
+  fechaVigencia         DateTime?
+  activa                Boolean   @default(true)
+  notas                 String?
+  createdAt             DateTime  @default(now())
+
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+  provider            InsuranceProvider   @relation(fields: [providerId], references: [id])
+
+  @@index([patientRegistrationId])
+  @@index([providerId])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 33 — Consentimientos Informados
+// ---------------------------------------------------------------------------
+
+model ConsentTemplate {
+  id          String   @id @default(cuid())
+  workspaceId String
+  titulo      String
+  contenido   String   @db.Text
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  consents  PatientConsent[]
+
+  @@index([workspaceId])
+}
+
+model PatientConsent {
+  id                    String    @id @default(cuid())
+  workspaceId           String
+  patientRegistrationId String
+  templateId            String
+  encounterId           String?
+  firmado               Boolean   @default(false)
+  firmadoAt             DateTime?
+  firmaData             String?   @db.Text
+  pdfUrl                String?
+  notas                 String?
+  createdAt             DateTime  @default(now())
+
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+  template            ConsentTemplate     @relation(fields: [templateId], references: [id])
+  encounter           Encounter?          @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([patientRegistrationId])
+  @@index([encounterId])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 34 — Auditoría Clínica
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  accion      String
+  entidad     String
+  entidadId   String?
+  actorId     String?
+  actorNombre String?
+  detalle     Json?
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([entidad, entidadId])
+  @@index([actorId])
+}
+
+/// Comprehensive PHI-access audit trail. Every read/write of clinical data
+/// should produce a row here. Distinct from AuditLog (which captures only
+/// high-severity events like signed consultations or config changes).
+///
+/// LOPDP (Venezuela, Ley Orgánica de Protección de Datos Personales) Art. 19
+/// requires technical safeguards for personal data — this audit log is one
+/// such safeguard. Retention policy: see docs/DATA_RETENTION.md.
+model AuditEvent {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  /// userId of the actor (doctor, staff). Null for unauthenticated events.
+  actorId         String?
+  actorRole       String?
+  /// What was done. Use one of the AuditAction enum values (string for forward-compat).
+  action          String
+  /// Resource type accessed, e.g. "Encounter", "PatientRegistration", "Prescription".
+  resourceType    String
+  /// Resource ID (cuid). Use cuid() not patient.cedula for privacy.
+  resourceId      String?
+  /// If the resource is patient-scoped, the patientRegistrationId for fast lookup.
+  patientId       String?
+  /// Outcome of the access: "ALLOWED" or "DENIED".
+  outcome         String    @default("ALLOWED")
+  /// Reason for denial (if applicable). Empty string when allowed.
+  denialReason    String?
+  /// Originating IP (truncated to /24 for IPv4, /48 for IPv6 in app).
+  ip              String?
+  /// Browser/client user agent.
+  userAgent       String?
+  /// Method of access: "UI", "API", "PDF", "EXPORT", "PORTAL".
+  channel         String    @default("UI")
+  /// Free-form JSON for additional context (e.g., which PDF was downloaded).
+  metadata        Json?
+  /// Encrypted (AES-256-GCM) JSON-as-text for additional context.
+  /// Preferred for new writes; readers fall back to `metadata` (plaintext) when NULL.
+  metadataCifrado String?   @db.Text
+  createdAt       DateTime  @default(now())
+  /// Set by scripts/archive-old-audit-events.ts when the row exceeds the
+  /// retention window (default 5 years, per docs/DATA_RETENTION.md).
+  /// Archived rows are kept indefinitely for compliance but excluded from
+  /// default app queries. Use the helpers in lib/audit.ts:
+  ///   - listActiveAuditEvents(workspaceId, opts)        [default: archivedAt IS NULL]
+  ///   - getActiveAuditEvent(id)                          [default: archivedAt IS NULL]
+  ///   - countActiveAuditEvents(workspaceId, opts)        [default: archivedAt IS NULL]
+  /// For compliance/LOPDP reporting queries that intentionally need
+  /// archived rows, pass includeArchived: true.
+  archivedAt      DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([patientId, createdAt])
+  @@index([action, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([archivedAt, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// FASE 35 — Marco Legal (LOPDP / Términos / Cookies)
+// ---------------------------------------------------------------------------
+
+/// A versioned, published version of a legal document (ToS, Privacy, Cookies).
+/// Content lives in `content/legal/*.md`; this row is the audit trail of what
+/// was published, when, and which hash (sha256 of the markdown) was bound.
+model LegalVersion {
+  id          String   @id @default(cuid())
+  slug        String // "terminos" | "privacidad" | "cookies" | "lopdp-consentimiento"
+  version     String // e.g. "1.0.0"
+  title       String
+  /// sha256 of the markdown source — detects content drift vs the file on disk.
+  contentHash String
+  effectiveAt DateTime
+  publishedBy String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  acceptances ConsentAcceptance[]
+
+  @@unique([slug, version])
+  @@index([slug, effectiveAt])
+}
+
+/// Every time a doctor clicks "Acepto Términos / Privacidad / Cookies" we
+/// write a row here. Tamper-evident (workspaceId-scoped via Doctor).
+///
+/// LOPDP Art. 25 (consentimiento expreso) and Art. 32 (prueba del consentimiento).
+model ConsentAcceptance {
+  id             String   @id @default(cuid())
+  doctorId       String
+  legalVersionId String
+  /// Slug of the legal doc that was accepted, denormalised for fast queries.
+  slug           String
+  version        String
+  /// Truncated client IP (matches lib/log-sanitizer.ts convention).
+  ip             String?
+  userAgent      String?  @db.Text
+  /// True when the user explicitly checked the acceptance box. False when
+  /// the acceptance is implicit (e.g. legacy users grandfathered in).
+  explicit       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  doctor       Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  legalVersion LegalVersion @relation(fields: [legalVersionId], references: [id], onDelete: Restrict)
+
+  @@index([doctorId, createdAt])
+  @@index([legalVersionId])
+  @@index([slug, version])
+}
+
+/// A patient (or their doctor on their behalf) requests a copy of their
+/// personal data. LOPDP Art. 60 — derecho de acceso. Workflow:
+///   REQUESTED → PREPARING → READY (download URL) → DELIVERED → CLOSED.
+/// Download links expire after 30 days.
+model DataExportRequest {
+  id                String    @id @default(cuid())
+  doctorId          String // who requested (patient via portal OR doctor)
+  patientCedulaHMAC String? // HMAC of the target patient cedula (searchable encryption)
+  scope             String // "PATIENT_FULL" | "DOCTOR_FULL"
+  status            String    @default("REQUESTED")
+  downloadToken     String?   @unique
+  downloadUrl       String?   @db.Text
+  expiresAt         DateTime?
+  requestedAt       DateTime  @default(now())
+  readyAt           DateTime?
+  downloadedAt      DateTime?
+  closedAt          DateTime?
+  ip                String?
+  notes             String?   @db.Text
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId, requestedAt])
+  @@index([status, expiresAt])
+}
+
+/// LOPDP Art. 61 — derecho de cancelación. Soft-delete: we never physically
+/// destroy clinical rows (legal retention + audit immutability), but we
+/// tombstone the patient (numeroIdentificacion and nombre become "ANONIMIZADO-NNN"),
+/// PHI fields are wiped, and the patient is marked `deletedAt`. The audit
+/// trail is preserved indefinitely.
+model DataDeletionRequest {
+  id                String    @id @default(cuid())
+  doctorId          String
+  patientCedulaHMAC String?
+  status            String    @default("REQUESTED")
+  reason            String?   @db.Text
+  approvedAt        DateTime?
+  appliedAt         DateTime?
+  /// Tombstone id assigned to the anonymised patient for traceability.
+  tombstoneId       String?
+  ip                String?
+  requestedAt       DateTime  @default(now())
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId, requestedAt])
+  @@index([status])
+}
+
+/// LOPDP Art. 64 + buena práctica: register security incidents so we can
+/// produce a breach-notification template (with affected users, scope,
+/// remediation) within the 72-hour window. Not auto-detected — this is
+/// the admin's ledger for incidents that did happen.
+model BreachIncident {
+  id                 String    @id @default(cuid())
+  slug               String    @unique
+  title              String
+  severity           String // "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  status             String    @default("INVESTIGATING") // INVESTIGATING | CONTAINED | NOTIFIED | CLOSED
+  detectedAt         DateTime
+  containedAt        DateTime?
+  notifiedAt         DateTime?
+  closedAt           DateTime?
+  affectedUsers      Int       @default(0)
+  affectedWorkspaces Int       @default(0)
+  dataCategories     String[] // ["PHI", "PII", "AUTH", "BILLING"]
+  description        String    @db.Text
+  rootCause          String?   @db.Text
+  remediation        String?   @db.Text
+  reportedBy         String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([status, detectedAt])
+  @@index([severity, detectedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Email OTP (one-time codes for registration verification & password reset)
+// ---------------------------------------------------------------------------
+
+/// Purpose of a one-time code sent via email.
+/// - EMAIL_VERIFY: required to complete new-doctor registration. Row is created
+///   BEFORE the doctor exists, so no FK to Doctor.
+/// - PASSWORD_RESET: sent to an existing doctor's email. Verified token is
+///   exchanged for a short-lived reset credential used to change the password.
+enum OtpPurpose {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+/// A 6-digit one-time code sent by email. Stored as SHA-256 hash, never
+/// plaintext. Rate-limited at the API layer (5 requests/hour per email,
+/// 10 verification attempts per code). Lifetime: 10 minutes (EMAIL_VERIFY)
+/// or 15 minutes (PASSWORD_RESET).
+///
+/// After successful verification we mark `consumedAt` so the row cannot be
+/// reused. The caller receives a one-time "verified token" (HMAC of the row
+/// id + secret) to authorize the next step (registration or password change);
+/// that token expires in 15 min independently of the OTP lifetime.
+model EmailOtp {
+  id         String     @id @default(cuid())
+  /// Lowercased email address. Indexed for the lookup in `requestOtp` and
+  /// `verifyOtp` procedures.
+  email      String
+  /// SHA-256 of the 6-digit code (plaintext code is sent to the user, never
+  /// stored). Compared with `crypto.timingSafeEqual` to defeat timing attacks.
+  codeHash   String
+  purpose    OtpPurpose
+  /// Brute-force protection: incremented on every failed `verifyOtp` call.
+  /// Verification is rejected after 10 failed attempts even if the code is
+  /// later correct (require new request).
+  attempts   Int        @default(0)
+  /// Set on successful verification. After this the row is dead and any
+  /// further `verifyOtp` with the same code returns `consumed`.
+  consumedAt DateTime?
+  /// Hard expiry. Verification is rejected after this moment. Index supports
+  /// a periodic cleanup job that deletes rows older than 24h.
+  expiresAt  DateTime
+  /// Truncated client IP (matches lib/log-sanitizer.ts convention).
+  ip         String?
+  userAgent  String?    @db.Text
+  createdAt  DateTime   @default(now())
+
+  @@index([email, purpose, expiresAt])
+  @@index([expiresAt])
+}
+
+// Audit S10 (2026-07-07): per-doctor feature-flag override. Closes audit #15.
+//
+// FEATURE_FLAGS.md §7 previously said per-doctor override was "out of scope;
+// use experimental flags". This model + a small admin-only tRPC router
+// brings the override capability into production. Use case: a specific
+// doctor reports a hallucination issue and we want to disable AI features
+// for them immediately WITHOUT a code deploy AND WITHOUT touching the
+// global flag (other doctors keep working).
+//
+// Decision tree (see lib/feature-flags.ts:isAIFeatureEnabled):
+//   1. Master `ai.enabled` switch off → false (no exception).
+//   2. Per-doctor row exists and not expired → use its `enabled` value.
+//   3. Otherwise fall back to rollout percent (existing logic).
+//
+// TTL: `expiresAt` is a safety net — admin can set a temporary 24h override
+// during a hotfix and not have to remember to clear it. The cron-friendly
+// index supports a future cleanup job.
+model DoctorFeatureOverride {
+  id        String    @id @default(cuid())
+  /// The doctor whose AI access we're controlling.
+  doctorId  String
+  /// The flag being overridden. Today: "ai" (the only tier we expose per-doctor).
+  /// Future keys could be e.g. "experimental.newDashboard".
+  flagKey   String
+  /// Whether AI features are ON for this doctor. False = the master switch
+  /// and rollout percent don't apply; doctor has AI disabled for them
+  /// until the override is cleared or expires.
+  enabled   Boolean
+  /// Why this override exists. Required when disabling, optional when enabling.
+  reason    String?
+  /// Set NULL for a permanent override. Past this moment, the row is
+  /// ignored by `isAIFeatureEnabled` and the global rollout applies.
+  expiresAt DateTime?
+  /// Admin who set this. Audit trail (also recorded in AuditEvent on every
+  /// set/clear mutation).
+  setByUserId String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  doctor Doctor @relation("OverrideDoctor", fields: [doctorId], references: [id], onDelete: Cascade)
+  setBy  Doctor @relation("OverrideSetBy", fields: [setByUserId], references: [id], onDelete: NoAction)
+
+  @@unique([doctorId, flagKey])
+  @@index([flagKey])
+  @@index([expiresAt])
+}
+
+/// Per-doctor preferences for the customizable medical report (informe).
+///
+/// Source of truth for which sections appear in the AI-generated draft, plus
+/// the doctor's standing instructions per section (e.g. "in the exam
+/// section, always lead with cardiovascular"). Doctors configure this once
+/// in their profile and 99% of their informes use the result directly. For
+/// a one-off special case the doctor can override at consulta time, which
+/// is stored on the `Document.reportOverride` JSON column.
+///
+/// One row per doctor (enforced by `@@unique([doctorId])`). The doctor
+/// sees an empty state with sensible defaults the first time they visit
+/// `/dashboard/preferencias-informe` — see `DEFAULT_REPORT_SECCIONES` in
+/// `types/report.ts` for the default section set.
+model DoctorReportPreferences {
+  id          String   @id @default(cuid())
+  doctorId    String   @unique
+  /// Map from ReportSectionKey (motivoConsulta, historiaClinica, …) to
+  /// boolean. Sections not in the map default to TRUE on first render
+  /// (the doctor toggles them OFF). Sections explicitly FALSE are
+  /// excluded from the AI prompt.
+  ///
+  /// Shape: { motivoConsulta: true, historiaClinica: true,
+  ///           signosVitales: false, examenFisico: true, … }
+  secciones   Json
+  /// Default instructions the doctor wants the AI to follow per section
+  /// on every informe. Free-text, optional. The doctor can override
+  /// per-consulta via Document.reportOverride.instrucciones.
+  ///
+  /// Shape: { examenFisico: "En pacientes quirúrgicos, incluir siempre
+  ///            descripción del sitio quirúrgico", … }
+  instruccionesDefault Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+}
+
+model ExpressOrder {
+  id               String   @id @default(cuid())
+  tipo             String   // "RECETA" | "LABORATORIO" | "IMAGEN"
+  pacienteNombre   String
+  pacienteApellido String
+  pacienteCedula   String?
+  pacienteEdad     Int
+  pacienteSexo     String?
+  items            Json     // List of items (medications or studies)
+  diagnosticos     String?  // Opcional
+  indicaciones     String?  // Opcional
+  createdAt        DateTime @default(now())
+  workspaceId      String
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}

@@ -1,0 +1,1926 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Manual de Usuario --- MedSysVE</title>
+<style>
+/* --------- Brand colors --------- */
+:root {
+  --msv-blue:   #003087;
+  --msv-yellow: #FFD100;
+  --msv-red:    #CF142B;
+  --msv-cream:  #FAF6EC;
+  --msv-ink:    #0F0F1F;   /* Más oscuro: mejora contraste sobre cream */
+  --msv-sage:   #6B8E7F;
+  --msv-mute:   #2D2D40;   /* Antes #5C5C6B — muy claro sobre cream. Ahora AA-compliant. */
+  --msv-text:   #1A1A2E;   /* Texto principal de párrafos */
+}
+
+/* --------- Print + screen base --------- */
+@page {
+  size: A4;
+  margin: 22mm 16mm 22mm 16mm;
+}
+@page :first {
+  margin: 0;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.55;
+  color: var(--msv-text);
+  background: white;
+}
+
+/* --------- Brand watermark on every page (fixed background) --------- */
+body::before {
+  content: "";
+  position: fixed;
+  top: 50%; left: 50%;
+  width: 420px; height: 420px;
+  transform: translate(-50%, -50%);
+  background: url('https://images.medsysve.com/logo-med-transparent.png') no-repeat center;
+  background-size: contain;
+  opacity: 0.06;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* --------- Header bar (every page after cover) --------- */
+.page-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 14mm;
+  background: white;
+  border-bottom: 2px solid var(--msv-blue);
+  padding: 4mm 16mm 0 16mm;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9pt;
+  z-index: 10;
+}
+.page-header img {
+  height: 10mm;
+}
+.page-header .meta {
+  color: var(--msv-mute);
+  font-style: italic;
+}
+
+/* Push content below the fixed header */
+.page-content {
+  padding-top: 18mm;
+  padding-bottom: 12mm;
+}
+
+/* --------- COVER --------- */
+.cover {
+  page-break-after: always;
+  height: 100vh;
+  background:
+    linear-gradient(135deg, var(--msv-blue) 0%, #001a4d 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 0;
+  position: relative;
+  z-index: 100;       /* Cubre el .page-header fixed en la primera página */
+}
+.cover::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 6px;
+  background: linear-gradient(to right, var(--msv-yellow) 33.33%, var(--msv-blue) 33.33% 66.66%, var(--msv-red) 66.66%);
+}
+.cover .badge {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 9pt;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
+.cover img.logo-big {
+  height: 80px;
+  margin-bottom: 32px;
+  background: white;
+  padding: 16px 28px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+.cover h1 {
+  font-size: 38pt;
+  margin: 0 0 8px 0;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.cover h2 {
+  font-size: 18pt;
+  margin: 0 0 32px 0;
+  font-weight: 400;
+  color: rgba(255,255,255,0.85);
+}
+.cover .footer-info {
+  position: absolute;
+  bottom: 40px;
+  font-size: 10pt;
+  color: rgba(255,255,255,0.7);
+}
+.cover .footer-info strong {
+  color: var(--msv-yellow);
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13pt;
+}
+
+/* --------- Section dividers --------- */
+.section-divider {
+  page-break-before: always;
+  padding: 40mm 16mm;
+  background: var(--msv-cream);
+  border-left: 8px solid var(--msv-blue);
+  margin-bottom: 12mm;
+}
+.section-divider .num {
+  color: var(--msv-blue);
+  font-weight: 800;
+  font-size: 11pt;
+  letter-spacing: 2px;
+}
+.section-divider h2 {
+  font-size: 30pt;
+  margin: 6px 0 8px 0;
+  color: var(--msv-ink);
+}
+.section-divider p {
+  color: var(--msv-mute);
+  font-size: 12pt;
+  max-width: 70%;
+  margin: 0;
+}
+
+/* --------- Page entries --------- */
+/* Carlos pidió (2026-07-01): los saltos de página eran horribles — un
+   page-entry + screenshot que no cabía en la página quedaba ENTERO en la
+   siguiente, dejando 1/4 de página en blanco. Fix:
+   - El entry completo se permite romper (page-break-inside: auto).
+   - Pero la IMAGEN y su caption van protegidas como bloque indivisible,
+     para que la imagen nunca quede partida a la mitad entre dos páginas.
+   - Y el screenshot wrapper tiene margin-bottom pequeño para evitar el
+     whitespace feo cuando salta a la siguiente página.
+   - El h3 (título del entry) tampoco se parte de su icono.
+*/
+.page-entry {
+  page-break-inside: auto;
+  margin-bottom: 10mm;
+  padding-bottom: 6mm;
+  border-bottom: 1px dashed #DDD;
+}
+.page-entry:last-child { border-bottom: 0; }
+
+.page-entry h3 {
+  page-break-after: avoid;       /* El título no se separa del primer párrafo */
+  break-after: avoid-page;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.page-entry h4 {
+  page-break-after: avoid;
+  break-after: avoid-page;
+}
+
+.page-entry .screenshot-wrap {
+  /* Wrapper alrededor de la imagen — protege la imagen como bloque. */
+  break-inside: avoid;
+  page-break-inside: avoid;
+  margin-top: 6px;
+  margin-bottom: 4mm;
+}
+.page-entry .screenshot-wrap + .screenshot-wrap {
+  margin-top: 0;                /* Screenshots consecutivos: sin gap feo */
+}
+
+.page-entry h3 {
+  font-size: 14pt;
+  margin: 0 0 4px 0;
+  color: var(--msv-blue);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.page-entry h3 .icon {
+  font-size: 16pt;
+}
+.page-entry .url-line {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 9pt;
+  color: var(--msv-blue);
+  text-decoration: none;
+  background: #F0F4FF;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+.page-entry .url-line:hover { background: var(--msv-yellow); }
+
+.page-entry h4 {
+  font-size: 10pt;
+  margin: 12px 0 4px 0;
+  color: var(--msv-mute);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.page-entry ol, .page-entry ul {
+  margin: 4px 0 10px 0;
+  padding-left: 22px;
+}
+.page-entry li { margin-bottom: 2px; }
+
+.page-entry .description {
+  margin: 8px 0;
+  color: var(--msv-ink);
+}
+
+.page-entry .tip {
+  background: #FFF8DC;
+  border-left: 3px solid var(--msv-yellow);
+  padding: 8px 12px;
+  margin: 8px 0;
+  font-size: 9.5pt;
+  border-radius: 0 4px 4px 0;
+}
+.page-entry .warning {
+  background: #FFE8E8;
+  border-left: 3px solid var(--msv-red);
+  padding: 8px 12px;
+  margin: 8px 0;
+  font-size: 9.5pt;
+  border-radius: 0 4px 4px 0;
+}
+.page-entry .info {
+  background: #E8F2FF;
+  border-left: 3px solid var(--msv-blue);
+  padding: 8px 12px;
+  margin: 8px 0;
+  font-size: 9.5pt;
+  border-radius: 0 4px 4px 0;
+}
+
+.page-entry img.screenshot {
+  width: 100%;
+  border: 1px solid #E0E0E0;
+  border-radius: 4px;
+  margin-top: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+/* --------- TOC --------- */
+.toc {
+  page-break-after: always;
+  padding: 16mm 0;
+}
+.toc h2 {
+  font-size: 24pt;
+  color: var(--msv-blue);
+  margin-bottom: 12mm;
+  border-bottom: 3px solid var(--msv-yellow);
+  padding-bottom: 4mm;
+}
+.toc ol {
+  list-style: none;
+  padding: 0;
+  counter-reset: toc-counter;
+}
+.toc ol li {
+  counter-increment: toc-counter;
+  margin: 6px 0;
+  font-size: 11pt;
+}
+.toc ol li a {
+  color: var(--msv-ink);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dotted #CCC;
+}
+.toc ol li a:hover {
+  color: var(--msv-blue);
+  background: #F8FBFF;
+}
+.toc ol li a::before {
+  content: counter(toc-counter, decimal-leading-zero);
+  font-weight: 800;
+  color: var(--msv-blue);
+  font-size: 11pt;
+  min-width: 28px;
+}
+
+/* --------- Field reference table --------- */
+.field-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 9.5pt;
+}
+.field-table th, .field-table td {
+  text-align: left;
+  padding: 5px 8px;
+  border-bottom: 1px solid #EEE;
+}
+.field-table th {
+  background: var(--msv-cream);
+  color: var(--msv-blue);
+  font-weight: 700;
+}
+
+/* --------- Footer --------- */
+.last-page {
+  page-break-before: always;
+  padding: 30mm 16mm;
+  background: var(--msv-blue);
+  color: white;
+  text-align: center;
+}
+.last-page h2 {
+  color: var(--msv-yellow);
+  font-size: 22pt;
+  margin-bottom: 16px;
+}
+.last-page .contact {
+  margin: 20px 0;
+  font-size: 11pt;
+}
+.last-page a {
+  color: var(--msv-yellow);
+}
+
+/* --------- Util --------- */
+.role-badge {
+  display: inline-block;
+  font-size: 8.5pt;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+  letter-spacing: 0.5px;
+}
+.role-badge.doctor { background: var(--msv-blue); color: white; }
+.role-badge.patient { background: var(--msv-sage); color: white; }
+.role-badge.admin { background: var(--msv-red); color: white; }
+.role-badge.clinic { background: #6F4E9E; color: white; }
+.role-badge.staff { background: #B58900; color: white; }
+.role-badge.public { background: #555; color: white; }
+</style>
+</head>
+<body>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<!-- COVER                                                                 -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<div class="cover">
+  <div class="badge">YOGUITECH LLC · Sistema Oficial</div>
+  <img class="logo-big" src="https://images.medsysve.com/logo-med-transparent.png" alt="MedSysVE">
+  <h1>Manual de Usuario</h1>
+  <h2>Plataforma Médica Venezolana</h2>
+  <div style="max-width: 460px; color: rgba(255,255,255,0.95); font-size: 11pt; line-height: 1.6;">
+    La guía completa, paso a paso, de cada pantalla del sistema.
+    Pensada para doctores, clínicas, personal administrativo y pacientes
+    que usan MedSysVE en su día a día.
+  </div>
+  <div class="footer-info">
+    <strong>MedSysVE</strong>
+    La Medicina Venezolana en la Era Digital<br>
+    Versión 1.2 · Julio 2026<br>
+    <span style="font-size: 8pt;">Cumple LOPDP · Infraestructura HIPAA-ready · Hecho en Venezuela</span>
+  </div>
+</div>
+
+<div class="page-content">
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<!-- TOC                                                                    -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<div class="toc">
+  <h2>Contenido</h2>
+  <ol>
+    <li><a href="#sec-intro">1. Introducción a MedSysVE</a></li>
+    <li><a href="#sec-public">2. Páginas Públicas (sin autenticación)</a></li>
+    <li><a href="#sec-portal">3. Portal del Paciente</a></li>
+    <li><a href="#sec-doctor">4. Panel del Doctor</a></li>
+    <li><a href="#sec-admin">5. Panel de Administrador</a></li>
+    <li><a href="#sec-clinica">6. Panel de Clínica</a></li>
+    <li><a href="#sec-staff">7. Roles de Personal (Enfermera · Secretaria · Asistente)</a></li>
+    <li><a href="#sec-legal">8. Marco Legal y Cumplimiento LOPDP</a></li>
+    <li><a href="#sec-help">9. Soporte y Contacto</a></li>
+  </ol>
+</div>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<!-- HEADER (renders fixed on every page via the .page-header definition) -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<div class="page-header">
+  <img src="https://images.medsysve.com/logo-med-transparent.png" alt="MedSysVE">
+  <div class="meta">Manual de Usuario · v1.2 · Julio 2026</div>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- SECCIÓN 1: INTRODUCCIÓN                                                -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+
+<div class="section-divider" id="sec-intro">
+  <div class="num">SECCIÓN 01</div>
+  <h2>Introducción a MedSysVE</h2>
+  <p>Qué es, para quién es, y cómo está organizado el sistema.</p>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🏥</span> ¿Qué es MedSysVE?</h3>
+  <div class="description">
+    MedSysVE es el <strong>sistema de historia clínica digital</strong> diseñado específicamente para la realidad
+    del médico venezolano. Nació en 2026 bajo el paraguas de <strong>YOGUITECH LLC</strong> con un objetivo claro:
+    que un consultorio en Caracas, Maracaibo, Valencia o cualquier ciudad del país pueda operar con la misma
+    sofisticación tecnológica de una clínica de primer mundo, sin renunciar al contexto local — la tasa BCV,
+    los cobros en bolívares y dólares, la facturación al IVSS o seguros privados, y el cumplimiento de la
+    <strong>LOPDP</strong> (Ley Orgánica de Protección de Datos Personales).
+  </div>
+
+  <h4>Qué resuelve</h4>
+  <ul>
+    <li>La historia clínica del paciente en un solo lugar — accesible desde el celular o la computadora.</li>
+    <li>Diagnósticos diferenciales y plan terapéutico <strong>sugeridos por IA</strong> (Claude Haiku 4.5).</li>
+    <li>Recetas digitales con verificación automática de interacciones medicamentosas.</li>
+    <li>Facturación multi-moneda con tasa BCV actualizada diariamente.</li>
+    <li>Cumplimiento LOPDP automático: consentimiento, retención de datos, bitácora de auditoría.</li>
+    <li>Teleconsulta por video sin apps externas.</li>
+    <li>Portal del paciente para que él mismo vea sus resultados, citas y recetas.</li>
+  </ul>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🗂️</span> Roles del sistema</h3>
+  <div class="description">
+    MedSysVE maneja <strong>7 roles</strong>, cada uno con su panel dedicado y permisos granulares. Esta es la
+    matriz básica:
+  </div>
+  <table class="field-table">
+    <thead>
+      <tr><th>Rol</th><th>Panel</th><th>Función principal</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Doctor</strong></td><td><code>/doctor</code></td><td>Atiende pacientes, crea consultas, receta, factura.</td></tr>
+      <tr><td><strong>Paciente</strong></td><td><code>/portal</code></td><td>Ve sus citas, recetas, resultados de laboratorio.</td></tr>
+      <tr><td><strong>Admin</strong></td><td><code>/admin</code></td><td>Gestiona el sistema, doctores, branding, cumplimiento.</td></tr>
+      <tr><td><strong>Clínica</strong></td><td><code>/clinica</code></td><td>Administra clínicas multi-doctor, staff, invitaciones.</td></tr>
+      <tr><td><strong>Enfermera</strong></td><td><code>/nurse</code></td><td>Sala de espera, signos vitales, triage.</td></tr>
+      <tr><td><strong>Secretaria</strong></td><td><code>/secretary</code></td><td>Agenda, confirmaciones, recordatorios.</td></tr>
+      <tr><td><strong>Asistente</strong></td><td><code>/assistant</code></td><td>Auxiliar administrativo del consultorio.</td></tr>
+    </tbody>
+  </table>
+  <div class="info">
+    Cada rol tiene su propio login. El sistema identifica al usuario al iniciar sesión y lo redirige al panel correspondiente.
+  </div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🔐</span> Acceso y navegación general</h3>
+  <div class="description">
+    Toda URL de MedSysVE responde bajo el dominio <code>https://www.medsysve.com</code>. La navegación
+    principal siempre es:
+  </div>
+  <ol>
+    <li><strong>Inicio de sesión</strong> en <code>https://www.medsysve.com/login</code></li>
+    <li><strong>Redirección automática</strong> al panel según el rol detectado</li>
+    <li><strong>Sidebar izquierdo</strong> con todas las secciones disponibles para ese rol</li>
+    <li><strong>Header</strong> con buscador global (⌘K), notificaciones y menú de usuario</li>
+  </ol>
+  <div class="tip">
+    <strong>Tip:</strong> el atajo <code>Ctrl + K</code> (o <code>⌘ + K</code> en Mac) abre el buscador global desde
+    cualquier pantalla — busca pacientes, doctores, recetas, etc.
+  </div>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- SECCIÓN 2: PÁGINAS PÚBLICAS                                           -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+
+<div class="section-divider" id="sec-public">
+  <div class="num">SECCIÓN 02</div>
+  <h2>Páginas Públicas</h2>
+  <p>Accesibles sin autenticación. Aquí es donde empieza todo: el visitante llega, conoce MedSysVE, se registra.</p>
+</div>
+
+<!-- Landing -->
+<div class="page-entry">
+  <h3><span class="icon">🌐</span> Landing page <span class="role-badge public">PÚBLICA</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/" target="_blank">https://www.medsysve.com/</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>El visitante escribe <code>medsysve.com</code> en el navegador.</li>
+    <li>También accesible desde motores de búsqueda (SEO optimizado).</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Es la página principal de marketing. En orden de arriba hacia abajo muestra:
+    <ul>
+      <li><strong>Hero animado</strong> con la propuesta de valor en una línea y los CTAs <em>"Comenzar Ahora"</em> y <em>"Ver Demo"</em>.</li>
+      <li><strong>Tira de la bandera venezolana</strong> en la parte superior (amarillo · azul · rojo).</li>
+      <li><strong>Sección de features</strong> con 6 tarjetas: Historia Clínica Digital, Prescripciones Inteligentes, IA Clínica Integrada, Portal del Paciente, Teleconsulta, Facturación Multi-Moneda.</li>
+      <li><strong>Sección de estadísticas</strong>: 100% Venezolano, Diagnóstico Asistido por IA, 24/7 Disponibilidad.</li>
+      <li><strong>Sección "Cómo funciona"</strong> en 3 pasos (registro, configuración, atención).</li>
+      <li><strong>Sección de precios</strong> con planes Individual y Clínica.</li>
+      <li><strong>FAQ</strong> con preguntas frecuentes (suscripción, datos, LOPDP, seguridad).</li>
+      <li><strong>Footer</strong> con links legales (términos, privacidad, cookies, LOPDP).</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/public/01-landing.jpg" alt="Landing page de MedSysVE">
+</div>
+</div>
+
+<!-- Login -->
+<div class="page-entry">
+  <h3><span class="icon">🔑</span> Inicio de sesión (Doctor / Clínica / Staff) <span class="role-badge public">PÚBLICA</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/login" target="_blank">https://www.medsysve.com/login</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Desde la landing → botón <strong>"Iniciar Sesión"</strong> arriba a la derecha.</li>
+    <li>URL directa: <code>/login</code>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Pantalla única de autenticación para <strong>todos los roles internos</strong> (Doctor, Clínica, Enfermera,
+    Secretaria, Asistente, Admin). El sistema detecta automáticamente a qué tabla pertenece el email y aplica
+    el flujo correspondiente.
+  </div>
+  <ul>
+    <li><strong>Email</strong>: tu correo registrado.</li>
+    <li><strong>Contraseña</strong>: mínimo 12 caracteres, con mayúsculas, minúsculas, números y símbolos.</li>
+    <li><strong>Recordarme</strong>: extiende la sesión a 30 días.</li>
+    <li><strong>Botón "Iniciar sesión"</strong>: envía credenciales vía NextAuth v5 con JWT cifrado.</li>
+  </ul>
+  <div class="tip">
+    <strong>Seguridad:</strong> tras 5 intentos fallidos consecutivos la cuenta se bloquea por 15 minutos.
+    El hash de la contraseña se almacena con bcrypt cost 12 (estándar médico-legal venezolano).
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/public/02-login.jpg" alt="Pantalla de login">
+</div>
+</div>
+
+<!-- Register -->
+<div class="page-entry">
+  <h3><span class="icon">📝</span> Registro de nuevo doctor <span class="role-badge public">PÚBLICA</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/register" target="_blank">https://www.medsysve.com/register</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Desde la landing → botón <strong>"Comenzar Ahora"</strong>.</li>
+    <li>Desde el login → link <strong>"¿No tienes cuenta? Regístrate"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Formulario de alta de un nuevo doctor. Se divide en pasos:
+  </div>
+  <ol>
+    <li><strong>Datos personales</strong>: nombre, apellido, cédula, email, teléfono.</li>
+    <li><strong>Credenciales</strong>: contraseña (con indicador de fortaleza en tiempo real).</li>
+    <li><strong>Verificación de email</strong>: código OTP de 6 dígitos enviado al correo.</li>
+    <li><strong>Datos profesionales</strong>: especialidad principal, sub-especialidades, bio corta, idiomas.</li>
+    <li><strong>Consentimiento LOPDP</strong>: checkbox obligatorio + versión del documento legal aceptado.</li>
+  </ol>
+  <div class="info">
+    Tras completar el registro, el doctor entra automáticamente al <strong>plan Free</strong> con 14 días de trial.
+    Puede empezar a usar el sistema inmediatamente. No requiere tarjeta de crédito para el trial.
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/public/03-register.jpg" alt="Pantalla de registro">
+</div>
+</div>
+
+<!-- Forgot password -->
+<div class="page-entry">
+  <h3><span class="icon">🔓</span> Recuperar contraseña <span class="role-badge public">PÚBLICA</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/forgot-password" target="_blank">https://www.medsysve.com/forgot-password</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Desde el login → link <strong>"¿Olvidaste tu contraseña?"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Pantalla de recuperación de contraseña en 2 pasos:
+  </div>
+  <ol>
+    <li><strong>Email</strong> → envía link de recuperación con token de 1 hora de expiración.</li>
+    <li><strong>Nueva contraseña</strong> → al hacer click en el link del correo, te lleva a esta pantalla para definir el nuevo password.</li>
+  </ol>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/public/04-forgot-password.jpg" alt="Recuperar contraseña">
+</div>
+</div>
+
+<!-- Clinica pública -->
+<div class="page-entry">
+  <h3><span class="icon">🏥</span> Perfil público de clínica <span class="role-badge public">PÚBLICA</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/clinica/centro-medico-la-castellana" target="_blank">https://www.medsysve.com/clinica/centro-medico-la-castellana</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>URL directa con el slug de la clínica: <code>/clinica/&lt;slug&gt;</code>.</li>
+    <li>Compartido por el admin de la clínica en redes sociales, firma de email, o códigos QR.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Página tipo "landing" específica de cada clínica. Muestra información pública:
+    <ul>
+      <li>Logo y banner de la clínica.</li>
+      <li>Nombre, RIF, dirección, contacto.</li>
+      <li>Servicios ofrecidos.</li>
+      <li>Redes sociales.</li>
+      <li>Botón para solicitar cita o contactarlos.</li>
+    </ul>
+  </div>
+  <div class="info">
+    Solo se muestra información no sensible. NO se exponen historiales clínicos, datos de pacientes,
+    ni información financiera. Cumple LOPDP por defecto.
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/public/05-clinica-publica.jpg" alt="Perfil público de clínica">
+</div>
+</div>
+
+<!-- Portal login -->
+<div class="page-entry">
+  <h3><span class="icon">👤</span> Login del Portal del Paciente <span class="role-badge public">PÚBLICA</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/portal/login" target="_blank">https://www.medsysve.com/portal/login</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>URL directa: <code>/portal/login</code>.</li>
+    <li>Compartido por el doctor en el PDF de la receta o al alta del paciente.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Login dedicado para <strong>pacientes</strong> (NO doctores). Usa el email + contraseña separada
+    del portal, distinta de la del doctor. El sistema valida que la cuenta tenga un
+    <code>portalPasswordHash</code> configurado.
+  </div>
+  <div class="tip">
+    La contraseña del portal es configurada por el doctor al crear al paciente. El paciente la recibe
+    en el correo de bienvenida. Puede cambiarla después desde el propio portal.
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/public/06-portal-login.jpg" alt="Login del portal del paciente">
+</div>
+</div>
+
+<!-- Legal pages -->
+<div class="page-entry">
+  <h3><span class="icon">⚖️</span> Marco Legal <span class="role-badge public">PÚBLICA</span></h3>
+  <div class="description">
+    MedSysVE expone todas sus páginas legales en la ruta <code>/legal/*</code>. Son páginas estáticas
+    que cumplen con la LOPDP y las mejores prácticas internacionales de privacidad.
+  </div>
+
+  <h4>Páginas disponibles</h4>
+  <table class="field-table">
+    <thead>
+      <tr><th>Página</th><th>URL</th><th>Propósito</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Índice legal</td>
+        <td><a href="https://www.medsysve.com/legal" target="_blank">/legal</a></td>
+        <td>Vista agregada con links a todas las políticas.</td>
+      </tr>
+      <tr>
+        <td>Consentimiento LOPDP</td>
+        <td><a href="https://www.medsysve.com/legal/lopdp-consentimiento" target="_blank">/legal/lopdp-consentimiento</a></td>
+        <td>Modelo del consentimiento informado que el paciente firma electrónicamente.</td>
+      </tr>
+      <tr>
+        <td>Términos y Condiciones</td>
+        <td><a href="https://www.medsysve.com/legal/terminos" target="_blank">/legal/terminos</a></td>
+        <td>Términos legales del servicio. Incluye cláusulas de facturación, cancelación, propiedad intelectual.</td>
+      </tr>
+      <tr>
+        <td>Política de Privacidad</td>
+        <td><a href="https://www.medsysve.com/legal/privacidad" target="_blank">/legal/privacidad</a></td>
+        <td>Cómo MedSysVE recopila, almacena, procesa y protege los datos personales y clínicos.</td>
+      </tr>
+      <tr>
+        <td>Política de Cookies</td>
+        <td><a href="https://www.medsysve.com/legal/cookies" target="_blank">/legal/cookies</a></td>
+        <td>Tipos de cookies usadas, duración, opt-out.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info">
+    <strong>Versionado legal:</strong> cada vez que una página legal se actualiza, el sistema
+    incrementa la versión. Los usuarios deben aceptar la nueva versión antes de seguir usando
+    el sistema. Queda registro firmado en <code>ConsentAcceptance</code> con timestamp, IP y user-agent.
+  </div>
+
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/public/07-legal.jpg" alt="Índice legal">
+</div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/public/08-lopdp.jpg" alt="Consentimiento LOPDP">
+</div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/public/09-terminos.jpg" alt="Términos y Condiciones">
+</div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/public/10-privacidad.jpg" alt="Política de Privacidad">
+</div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/public/11-cookies.jpg" alt="Política de Cookies">
+</div>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- SECCIÓN 3: PORTAL DEL PACIENTE                                         -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+
+<div class="section-divider" id="sec-portal">
+  <div class="num">SECCIÓN 03</div>
+  <h2>Portal del Paciente</h2>
+  <p>Vista para pacientes. Aquí pueden ver sus citas, recetas, resultados de laboratorio y comunicarse con su médico.</p>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🏠</span> Inicio del portal <span class="role-badge patient">PACIENTE</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/portal" target="_blank">https://www.medsysve.com/portal</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Login en <a href="https://www.medsysve.com/portal/login" target="_blank">/portal/login</a> → redirección automática al home.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Dashboard principal del paciente. Muestra:
+    <ul>
+      <li><strong>Tarjeta de próxima cita</strong> con día, hora, doctor y link de teleconsulta si aplica.</li>
+      <li><strong>Recetas activas</strong> resumidas con los medicamentos en curso.</li>
+      <li><strong>Resultados de laboratorio recientes</strong> con badges "Nuevo" para los no leídos.</li>
+      <li><strong>Mensajes no leídos</strong> del equipo médico.</li>
+      <li><strong>Accesos rápidos</strong> a Agendar, Ver recetas, Resultados, Mensajes.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/portal/01-home.jpg" alt="Portal home">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">📅</span> Mis citas <span class="role-badge patient">PACIENTE</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/portal/schedule" target="_blank">https://www.medsysve.com/portal/schedule</a>
+  <h4>Cómo hace</h4>
+  <ul>
+    <li>Sidebar del portal → <strong>"Mis citas"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista de calendario con todas las citas del paciente:
+    <ul>
+      <li><strong>Próximas</strong> con cuenta regresiva ("en 2 días", "mañana", "hoy").</li>
+      <li><strong>Pasadas</strong> con posibilidad de ver el resumen si el doctor lo firmó.</li>
+      <li><strong>Teleconsulta</strong>: muestra botón <strong>"Unirse a consulta"</strong> cuando está dentro de la ventana de tiempo.</li>
+      <li>Botón <strong>"Agendar nueva cita"</strong> abre un wizard de selección de fecha, hora y motivo.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/portal/02-schedule.jpg" alt="Mis citas">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">💊</span> Mis recetas <span class="role-badge patient">PACIENTE</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/portal/prescriptions" target="_blank">https://www.medsysve.com/portal/prescriptions</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Recetas"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Lista de todas las recetas emitidas al paciente:
+    <ul>
+      <li><strong>Recetas activas</strong> con los medicamentos en curso.</li>
+      <li><strong>Histórico</strong> de recetas pasadas con fecha, doctor, motivo.</li>
+      <li>Botón <strong>"Descargar PDF"</strong> para cada receta.</li>
+      <li>Cada receta muestra: medicamentos (nombre + dosis + frecuencia + duración), indicaciones especiales, fecha de emisión, doctor que la prescribió.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/portal/03-prescriptions.jpg" alt="Mis recetas">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🧪</span> Resultados de laboratorio <span class="role-badge patient">PACIENTE</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/portal/lab-results" target="_blank">https://www.medsysve.com/portal/lab-results</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Laboratorio"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista cronológica de los resultados de laboratorio subidos por el médico:
+    <ul>
+      <li><strong>Resultados estructurados</strong> (hemograma, perfil lipídico, glicemia, etc.) con valores de referencia y alertas de valores fuera de rango (en rojo).</li>
+      <li><strong>Imágenes escaneadas</strong> (PDFs de laboratorios externos).</li>
+      <li>Indicador <strong>"Nuevo"</strong> para los no leídos.</li>
+      <li>Botón <strong>"Descargar PDF"</strong>.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/portal/04-lab-results.jpg" alt="Resultados de laboratorio">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🩻</span> Mis exámenes <span class="role-badge patient">PACIENTE</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/portal/examenes" target="_blank">https://www.medsysve.com/portal/examenes</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Exámenes"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Listado de órdenes de imagenología y estudios especiales:
+    <ul>
+      <li>Rayos X, ecografías, tomografías, resonancias.</li>
+      <li>Estado: solicitada, en proceso, completada.</li>
+      <li>Resultados escaneados (cuando se suben).</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/portal/05-examenes.jpg" alt="Mis exámenes">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">💉</span> Mis vacunas <span class="role-badge patient">PACIENTE</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/portal/vacunas" target="_blank">https://www.medsysve.com/portal/vacunas</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Vacunas"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Cartón de vacunación digital:
+    <ul>
+      <li>Vacunas registradas por el médico con fecha, lote, centro de aplicación.</li>
+      <li>Recordatorios de vacunas pendientes según el calendario venezolano de inmunización.</li>
+      <li>Botón <strong>"Descargar PDF"</strong> (formato carnet de vacunación estándar).</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/portal/06-vacunas.jpg" alt="Mis vacunas">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">💬</span> Mensajes <span class="role-badge patient">PACIENTE</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/portal/mensajes" target="_blank">https://www.medsysve.com/portal/mensajes</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Mensajes"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Sistema de mensajería con el equipo médico (doctor, enfermeras, secretarias del consultorio):
+    <ul>
+      <li>Hilos por asunto (ej. "Resultados de laboratorio", "Consulta de seguimiento").</li>
+      <li>Notificaciones por email y push al recibir mensajes nuevos.</li>
+      <li><strong>Trazabilidad LOPDP</strong>: cada mensaje queda registrado con timestamp, emisor, receptor.</li>
+    </ul>
+  </div>
+  <div class="warning">
+    <strong>Privacidad:</strong> los mensajes NO reemplazan la consulta. Para temas urgentes, agenda una cita
+    o llama directamente al consultorio.
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/portal/07-mensajes.jpg" alt="Mensajes del portal">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">👤</span> Mi perfil <span class="role-badge patient">PACIENTE</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/portal/perfil" target="_blank">https://www.medsysve.com/portal/perfil</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Mi perfil"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Configuración de la cuenta del paciente:
+    <ul>
+      <li>Datos personales (nombre, cédula, fecha de nacimiento, contacto).</li>
+      <li>Cambio de contraseña del portal.</li>
+      <li>Descarga de datos personales (cumplimiento LOPDP — derecho de acceso).</li>
+      <li>Solicitud de eliminación de cuenta (derecho al olvido).</li>
+      <li>Versión legal aceptada actualmente.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/portal/08-perfil.jpg" alt="Mi perfil">
+</div>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- SECCIÓN 4: PANEL DEL DOCTOR (la más grande)                            -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+
+<div class="section-divider" id="sec-doctor">
+  <div class="num">SECCIÓN 04</div>
+  <h2>Panel del Doctor</h2>
+  <p>El corazón del sistema. Aquí el médico atiende pacientes, crea consultas, receta, factura y administra su consultorio.</p>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">📊</span> Dashboard principal <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor" target="_blank">https://www.medsysve.com/doctor</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Login → redirección automática al dashboard.</li>
+    <li>Sidebar izquierdo → <strong>"Dashboard"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista panorámica del consultorio en el día. Muestra:
+    <ul>
+      <li><strong>Saludo personalizado</strong> según hora del día ("Buenos días", "Buenas tardes").</li>
+      <li><strong>Métricas clave</strong>: pacientes registrados, staff activo, citas hoy.</li>
+      <li><strong>Pizarrón del equipo</strong>: notas rápidas para el staff del consultorio.</li>
+      <li><strong>Accesos rápidos</strong>: nueva consulta, nuevo paciente, ver agenda.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/01-dashboard.jpg" alt="Dashboard del doctor">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">👥</span> Pacientes <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/patients" target="_blank">https://www.medsysve.com/doctor/patients</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Pacientes"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Listado paginado de todos los pacientes del consultorio con búsqueda instantánea:
+    <ul>
+      <li><strong>Búsqueda global</strong> por nombre, cédula, ID interno, email o teléfono.</li>
+      <li>Filtros por: rango de edad, sexo, grupo sanguíneo, etiquetas, alergias.</li>
+      <li>Ordenamiento por nombre, última consulta, fecha de alta.</li>
+      <li>Click en un paciente abre su <a href="#sec-doctor-patient-detail">ficha completa</a>.</li>
+      <li>Botón <strong>"+ Nuevo paciente"</strong> para crear uno.</li>
+    </ul>
+  </div>
+  <div class="tip">
+    <strong>Performance:</strong> con más de 10,000 pacientes, la búsqueda usa índice de Prisma sobre
+    <code>nombre + apellido</code> y full-text sobre <code>cedula</code>. Devuelve resultados en menos de 100ms.
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/02-patients-list.jpg" alt="Listado de pacientes">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">➕</span> Nuevo paciente <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/patients/new" target="_blank">https://www.medsysve.com/doctor/patients/new</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Pacientes → botón <strong>"+ Nuevo paciente"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Formulario de alta de paciente. Se divide en pestañas:
+    <ol>
+      <li><strong>Identificación</strong>: nombre, apellido, cédula/pasaporte, fecha de nacimiento, sexo.</li>
+      <li><strong>Contacto</strong>: teléfono, email, dirección.</li>
+      <li><strong>Representante</strong> (si es menor de edad o adulto mayor dependiente): nombre completo, parentesco, contacto del representante.</li>
+      <li><strong>Antecedentes</strong>: alergias, crónicos, quirúrgicos, familiares.</li>
+      <li><strong>Portal del paciente</strong>: opcional, definir email + contraseña del portal para que el paciente pueda acceder.</li>
+    </ol>
+  </div>
+  <div class="info">
+    <strong>Cifrado:</strong> los campos de identificación personal (nombre, apellido, cédula, teléfono, email)
+    se almacenan cifrados con AES-256-GCM + HMAC-SHA256 para búsquedas determinísticas.
+    Solo se descifran al renderizar al doctor autenticado.
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/03-patient-new.jpg" alt="Nuevo paciente">
+</div>
+</div>
+
+<div class="page-entry" id="sec-doctor-patient-detail">
+  <h3><span class="icon">📋</span> Ficha del paciente <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/patients/demo_pr_maria_001" target="_blank">https://www.medsysve.com/doctor/patients/&lt;patientRegId&gt;</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Click en cualquier paciente desde la lista.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista 360° del paciente. Toda la información clínica organizada en secciones:
+    <ul>
+      <li><strong>Cabecera</strong>: nombre, edad, ID consultorio (#000002), grupo sanguíneo, alertas activas.</li>
+      <li><strong>Consultas</strong>: lista cronológica de todas las consultas con badge de estado (Borrador / Firmada).</li>
+      <li><strong>Antecedentes</strong>: alergias, crónicos, quirúrgicos, familiares, hábitos.</li>
+      <li><strong>Etiquetas</strong>: clasificación libre (ej. "Hipertenso", "Alérgico a penicilina").</li>
+      <li><strong>Alergias</strong>: registro de alergias con severidad.</li>
+      <li><strong>Vacunas</strong>: carnet digital.</li>
+      <li><strong>Seguros</strong>: HMO / seguros privados asociados.</li>
+      <li><strong>Consentimientos</strong>: documentos firmados electrónicamente.</li>
+      <li><strong>Citas</strong>: próximas y pasadas.</li>
+      <li><strong>Recetas</strong>: emitidas a su nombre.</li>
+      <li><strong>Resultados de laboratorio</strong>: histórico.</li>
+      <li><strong>Facturación</strong>: estado de cuenta, facturas pagadas/pendientes.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/04-patient-detail.jpg" alt="Ficha del paciente">
+</div>
+</div>
+
+<div class="page-entry" id="sec-doctor-encounter">
+  <h3><span class="icon">🩺</span> Consulta (SOAP) <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/patients/demo_pr_maria_001/encounters/demo_enc_maria_001" target="_blank">https://www.medsysve.com/doctor/patients/&lt;id&gt;/encounters/&lt;id&gt;</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Ficha del paciente → <strong>"+ Nueva consulta"</strong>.</li>
+    <li>Click en una consulta existente de la lista.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    La pantalla central del flujo clínico. Implementa el formato <strong>SOAP</strong> estándar médico:
+    <ol>
+      <li><strong>S — Subjetivo</strong>: motivo de consulta + historia clínica.</li>
+      <li><strong>O — Signos Vitales</strong>: TA, FC, FR, temperatura, peso, talla, SpO2, Glasgow. Calcula IMC automáticamente.</li>
+      <li><strong>O — Examen Físico</strong>: hallazgos por sistema (cabeza, cuello, cardiopulmonar, abdomen, extremidades, SNC).</li>
+      <li><strong>A — Diagnósticos</strong>: búsqueda de códigos CIE-10 con autocompletado.</li>
+      <li><strong>P — Plan</strong>: tratamiento de medicamentos + indicaciones + próximos pasos.</li>
+    </ol>
+  </div>
+
+  <h4>Funcionalidades especiales</h4>
+  <ul>
+    <li><strong>✦ IA Asistente Clínico</strong>: dentro del panel IA, dos botones mágicos:
+      <ul>
+        <li><strong>"Sugerir diagnósticos diferenciales"</strong>: toma motivo + historia + vitales + diagnósticos
+        escritos, y devuelve hasta 5 códigos CIE-10 ordenados por probabilidad + plan terapéutico sugerido.</li>
+        <li><strong>"Redactar sugerencia de plan"</strong>: genera un borrador de plan terapéutico basado en evidencia.</li>
+      </ul>
+    </li>
+    <li><strong>Plantillas</strong>: el doctor puede guardar la consulta actual como plantilla reutilizable
+    (ej. "Control de HTA", "Primera consulta pediátrica").</li>
+    <li><strong>Expresar modo</strong>: copia vital signs + exam + plan de una consulta reciente para acelerar el flujo en consultas recurrentes.</li>
+    <li><strong>Auto-guardado</strong>: cada campo se guarda automáticamente al perder foco (sin necesidad de botón "Guardar").</li>
+    <li><strong>Firma digital</strong>: al terminar, botón <strong>"Firmar y cerrar consulta"</strong> sella con hash criptográfico + timestamp + identidad del firmante.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>Disclaimer:</strong> la IA es una herramienta de apoyo. El criterio clínico del médico prevalece siempre.
+    Toda sugerencia debe ser revisada y firmada por el doctor antes de aplicarse al paciente.
+  </div>
+
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/05-encounter.jpg" alt="Consulta SOAP en progreso">
+</div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/05b-encounter-full.jpg" alt="Consulta SOAP vista completa">
+</div>
+
+  <h4>Variantes</h4>
+  <ul>
+    <li><strong>Consulta firmada</strong>: una vez firmada, el documento es inmutable. Solo se puede "Amendar"
+    (crea una consulta adicional que referencia la original).</li>
+    <li><strong>Consulta crónica</strong>: para seguimiento de crónicos (HTA, DM2), con vista específica de evolución.</li>
+  </ul>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/06-encounter-signed.jpg" alt="Consulta firmada">
+</div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/07-encounter-chronic.jpg" alt="Consulta crónica">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🏢</span> Workspace del consultorio <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/workspace" target="_blank">https://www.medsysve.com/doctor/workspace</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Consultorio"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Configuración del consultorio virtual:
+    <ul>
+      <li>Nombre, dirección, teléfono, RIF, logo.</li>
+      <li>Tasa BCV actual (auto-actualizada diariamente).</li>
+      <li>Recordatorios automáticos (horas antes, WhatsApp, email).</li>
+      <li>Plantillas de encuentro.</li>
+      <li>Configuración de impresión (membrete, sello digital).</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/08-workspace.jpg" alt="Workspace">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">⏰</span> Sala de espera <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/waiting-room" target="_blank">https://www.medsysve.com/doctor/waiting-room</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Sala de Espera"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista en tiempo real de los pacientes que están esperando ser atendidos:
+    <ul>
+      <li>Lista de pacientes en cola con hora de llegada, motivo, tiempo de espera.</li>
+      <li>Botón <strong>"Llamar siguiente"</strong> que mueve al paciente a "En consulta".</li>
+      <li>Si el paciente fue agregado por la enfermera con signos vitales, ya aparecen registrados.</li>
+      <li>Indicador visual cuando el tiempo de espera supera los 30 min (recomendación de atención prioritaria).</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/09-waiting-room.jpg" alt="Sala de espera">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">📹</span> Teleconsulta <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/teleconsulta/demo_appt_carmen_tele" target="_blank">https://www.medsysve.com/doctor/teleconsulta/&lt;appointmentId&gt;</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Agenda → click en cita de tipo teleconsulta → botón <strong>"Iniciar consulta"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Sala de videoconferencia integrada. Funcionalidades:
+    <ul>
+      <li>Video HD de doble vía (médico ↔ paciente) usando WebRTC nativo (sin Zoom, sin Google Meet).</li>
+      <li>Chat de texto complementario dentro de la misma sesión.</li>
+      <li>Botón <strong>"Grabar consulta"</strong> (con consentimiento explícito del paciente).</li>
+      <li>Panel lateral con acceso directo a la historia clínica del paciente durante la consulta.</li>
+      <li>Botón <strong>"Iniciar consulta SOAP"</strong> que abre una nueva consulta pre-poblada con el paciente de la teleconsulta.</li>
+    </ul>
+  </div>
+  <div class="info">
+    La grabación queda cifrada en reposo y solo accesible para los participantes y auditores autorizados.
+    Cumple HIPAA §164.312(e) sobre transmisión segura.
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/10-teleconsulta.jpg" alt="Teleconsulta">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">📆</span> Agenda <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/schedule" target="_blank">https://www.medsysve.com/doctor/schedule</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Horario"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Configuración de la disponibilidad horaria del médico:
+    <ul>
+      <li>Días y bloques horarios en que el consultorio atiende.</li>
+      <li>Excepciones (vacaciones, feriados).</li>
+      <li>Duración estándar de las citas (default 30 min).</li>
+      <li>Sincronización opcional con Google Calendar (calendarios personales).</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/11-schedule.jpg" alt="Agenda del doctor">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🗓️</span> Citas <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/appointments" target="_blank">https://www.medsysve.com/doctor/appointments</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Citas"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista de gestión de citas:
+    <ul>
+      <li>Lista filtrable por estado (programada, confirmada, en curso, completada, cancelada, no-show).</li>
+      <li>Vista de calendario (día / semana / mes).</li>
+      <li>Botón <strong>"Nueva cita"</strong> para agendar manualmente.</li>
+      <li>Click en una cita abre detalles: paciente, motivo, tipo, estado, notas.</li>
+      <li>Acciones rápidas: confirmar, cancelar, reagendar, marcar como completada.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/12-appointments.jpg" alt="Citas">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">✅</span> Tareas <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/tasks" target="_blank">https://www.medsysve.com/doctor/tasks</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Tareas"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Lista de tareas del consultorio:
+    <ul>
+      <li>Crear tareas asignables al staff (secretaria, enfermera, asistente).</li>
+      <li>Prioridad (alta / media / baja) + fecha de vencimiento.</li>
+      <li>Estados: pendiente, en progreso, completada.</li>
+      <li>Filtros por asignado, prioridad, estado.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/13-tasks.jpg" alt="Tareas">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">👥</span> Staff del consultorio <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/staff" target="_blank">https://www.medsysve.com/doctor/staff</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Mi Equipo"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Gestión del equipo de trabajo del consultorio:
+    <ul>
+      <li>Listado de enfermeras, secretarias y asistentes asociados.</li>
+      <li>Estado activo/inactivo.</li>
+      <li>Permisos granulares (qué puede hacer cada rol).</li>
+      <li>Auditoría: quién hizo qué y cuándo.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/14-staff.jpg" alt="Staff del consultorio">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">✉️</span> Invitar staff <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/staff/invite" target="_blank">https://www.medsysve.com/doctor/staff/invite</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Staff → botón <strong>"+ Invitar miembro"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Wizard para invitar nuevo personal:
+    <ol>
+      <li>Elegir rol (Enfermera / Secretaria / Asistente).</li>
+      <li>Ingresar email y datos básicos.</li>
+      <li>Definir permisos específicos.</li>
+      <li>Sistema envía email con link de activación + credenciales temporales.</li>
+    </ol>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/15-staff-invite.jpg" alt="Invitar staff">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">✉️</span> Mensajes <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/mensajes" target="_blank">https://www.medsysve.com/doctor/mensajes</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Mensajes"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Bandeja de entrada unificada de mensajes con:
+    <ul>
+      <li>Pacientes del consultorio.</li>
+      <li>Staff (enfermeras, secretarias, asistente).</li>
+      <li>Doctores referidores.</li>
+    </ul>
+    Cada mensaje tiene: remitente, asunto, preview, indicador de leído/no leído, archivos adjuntos.
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/16-mensajes.jpg" alt="Mensajes">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">↗️</span> Referidos <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/referrals" target="_blank">https://www.medsysve.com/doctor/referrals</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Referidos"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Red de referidos entre doctores:
+    <ul>
+      <li>Buscar doctores por especialidad, estado, ciudad.</li>
+      <li>Derivar pacientes con un click: crea una orden de referencia con el motivo + historia resumida.</li>
+      <li>Recibir referidos de otros doctores (ver historial del paciente + motivo).</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/17-referrals.jpg" alt="Referidos">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">💳</span> Facturación <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/billing" target="_blank">https://www.medsysve.com/doctor/billing</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Facturación"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Módulo financiero del consultorio:
+    <ul>
+      <li>Facturas emitidas (pagadas / pendientes / canceladas).</li>
+      <li>Detalle de cada factura: servicios, monto USD, monto Bs a tasa BCV del momento, método de pago.</li>
+      <li>Métodos de pago aceptados: efectivo USD, efectivo Bs, transferencia Bs, Zelle, Binance USDT, PagoMóvil.</li>
+      <li>Reportes: ingresos por mes, por paciente, por servicio.</li>
+      <li>Exportar a Excel / CSV.</li>
+    </ul>
+  </div>
+  <div class="info">
+    <strong>Tasa BCV automática:</strong> el sistema consulta la tasa oficial BCV cada día a las 9am (cron job)
+    y la aplica automáticamente. Las facturas usan la tasa del momento de emisión.
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/18-billing.jpg" alt="Facturación">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🛡️</span> Seguros <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/insurance" target="_blank">https://www.medsysve.com/doctor/insurance</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Seguros"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Gestión de aseguradoras y HMOs con los que el consultorio tiene convenio:
+    <ul>
+      <li>Listado de aseguradoras configuradas (con su RIF, contacto, cobertura).</li>
+      <li>Asociación de pacientes a aseguradoras.</li>
+      <li>Cálculo de copago y monto del seguro en facturas.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/19-insurance.jpg" alt="Seguros">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">📜</span> Auditoría <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/audit" target="_blank">https://www.medsysve.com/doctor/audit</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Auditoría"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Bitácora completa de accesos y operaciones dentro del consultorio:
+    <ul>
+      <li>Quién accedió a qué historia clínica y cuándo.</li>
+      <li>Modificaciones a recetas, diagnósticos, datos del paciente.</li>
+      <li>Exportaciones de datos.</li>
+      <li>Cambios de configuración.</li>
+    </ul>
+    Cada evento tiene: timestamp, usuario, IP, acción, recurso, metadatos.
+  </div>
+  <div class="info">
+    <strong>LOPDP Art. 19:</strong> la auditoría es obligatoria para sistemas que manejan datos sensibles
+    de salud. Los registros se retienen por mínimo 5 años.
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/20-audit.jpg" alt="Auditoría">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">📈</span> Estadísticas <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/analytics" target="_blank">https://www.medsysve.com/doctor/analytics</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Estadísticas"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Dashboard de métricas del consultorio:
+    <ul>
+      <li>Pacientes atendidos por mes / trimestre / año.</li>
+      <li>Diagnósticos más frecuentes (top CIE-10).</li>
+      <li>Ingresos y proyección.</li>
+      <li>Tasa de no-show.</li>
+      <li>Distribución demográfica de pacientes.</li>
+      <li>Gráficos exportables a PDF.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/21-analytics.jpg" alt="Estadísticas">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">📋</span> Crónicos <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/chronics" target="_blank">https://www.medsysve.com/doctor/chronics</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Crónicos"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista especializada para seguimiento de pacientes con enfermedades crónicas:
+    <ul>
+      <li>Listado de pacientes con marcadores de cronicidad.</li>
+      <li>Vista por patología: HTA, DM2, EPOC, ERC, etc.</li>
+      <li>Gráficos de evolución de cada paciente (HbA1c, TA, peso, glicemia).</li>
+      <li>Alertas automáticas cuando un paciente no asiste a control en X meses.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/22-chronics.jpg" alt="Pacientes crónicos">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🎯</span> Calidad <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/quality" target="_blank">https://www.medsysve.com/doctor/quality</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Calidad"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Indicadores de calidad clínica:
+    <ul>
+      <li>% de consultas con SOAP completo.</li>
+      <li>% de recetas con verificación de interacciones.</li>
+      <li>% de pacientes con consentimiento firmado.</li>
+      <li>% de teleconsultas exitosas.</li>
+      <li>Comparación contra benchmarks del sector.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/23-quality.jpg" alt="Indicadores de calidad">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">📋</span> Plantillas de consentimiento <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/consent-templates" target="_blank">https://www.medsysve.com/doctor/consent-templates</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Consentimientos"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Editor y biblioteca de plantillas de consentimiento informado:
+    <ul>
+      <li>Plantillas pre-cargadas (cirugía, procedimiento invasivo, anestesia, transfusión, etc.).</li>
+      <li>Editor visual para crear plantillas personalizadas.</li>
+      <li>Variables dinámicas (nombre del paciente, procedimiento, riesgos).</li>
+      <li>Versionado de plantillas.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/24-consent-templates.jpg" alt="Plantillas de consentimiento">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">⚖️</span> Cumplimiento <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/compliance" target="_blank">https://www.medsysve.com/doctor/compliance</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Compliance"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Panel de cumplimiento normativo del consultorio:
+    <ul>
+      <li>Estado de cumplimiento LOPDP del consultorio.</li>
+      <li>Consentimientos firmados vs pendientes.</li>
+      <li>Versión legal vigente aceptada por cada usuario.</li>
+      <li>Brechas detectadas con sugerencias de remediación.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/25-compliance.jpg" alt="Cumplimiento">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">📥</span> Importar pacientes <span class="role-badge doctor">DOCTOR</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/doctor/import" target="_blank">https://www.medsysve.com/doctor/import</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Sidebar → <strong>"Importar"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Wizard de importación masiva de pacientes desde archivos externos:
+    <ol>
+      <li><strong>Subir archivo</strong>: CSV, XLSX, o JSON.</li>
+      <li><strong>Mapear columnas</strong>: el sistema detecta automáticamente y permite ajustar.</li>
+      <li><strong>Vista previa</strong>: muestra las primeras filas con validación.</li>
+      <li><strong>Errores</strong>: lista de filas que no pudieron importarse, con motivo.</li>
+      <li><strong>Importar</strong>: confirmación final con conteo esperado.</li>
+    </ol>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/doctor/26-import.jpg" alt="Importar pacientes">
+</div>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- SECCIÓN 5: ADMINISTRADOR                                               -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+
+<div class="section-divider" id="sec-admin">
+  <div class="num">SECCIÓN 05</div>
+  <h2>Panel de Administrador</h2>
+  <p>Para el dueño de la plataforma o el súper-admin del sistema. Acceso a configuración global y métricas globales.</p>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">⚙️</span> Panel principal <span class="role-badge admin">ADMIN</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/admin" target="_blank">https://www.medsysve.com/admin</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Login con cuenta admin → sidebar → <strong>"Panel Admin"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista panorámica del estado de la plataforma:
+    <ul>
+      <li>Métricas globales: doctores activos, pacientes totales, consultas/mes, ingresos.</li>
+      <li>Estado de los servicios: base de datos, Redis, Anthropic API, Stripe.</li>
+      <li>Alertas operativas.</li>
+      <li>Accesos rápidos a las áreas administrativas.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/admin/01-panel.jpg" alt="Panel admin">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">👨‍⚕️</span> Gestión de doctores <span class="role-badge admin">ADMIN</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/admin/doctors" target="_blank">https://www.medsysve.com/admin/doctors</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Panel admin → <strong>"Doctores"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Listado de todos los doctores de la plataforma con:
+    <ul>
+      <li>Estado de la suscripción (Free / Individual / Clínica).</li>
+      <li>Estado de la cuenta (activa / suspendida / eliminada).</li>
+      <li>Verificación LOPDP y consentimiento.</li>
+      <li>Acciones: suspender, eliminar, transferir propiedad, contactar.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/admin/02-doctors.jpg" alt="Gestión de doctores">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🎨</span> Branding global <span class="role-badge admin">ADMIN</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/admin/branding" target="_blank">https://www.medsysve.com/admin/branding</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Panel admin → <strong>"Branding"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Configuración del branding global de MedSysVE:
+    <ul>
+      <li>Logo principal y logo para fondo rojo/oscuro.</li>
+      <li>Paleta de colores primaria.</li>
+      <li>Tipografías.</li>
+      <li>Email transaccional (logo en headers).</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/admin/03-branding.jpg" alt="Branding global">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🔒</span> Cumplimiento global <span class="role-badge admin">ADMIN</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/admin/compliance" target="_blank">https://www.medsysve.com/admin/compliance</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Panel admin → <strong>"Compliance"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista de cumplimiento normativo de TODA la plataforma:
+    <ul>
+      <li>Doctores con consentimiento vigente vs desactualizado.</li>
+      <li>Versiones legales aceptadas por cada usuario.</li>
+      <li>Incidentes de seguridad reportados.</li>
+      <li>Auditoría global.</li>
+      <li>Reportes para entes regulatorios.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/admin/04-compliance.jpg" alt="Cumplimiento global">
+</div>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- SECCIÓN 6: CLÍNICA                                                     -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+
+<div class="section-divider" id="sec-clinica">
+  <div class="num">SECCIÓN 06</div>
+  <h2>Panel de Clínica</h2>
+  <p>Para clínicas multi-doctor con múltiples especialidades y staff administrativo propio.</p>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🏥</span> Dashboard de la clínica <span class="role-badge clinic">CLÍNICA</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/clinica" target="_blank">https://www.medsysve.com/clinica</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Login con cuenta ClinicAdmin → redirección automática.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista panorámica de la clínica completa:
+    <ul>
+      <li>Listado de doctores afiliados.</li>
+      <li>Consultorios y ocupación.</li>
+      <li>Ingresos consolidados.</li>
+      <li>Cumplimiento LOPDP global.</li>
+      <li>Página pública de la clínica (link).</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/clinica/01-dashboard.jpg" alt="Dashboard clínica">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">👥</span> Staff de la clínica <span class="role-badge clinic">CLÍNICA</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/clinica/staff" target="_blank">https://www.medsysve.com/clinica/staff</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Dashboard clínica → <strong>"Staff"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Gestión de personal administrativo de la clínica (distinto del staff de cada consultorio):
+    <ul>
+      <li>Recepcionistas, administradores, facturadores.</li>
+      <li>Permisos a nivel de clínica vs consultorio.</li>
+      <li>Roles: OWNER (control total), MANAGER (gestión operativa).</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/clinica/02-staff.jpg" alt="Staff de clínica">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">✉️</span> Invitaciones a doctores <span class="role-badge clinic">CLÍNICA</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/clinica/invitaciones" target="_blank">https://www.medsysve.com/clinica/invitaciones</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Dashboard clínica → <strong>"Invitaciones"</strong>.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Sistema de códigos de invitación para nuevos doctores afiliados:
+    <ol>
+      <li>Generar código único de invitación.</li>
+      <li>Compartir el código con el doctor invitado.</li>
+      <li>El doctor se registra usando el código → queda afiliado automáticamente a la clínica.</li>
+      <li>Tracking de invitaciones pendientes, aceptadas, expiradas.</li>
+    </ol>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/clinica/03-invitaciones.jpg" alt="Invitaciones a doctores">
+</div>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- SECCIÓN 7: ROLES DE PERSONAL                                          -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+
+<div class="section-divider" id="sec-staff">
+  <div class="num">SECCIÓN 07</div>
+  <h2>Roles de Personal</h2>
+  <p>Enfermera, secretaria y asistente: el equipo que mantiene el consultorio funcionando.</p>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">💉</span> Panel de la Enfermera <span class="role-badge staff">STAFF</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/nurse" target="_blank">https://www.medsysve.com/nurse</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Login con cuenta de enfermera → redirección automática.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista optimizada para el trabajo de enfermería:
+    <ul>
+      <li><strong>Sala de espera</strong>: registrar pacientes que llegan, asignar prioridad.</li>
+      <li><strong>Toma de signos vitales</strong> antes de la consulta (TA, FC, T°, SpO2, peso, talla).</li>
+      <li><strong>Triage</strong>: clasificar por urgencia (rojo / amarillo / verde).</li>
+      <li><strong>Notificaciones</strong> al doctor cuando un paciente está listo.</li>
+      <li><strong>Procedimientos</strong>: inyectables, curaciones, toma de muestras.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/staff/01-nurse.jpg" alt="Panel enfermera">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">📞</span> Panel de la Secretaria <span class="role-badge staff">STAFF</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/secretary" target="_blank">https://www.medsysve.com/secretary</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Login con cuenta de secretaria → redirección automática.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista optimizada para la gestión administrativa:
+    <ul>
+      <li><strong>Agenda</strong>: agendar, reagendar, confirmar citas (vista de calendario grande).</li>
+      <li><strong>Confirmaciones</strong>: enviar SMS/WhatsApp/email para confirmar cita.</li>
+      <li><strong>Recordatorios automáticos</strong>: programar envío de recordatorio 24h antes.</li>
+      <li><strong>Pacientes nuevos</strong>: pre-registrar pacientes por teléfono antes de la cita.</li>
+      <li><strong>Recepción</strong>: marcar check-in cuando el paciente llega.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/staff/02-secretary.jpg" alt="Panel secretaria">
+</div>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🤝</span> Panel del Asistente <span class="role-badge staff">STAFF</span></h3>
+  <a class="url-line" href="https://www.medsysve.com/assistant" target="_blank">https://www.medsysve.com/assistant</a>
+  <h4>Cómo llegar</h4>
+  <ul>
+    <li>Login con cuenta de asistente → redirección automática.</li>
+  </ul>
+  <h4>Qué hace</h4>
+  <div class="description">
+    Vista para el asistente administrativo (rol de soporte general):
+    <ul>
+      <li><strong>Facturación</strong>: emitir facturas, registrar pagos.</li>
+      <li><strong>Cobranza</strong>: seguimiento de facturas pendientes.</li>
+      <li><strong>Reportes</strong>: ingresos por período.</li>
+      <li><strong>Soporte al doctor</strong>: cargar resultados de laboratorio, subir documentos.</li>
+    </ul>
+  </div>
+  <div class="screenshot-wrap">
+  <img class="screenshot" src="https://images.medsysve.com/manual/staff/03-assistant.jpg" alt="Panel asistente">
+</div>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- SECCIÓN 8: MARCO LEGAL Y CUMPLIMIENTO (resumen)                       -->
+<!-- (El detalle está en la sección 02 — Páginas Públicas)                  -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+
+<div class="section-divider" id="sec-legal">
+  <div class="num">SECCIÓN 08</div>
+  <h2>Marco Legal y Cumplimiento LOPDP</h2>
+  <p>Cómo MedSysVE protege los datos y cumple con la ley venezolana.</p>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🛡️</span> Cumplimiento LOPDP</h3>
+  <div class="description">
+    MedSysVE fue diseñado desde el primer día para cumplir con la
+    <strong>Ley Orgánica de Protección de Datos Personales</strong> de Venezuela (Gaceta Oficial 2021).
+  </div>
+
+  <h4>Garantías técnicas</h4>
+  <ul>
+    <li><strong>Cifrado en reposo</strong>: AES-256-GCM para datos personales identificables (PII).</li>
+    <li><strong>Cifrado en tránsito</strong>: TLS 1.3 en todas las conexiones HTTPS.</li>
+    <li><strong>HMAC determinístico</strong>: SHA-256 sobre campos normalizados para búsqueda cifrada.</li>
+    <li><strong>Backups cifrados</strong>: snapshots cifrados con clave separada, rotación 7/30/365 días.</li>
+    <li><strong>Auditoría inmutable</strong>: cada acción queda registrada con timestamp, usuario, IP.</li>
+    <li><strong>Consentimiento granular</strong>: el paciente firma qué tipo de uso acepta (tratamiento, investigación, marketing).</li>
+    <li><strong>Derecho al olvido</strong>: el paciente puede solicitar eliminación; el sistema ejecuta borrado real (no soft-delete).</li>
+    <li><strong>Portabilidad de datos</strong>: exportación JSON completa de la historia del paciente.</li>
+  </ul>
+
+  <h4>Garantías legales</h4>
+  <ul>
+    <li>Versión legal firmada electrónicamente en cada cambio de términos.</li>
+    <li>Periodo de retención configurable por tipo de dato.</li>
+    <li>Reporte de incidentes de seguridad en menos de 72h (cumple Art. 33 LOPDP).</li>
+    <li>Encargado de tratamiento designado y publicado.</li>
+  </ul>
+
+  <div class="info">
+    Las páginas legales completas están en la <a href="#sec-public">Sección 2</a> de este manual:
+    <a href="https://www.medsysve.com/legal/privacidad" target="_blank">Privacidad</a>,
+    <a href="https://www.medsysve.com/legal/terminos" target="_blank">Términos</a>,
+    <a href="https://www.medsysve.com/legal/cookies" target="_blank">Cookies</a>,
+    <a href="https://www.medsysve.com/legal/lopdp-consentimiento" target="_blank">Consentimiento LOPDP</a>.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- CIERRE / SOPORTE                                                       -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+
+<div class="section-divider" id="sec-help">
+  <div class="num">SECCIÓN 09</div>
+  <h2>Soporte y Contacto</h2>
+  <p>Si necesitás ayuda adicional, contactanos por cualquiera de estos canales.</p>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">🆘</span> ¿Necesitás ayuda?</h3>
+  <div class="description">
+    MedSysVE ofrece múltiples canales de soporte:
+  </div>
+
+  <h4>Canales oficiales</h4>
+  <table class="field-table">
+    <thead>
+      <tr><th>Canal</th><th>Contacto</th><th>Horario</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Email</strong></td>
+        <td><a href="mailto:soporte@medsysve.com">soporte@medsysve.com</a></td>
+        <td>Lun–Vie · 8am–6pm VET</td>
+      </tr>
+      <tr>
+        <td><strong>WhatsApp Business</strong></td>
+        <td>+58 412 000 0000</td>
+        <td>Lun–Sáb · 8am–8pm VET</td>
+      </tr>
+      <tr>
+        <td><strong>Soporte bot (in-app)</strong></td>
+        <td>Icono de chat en la esquina inferior derecha</td>
+        <td>24/7</td>
+      </tr>
+      <tr>
+        <td><strong>Documentación oficial</strong></td>
+        <td><a href="https://www.medsysve.com/docs" target="_blank">medsysve.com/docs</a></td>
+        <td>24/7</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Para reportar incidentes de seguridad</h4>
+  <p><strong>Email prioritario:</strong> <a href="mailto:security@medsysve.com">security@medsysve.com</a></p>
+  <p>Encriptar con nuestra clave pública PGP disponible en
+  <a href="https://www.medsysve.com/.well-known/security.txt" target="_blank">/.well-known/security.txt</a>.</p>
+</div>
+
+<div class="page-entry">
+  <h3><span class="icon">ℹ️</span> Información del documento</h3>
+  <table class="field-table">
+    <tr><th>Producto</th><td>MedSysVE — Sistema de Historia Clínica Digital</td></tr>
+    <tr><th>Versión del producto</th><td>1.0</td></tr>
+    <tr><th>Versión del manual</th><td>1.0</td></tr>
+    <tr><th>Fecha de publicación</th><td>Julio 2026</td></tr>
+    <tr><th>Operador</th><td>YOGUITECH LLC</td></tr>
+    <tr><th>Sitio web</th><td><a href="https://www.medsysve.com" target="_blank">medsysve.com</a></td></tr>
+    <tr><th>Idioma</th><td>Español (es-VE)</td></tr>
+    <tr><th>Cobertura de pantallas</th><td>50+ pantallas documentadas</td></tr>
+    <tr><th>Roles cubiertos</th><td>7 (Doctor, Paciente, Admin, Clínica, Enfermera, Secretaria, Asistente)</td></tr>
+    <tr><th>Cumplimiento normativo</th><td>LOPDP · HIPAA-ready</td></tr>
+  </table>
+
+  <div class="tip">
+    <strong>¿Encontraste algo que no funciona como dice este manual?</strong>
+    Escríbenos a <a href="mailto:docs@medsysve.com">docs@medsysve.com</a> —
+    actualizamos el manual cada vez que se libera una nueva versión.
+  </div>
+</div>
+
+</div><!-- /.page-content -->
+
+</body>
+</html>

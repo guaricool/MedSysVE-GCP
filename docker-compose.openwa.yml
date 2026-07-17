@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  openwa:
+    image: rmyndharis/openwa:latest
+    container_name: medsysve_openwa
+    restart: unless-stopped
+    ports:
+      - "2785:2785"
+    environment:
+      - NODE_ENV=production
+      - API_KEY=${OPENWA_API_KEY:-YOUR_SECURE_API_KEY}
+      - ENGINE_TYPE=whatsapp-web.js
+    volumes:
+      - openwa_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2785/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  openwa_data:

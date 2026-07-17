@@ -1,0 +1,22 @@
+-- Audit S9 (2026-07-07): optimistic locking for Appointment.
+--
+-- The Appointment model in schema.prisma already declares `version`
+-- (commit e882d0a, lines 728-735), but the corresponding ALTER TABLE was
+-- missed at the time. The container build includes the schema field, so
+-- every Prisma query that selects the model without an explicit `select`
+-- (most of server/routers/appointment.ts and analytics.ts) generates SQL
+-- that asks for `Appointment.version` — and Postgres returns P2022
+-- ColumnNotFound. The calendar of appointments has been broken in prod
+-- since deploy #256 (commit e882d0a) on 2026-07-07.
+--
+-- This migration backfills the missing column. Existing rows start at 0
+-- (DEFAULT). No backfill script needed.
+--
+-- After this migration, optimistic locking on Appointment becomes fully
+-- available (mirrors Encounter.version from audit S9). The router layer
+-- doesn't yet use it (low write contention on Appointment rows), but the
+-- schema is now consistent with the runtime expectation.
+--
+-- Deploy verification: open the calendar page in the doctor dashboard,
+-- the previous P2022 errors in `docker logs <container>` should stop.
+ALTER TABLE "Appointment" ADD COLUMN "version" INTEGER NOT NULL DEFAULT 0;

@@ -1,0 +1,27 @@
+{
+  "url": "https://medsysve.13.140.181.29.sslip.io/doctor",
+  "title": "MedSysVE",
+  "h1": [
+    "Bienvenido, Dr. Prueba"
+  ],
+  "h2": [
+    "Pizarrón del equipo"
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "placeholder": "Agregar nota para el equipo...",
+      "id": ""
+    }
+  ],
+  "buttons": [
+    "Buscar...⌘K",
+    "Cerrar sesión",
+    "Agregar"
+  ],
+  "forms": 1,
+  "mainText": "Bienvenido, Dr. Prueba\n\nConsultorio Prueba\n\nPacientes registrados\n\n1\n\nStaff activo\n\n1\n\nCitas hoy\n\n0\n\nPIZARRÓN DEL EQUIPO\nAgregar\n\nSin notas. Agregue recordatorios para el equipo.",
+  "bodyText": "MedSysVE\n\nConsultorio Prueba\n\nBuscar...\n⌘K\nDashboard\nPacientes\nSala de Espera\nCitas\nFacturación\nEstadísticas\nHorario\nMensajes\nCrónicos\nTareas\nSeguros\nConsentimientos\nAuditoría\nImportar\nCalidad\nReferidos\nMi Equipo\nConsultorio\n\nCarlos Prueba\n\nDoctor\n\nCerrar sesión\nBienvenido, Dr. Prueba\n\nConsultorio Prueba\n\nPacientes registrados\n\n1\n\nStaff activo\n\n1\n\nCitas hoy\n\n0\n\nPIZARRÓN DEL EQUIPO\nAgregar\n\nSin notas. Agregue recordatorios para el equipo."
+}

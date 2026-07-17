@@ -1,0 +1,15 @@
+[Unit]
+Description=MedSysVE rclone + secrets gocryptfs mounts
+After=local-fs.target
+Before=cron.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Use a wrapper script so we can mount both vaults in one ExecStart.
+ExecStart=/opt/medsysve-backup/mount-secrets.sh
+ExecStop=/bin/umount /root/.config/rclone
+ExecStop=/bin/umount /opt/medsysve-backup-secrets
+
+[Install]
+WantedBy=multi-user.target

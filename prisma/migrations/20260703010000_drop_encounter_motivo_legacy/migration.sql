@@ -1,0 +1,20 @@
+-- Drop the legacy plaintext motivo column from Encounter.
+--
+-- Audit #1 (commit 0e32dfd, 20260702145636_encounter_motivo_encryption) added
+-- motivoCifrado + motivoHmac columns and ran a backfill script that encrypted
+-- the 18 existing rows that had motivo plaintext. Verified post-deploy:
+--
+--   total_encounters | with_motivo_plaintext | with_motivo_cifrado
+--                  23 |                   18 |                 18
+--
+-- All 18 backfilled rows have motivoCifrado populated, so dropping motivo
+-- does not lose data. The 5 encounters without motivo are drafts created
+-- post-deploy that never had motivo plaintext.
+--
+-- After this migration:
+--   - motivo is read exclusively via readEncounterMotivo from motivoCifrado
+--   - lib/encounter-crypto.ts no longer has a plaintext fallback path
+--   - Any tampered or missing ciphertext returns undefined (UI shows empty)
+--
+-- Compliance: LOPDP Art. 19 (Venezuela) — eliminating plaintext PHI at rest.
+ALTER TABLE "Encounter" DROP COLUMN "motivo";

@@ -1,0 +1,86 @@
+import { router } from "../trpc"
+import { authRouter } from "./auth"
+import { doctorRouter } from "./doctor"
+import { workspaceRouter } from "./workspace"
+import { staffRouter } from "./staff"
+import { patientRouter } from "./patient"
+import { medicationRouter } from "./medication"
+import { encounterRouter } from "./encounter"
+import { icd10Router } from "./icd10"
+import { prescriptionRouter } from "./prescription"
+import { documentRouter } from "./document"
+import { portalRouter } from "./portal"
+import { appointmentRouter } from "./appointment"
+import { invoiceRouter } from "./invoice"
+import { clinicPublicRouter } from "./clinicPublic"
+import { analyticsRouter } from "./analytics"
+import { availabilityRouter } from "./availability"
+import { labResultRouter } from "./labResult"
+import { mensajeRouter } from "./mensaje"
+import { alergiaRouter } from "./alergia"
+import { labOrderRouter } from "./labOrder"
+import { imagingOrderRouter } from "./imagingOrder"
+import { templateRouter } from "./template"
+import { tagRouter } from "./tag"
+import { announcementRouter } from "./announcement"
+import { staffNoteRouter } from "./staffNote"
+import { vaccineRouter } from "./vaccine"
+import { waitingRoomRouter } from "./waitingRoom"
+import { notificationRouter } from "./notification"
+import { taskRouter } from "./task"
+import { insuranceRouter } from "./insurance"
+import { consentRouter } from "./consent"
+import { auditRouter } from "./audit"
+import { adminRouter } from "./admin"
+import { twoFactorRouter } from "./twoFactor"
+import { complianceRouter } from "./compliance"
+import { clinicAdminRouter } from "./clinicAdmin"
+import { billingRouter } from "./billing"
+import { featureFlagRouter } from "./feature-flag"
+import { reportPreferencesRouter } from "./report-preferences"
+import { expressOrderRouter } from "./expressOrder"
+
+export const appRouter = router({
+  auth: authRouter,
+  doctor: doctorRouter,
+  workspace: workspaceRouter,
+  staff: staffRouter,
+  patient: patientRouter,
+  medication: medicationRouter,
+  encounter: encounterRouter,
+  icd10: icd10Router,
+  prescription: prescriptionRouter,
+  document: documentRouter,
+  portal: portalRouter,
+  appointment: appointmentRouter,
+  invoice: invoiceRouter,
+  clinicPublic: clinicPublicRouter,
+  analytics: analyticsRouter,
+  availability: availabilityRouter,
+  labResult: labResultRouter,
+  mensaje: mensajeRouter,
+  alergia: alergiaRouter,
+  labOrder: labOrderRouter,
+  imagingOrder: imagingOrderRouter,
+  template: templateRouter,
+  tag: tagRouter,
+  announcement: announcementRouter,
+  staffNote: staffNoteRouter,
+  vaccine: vaccineRouter,
+  waitingRoom: waitingRoomRouter,
+  notification: notificationRouter,
+  task: taskRouter,
+  insurance: insuranceRouter,
+  consent: consentRouter,
+  audit: auditRouter,
+  admin: adminRouter,
+  twoFactor: twoFactorRouter,
+  compliance: complianceRouter,
+  clinicAdmin: clinicAdminRouter,
+  billing: billingRouter,
+  featureFlag: featureFlagRouter,
+  reportPreferences: reportPreferencesRouter,
+  expressOrder: expressOrderRouter,
+})
+
+export type AppRouter = typeof appRouter

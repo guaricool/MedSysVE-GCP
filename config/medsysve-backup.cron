@@ -1,0 +1,5 @@
+# MedSysVE daily Postgres backup → Google Drive (encrypted).
+# Runs at 03:00 America/Caracas = 07:00 UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+0 7 * * * root /opt/medsysve-backup/backup.sh >> /var/log/medsysve-backup.log 2>&1
