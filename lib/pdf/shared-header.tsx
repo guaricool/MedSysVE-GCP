@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet } from "@react-pdf/renderer"
 import { buildPdfHeader, type DoctorInfo, type ClinicInfo, type PdfBranding } from "./header-logic"
 
 const styles = StyleSheet.create({
-  header: { borderBottomWidth: 1, borderBottomColor: "#1e3a5f", paddingBottom: 6, marginBottom: 12 },
+  header: { paddingBottom: 6, marginBottom: 12 },
   logo: { width: 42, height: 42, objectFit: "contain", marginRight: 10 },
   headerRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
   headerTitulo: { fontSize: 12, fontWeight: "bold", color: "#1e3a5f" },

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { redis } from "./lib/redis"
 import { safeLog } from "./lib/log-sanitizer"
 import { auth } from "@/lib/auth-edge"
 
@@ -34,6 +33,8 @@ interface IpBucket {
   resetAt: number
 }
 
+const globalIpBuckets = new Map<string, IpBucket>();
+
 const IP_LIMITS: Record<string, { max: number; windowMs: number; failClosed: boolean }> = {
   // Auth endpoints — strict.
   "/api/auth/": { max: 30, windowMs: 60_000, failClosed: true },           // 30 / min per IP
@@ -64,11 +65,8 @@ async function checkIpRateLimit(
   const now = Date.now()
 
   try {
-    if (!process.env.REDIS_URL) {
-      return { ok: true, retryAfter: 0, bucket: matched }
-    }
-    const raw = await redis.get(key)
-    const bucket: IpBucket = raw ? JSON.parse(raw) : { count: 0, resetAt: now + cfg.windowMs }
+    const raw = globalIpBuckets.get(key)
+    const bucket: IpBucket = raw ? raw : { count: 0, resetAt: now + cfg.windowMs }
 
     // Reset if window expired.
     if (now >= bucket.resetAt) {
@@ -80,11 +78,11 @@ async function checkIpRateLimit(
 
     if (bucket.count > cfg.max) {
       const retryAfter = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))
-      await redis.set(key, JSON.stringify(bucket), "PX", bucket.resetAt - now)
+      globalIpBuckets.set(key, bucket)
       return { ok: false, retryAfter, bucket: matched }
     }
 
-    await redis.set(key, JSON.stringify(bucket), "PX", bucket.resetAt - now)
+    globalIpBuckets.set(key, bucket)
     return { ok: true, retryAfter: 0, bucket: matched }
   } catch (err) {
     safeLog("error", "proxy.ratelimit_failed", {
@@ -94,8 +92,6 @@ async function checkIpRateLimit(
       error: err instanceof Error ? err.message : "unknown",
     })
     // Fail-closed for security-sensitive buckets (auth, admin, portal-login)
-    // so a Redis outage cannot disable credential-stuffing protection. For
-    // generic API and tRPC we fail-open to preserve availability.
     return { ok: !cfg.failClosed, retryAfter: cfg.failClosed ? 60 : 0, bucket: matched }
   }
 }

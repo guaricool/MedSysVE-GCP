@@ -1,19 +1,16 @@
-import { redis } from "./redis";
 import { safeLog } from "./log-sanitizer";
 
 /**
  * Account lockout — protects against brute force / credential stuffing.
  *
  * Strategy:
- *  - Failed login attempts tracked per email in Redis (key: `lock:email:<email>`).
+ *  - Failed login attempts tracked per email in memory.
  *  - After N consecutive failures within a sliding window, account is locked for
  *    a fixed duration (default: 15 minutes).
  *  - Successful login clears the counter.
  *
- * Why Redis (not DB):
- *  - Survives deploys (lockout state not lost on container restart).
+ * Why In-Memory:
  *  - Fast — no DB write on every failed attempt (DoS-resistant).
- *  - Auto-expires — no garbage collection needed.
  *
  * Why per-email (not per-IP):
  *  - IP-based is bypassed by botnets. Email-based protects the account itself.
@@ -27,6 +24,10 @@ import { safeLog } from "./log-sanitizer";
 
 const FAILED_ATTEMPTS_KEY = (email: string) => `lock:email:${email.toLowerCase()}`;
 const LOCK_KEY = (email: string) => `lock:locked:${email.toLowerCase()}`;
+
+// In-memory storage for lockout state
+const lockoutCache = new Map<string, { lockedUntil: number }>();
+const failedAttemptsCache = new Map<string, { count: number; expiresAt: number }>();
 
 export interface LockoutConfig {
   /** Max failed attempts before lock. */
@@ -55,25 +56,40 @@ export interface LockoutCheck {
  */
 export async function isLocked(email: string): Promise<LockoutCheck> {
   try {
-    const locked = await redis.get(LOCK_KEY(email));
-    if (locked) {
-      const ttl = await redis.ttl(LOCK_KEY(email));
+    const now = Date.now();
+    const lockKey = LOCK_KEY(email);
+    const lockEntry = lockoutCache.get(lockKey);
+    
+    if (lockEntry && lockEntry.lockedUntil > now) {
+      const ttlSeconds = Math.ceil((lockEntry.lockedUntil - now) / 1000);
       return {
         locked: true,
-        remainingSeconds: ttl > 0 ? ttl : DEFAULT_LOCKOUT.lockDurationSec,
+        remainingSeconds: ttlSeconds > 0 ? ttlSeconds : DEFAULT_LOCKOUT.lockDurationSec,
         attemptsRemaining: 0,
       };
+    } else if (lockEntry) {
+      // Clean up expired lock
+      lockoutCache.delete(lockKey);
     }
+
     // Count attempts in window
-    const count = await redis.get(FAILED_ATTEMPTS_KEY(email));
-    const n = count ? parseInt(count, 10) : 0;
+    const attemptsKey = FAILED_ATTEMPTS_KEY(email);
+    const attemptsEntry = failedAttemptsCache.get(attemptsKey);
+    
+    if (attemptsEntry && attemptsEntry.expiresAt <= now) {
+      // Clean up expired attempts
+      failedAttemptsCache.delete(attemptsKey);
+    }
+    
+    const count = attemptsEntry && attemptsEntry.expiresAt > now ? attemptsEntry.count : 0;
+    
     return {
       locked: false,
       remainingSeconds: 0,
-      attemptsRemaining: Math.max(0, DEFAULT_LOCKOUT.maxAttempts - n),
+      attemptsRemaining: Math.max(0, DEFAULT_LOCKOUT.maxAttempts - count),
     };
   } catch (err) {
-    // Fail open on Redis error — login lockout is defense-in-depth, not primary.
+    // Fail open on error — login lockout is defense-in-depth, not primary.
     safeLog("error", "lockout.check_failed", {
       email: email.slice(0, 3) + "***",
       error: err instanceof Error ? err.message : "unknown",
@@ -89,16 +105,31 @@ export async function isLocked(email: string): Promise<LockoutCheck> {
 export async function recordFailedLogin(email: string): Promise<LockoutCheck> {
   const cfg = DEFAULT_LOCKOUT;
   try {
+    const now = Date.now();
     const key = FAILED_ATTEMPTS_KEY(email);
-    const count = await redis.incr(key);
-    if (count === 1) {
-      // First failure in this window — set expiry.
-      await redis.expire(key, cfg.windowSec);
+    
+    let attemptsEntry = failedAttemptsCache.get(key);
+    
+    // Reset if expired
+    if (attemptsEntry && attemptsEntry.expiresAt <= now) {
+      attemptsEntry = undefined;
     }
+    
+    let count = 1;
+    let expiresAt = now + (cfg.windowSec * 1000);
+    
+    if (attemptsEntry) {
+      count = attemptsEntry.count + 1;
+      expiresAt = attemptsEntry.expiresAt;
+    }
+    
+    failedAttemptsCache.set(key, { count, expiresAt });
 
     if (count >= cfg.maxAttempts) {
       // Lock the account.
-      await redis.set(LOCK_KEY(email), "1", "EX", cfg.lockDurationSec);
+      const lockedUntil = now + (cfg.lockDurationSec * 1000);
+      lockoutCache.set(LOCK_KEY(email), { lockedUntil });
+      
       safeLog("warn", "auth.account_locked", {
         email: email.slice(0, 3) + "***",
         attempts: count,
@@ -129,8 +160,8 @@ export async function recordFailedLogin(email: string): Promise<LockoutCheck> {
  */
 export async function clearLockout(email: string): Promise<void> {
   try {
-    await redis.del(FAILED_ATTEMPTS_KEY(email));
-    await redis.del(LOCK_KEY(email));
+    failedAttemptsCache.delete(FAILED_ATTEMPTS_KEY(email));
+    lockoutCache.delete(LOCK_KEY(email));
   } catch (err) {
     safeLog("error", "lockout.clear_failed", {
       error: err instanceof Error ? err.message : "unknown",

@@ -1,21 +1,14 @@
-import { redis } from "./redis";
-
 /**
- * Redis-backed sliding-window rate limiter.
+ * In-memory sliding-window rate limiter.
  *
  * Why sliding window (vs fixed window):
  *  - Fixed window allows bursts at window boundaries (2N requests in 2 seconds
  *    when limit is N/sec). Sliding window is smoother.
  *  - For login + portal access we want strict enforcement — no surprises.
  *
- * Storage: Redis sorted set keyed by `${prefix}:${identifier}`.
- * Each member is a unique request id (timestamp + random nonce).
+ * Storage: In-memory Map keyed by `${prefix}:${identifier}`.
+ * Each member is an array of timestamps.
  * We trim entries older than the window before counting.
- *
- * Failure mode: if Redis is unreachable, we FAIL OPEN (allow the request).
- * Rationale: better to let a few extra login attempts through than to lock
- * the entire system out during a Redis outage. Login is also protected by
- * the bcrypt cost factor + lockout mechanism in lib/auth.ts.
  */
 
 export interface RateLimitConfig {
@@ -37,6 +30,8 @@ export interface RateLimitResult {
   retryAfter: number;
 }
 
+const rateLimitCache = new Map<string, number[]>();
+
 export async function rateLimit(config: RateLimitConfig): Promise<RateLimitResult> {
   const { prefix, identifier, max, windowSec } = config;
   const key = `${prefix}:${identifier}`;
@@ -45,34 +40,35 @@ export async function rateLimit(config: RateLimitConfig): Promise<RateLimitResul
   const windowStart = now - windowMs;
 
   try {
+    let timestamps = rateLimitCache.get(key) || [];
+    
     // 1. Trim entries older than window.
-    await redis.zremrangebyscore(key, "-inf", windowStart);
+    timestamps = timestamps.filter(ts => ts > windowStart);
 
     // 2. Count current entries in window.
-    const count = await redis.zcard(key);
+    const count = timestamps.length;
 
     if (count >= max) {
       // Find when the oldest entry expires — that's the retry-after.
-      const oldest = await redis.zrange(key, 0, 0, "WITHSCORES");
-      const oldestTs = oldest.length >= 2 ? Number(oldest[1]) : now;
+      const oldestTs = timestamps[0] || now;
       const retryAfter = Math.max(1, Math.ceil((oldestTs + windowMs - now) / 1000));
+      rateLimitCache.set(key, timestamps);
       return { ok: false, remaining: 0, retryAfter };
     }
 
     // 3. Add this request to the window.
-    // Use timestamp + 6 random digits as the member to allow concurrent requests
-    // at the same millisecond.
-    const member = `${now}-${Math.random().toString(36).slice(2, 8)}`;
-    await redis.zadd(key, now, member);
+    timestamps.push(now);
+    rateLimitCache.set(key, timestamps);
 
-    // 4. Set expiry so the key cleans itself up if traffic stops.
-    await redis.expire(key, windowSec + 1);
+    // Note: We don't implement strict auto-expiry cleanup like Redis here to keep it simple,
+    // memory footprint of arrays is extremely small. In a real long-running heavy service,
+    // we would periodically clean up old keys.
 
     return { ok: true, remaining: max - count - 1, retryAfter: 0 };
   } catch (err) {
-    // Fail open: log but allow. See file header for rationale.
+    // Fail open: log but allow.
     console.error(
-      `[rateLimit] Redis error for ${prefix}:${identifier} — failing open:`,
+      `[rateLimit] Error for ${prefix}:${identifier} — failing open:`,
       err instanceof Error ? err.message : "unknown",
     );
     return { ok: true, remaining: max, retryAfter: 0 };

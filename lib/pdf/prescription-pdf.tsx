@@ -36,7 +36,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "flex-start",
-    borderBottom: "1pt solid #333",
     paddingBottom: 8,
     marginBottom: 10,
   },
