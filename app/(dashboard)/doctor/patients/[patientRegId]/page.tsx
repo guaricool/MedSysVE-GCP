@@ -24,6 +24,7 @@ import { auth } from "@/lib/auth"
 import type { SessionUser } from "@/types"
 import { EditPatientModal } from "@/components/patients/edit-patient-modal"
 import { DeletePatientModal } from "@/components/patients/delete-patient-modal"
+import { CrossWorkspaceHistory } from "@/components/patients/cross-workspace-history"
 
 export default async function PatientHistoryPage({
   params,
@@ -170,6 +171,9 @@ export default async function PatientHistoryPage({
               ))}
             </ul>
           )}
+          
+          {/* Consultas en otros consultorios del mismo doctor */}
+          <CrossWorkspaceHistory patientRegistrationId={patientRegId} />
         </div>
 
         {/* Blood type */}

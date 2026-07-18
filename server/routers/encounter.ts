@@ -727,4 +727,85 @@ const updated = await ctx.db.encounter.update({
         })
       }
     }),
+
+  listCrossWorkspace: doctorProcedure
+    .input(z.object({ patientRegistrationId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const reg = await ctx.db.patientRegistration.findFirst({
+        where: { id: input.patientRegistrationId, workspaceId: ctx.session.workspaceId },
+        include: { patient: true },
+      })
+      if (!reg) throw new TRPCError({ code: "NOT_FOUND" })
+      if (!reg.patient.hmacCedula) return [] // Only works for patients with cédula
+
+      const rows = await ctx.db.encounter.findMany({
+        where: {
+          patientRegistration: {
+            patient: {
+              hmacCedula: reg.patient.hmacCedula,
+              tipoIdentificacion: reg.patient.tipoIdentificacion,
+            }
+          },
+          workspace: {
+            doctorId: ctx.session.doctorId,
+          },
+          workspaceId: { not: ctx.session.workspaceId },
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          createdAt: true,
+          status: true,
+          motivoCifrado: true,
+          workspace: { select: { nombre: true } },
+          diagnoses: { select: { codigoCie10: true, descripcion: true } },
+          _count: { select: { prescriptions: true } },
+        },
+      })
+
+      return rows.map((e) => {
+        const { motivoCifrado: _drop, ...rest } = e
+        return {
+          ...rest,
+          motivo: readEncounterMotivo({ motivoCifrado: e.motivoCifrado }) ?? null,
+        }
+      })
+    }),
+
+  getCrossWorkspace: doctorProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const enc = await ctx.db.encounter.findFirst({
+        where: { 
+          id: input.id, 
+          workspace: { doctorId: ctx.session.doctorId },
+          workspaceId: { not: ctx.session.workspaceId },
+        },
+        include: {
+          workspace: { select: { nombre: true } },
+          diagnoses: { orderBy: { createdAt: "asc" } },
+          prescriptions: {
+            include: { items: { include: { medication: true } } },
+            orderBy: { createdAt: "desc" },
+          },
+        },
+      })
+      if (!enc) throw new TRPCError({ code: "NOT_FOUND" })
+
+      void audit("VIEW_ENCOUNTER", {
+        userId: ctx.session.id,
+        userRole: ctx.session.role,
+        workspaceId: ctx.session.workspaceId,
+        resourceType: "Encounter",
+        resourceId: enc.id,
+        patientId: enc.patientRegistrationId,
+      })
+
+      return {
+        ...enc,
+        motivo: readEncounterMotivo(enc) ?? null,
+        historiaClinica: enc.historiaClinicaCifrada ? safeDecrypt(enc.historiaClinicaCifrada) ?? enc.historiaClinica ?? null : enc.historiaClinica ?? null,
+        plan: enc.planCifrado ? safeDecrypt(enc.planCifrado) ?? enc.plan ?? null : enc.plan ?? null,
+      }
+    }),
 })
