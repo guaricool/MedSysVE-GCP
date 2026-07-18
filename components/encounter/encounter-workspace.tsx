@@ -37,6 +37,8 @@ import { EndocrinologiaForm } from "./endocrinologia-form"
 import { CirugiaGeneralForm } from "./cirugia-general-form"
 import { MedicinaInternaForm } from "./medicina-interna-form"
 import { TraumatologiaForm } from "./traumatologia-form"
+import { PsiquiatriaForm } from "./psiquiatria-form"
+import { InfectologiaForm } from "./infectologia-form"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import type { Vitales } from "@/lib/clinical/vitals-alerts"
 
@@ -86,6 +88,8 @@ type SectionId =
   | "cirugia-general"
   | "medicina-interna"
   | "traumatologia"
+  | "psiquiatria"
+  | "infectologia"
 
 const SECTIONS: { id: SectionId; key: "S" | "O" | "A" | "P" | "R" | "L" | "I" | "M" | "T" | "E"; label: string; icon: string; shortcut: string }[] = [
   { id: "subjetivo", key: "S", label: "Subjetivo", icon: "💬", shortcut: "1" },
@@ -246,6 +250,8 @@ export function EncounterWorkspace({
     else if (especialidad === "Endocrinología") core.push({ id: "endocrinologia", label: "Endocrinología", icon: "🔥" })
     else if (especialidad === "Cirugía General") core.push({ id: "cirugia-general", label: "Cirugía General", icon: "✂️" })
     else if (especialidad === "Medicina Interna") core.push({ id: "medicina-interna", label: "Medicina Interna", icon: "🛡️" })
+    else if (especialidad === "Psiquiatría") core.push({ id: "psiquiatria", label: "Psiquiatría", icon: "🧠" })
+    else if (especialidad === "Infectología") core.push({ id: "infectologia", label: "Infectología", icon: "🦠" })
     
     return core;
   }, [especialidad, initialStatus])
@@ -842,6 +848,42 @@ export function EncounterWorkspace({
             onToggle={() => toggleSection("traumatologia")}
           >
             <TraumatologiaForm
+              encounterId={encounterId}
+              disabled={locked}
+              initialData={enc?.datosEspecialidad || {}}
+            />
+          </Section>
+        )}
+
+        {visibleSections.has("psiquiatria") && especialidad === "Psiquiatría" && (
+          <Section
+            id="psiquiatria"
+            key="psiquiatria"
+            title="Psiquiatría y Salud Mental"
+            icon="🧠"
+            collapsible
+            open={openSections.has("psiquiatria")}
+            onToggle={() => toggleSection("psiquiatria")}
+          >
+            <PsiquiatriaForm
+              encounterId={encounterId}
+              disabled={locked}
+              initialData={enc?.datosEspecialidad || {}}
+            />
+          </Section>
+        )}
+
+        {visibleSections.has("infectologia") && especialidad === "Infectología" && (
+          <Section
+            id="infectologia"
+            key="infectologia"
+            title="Infectología"
+            icon="🦠"
+            collapsible
+            open={openSections.has("infectologia")}
+            onToggle={() => toggleSection("infectologia")}
+          >
+            <InfectologiaForm
               encounterId={encounterId}
               disabled={locked}
               initialData={enc?.datosEspecialidad || {}}
