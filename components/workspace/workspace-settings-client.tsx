@@ -370,7 +370,7 @@ function NewWorkspaceSection() {
   })
 
   return (
-    <section className="rounded-lg border border-dashed border-slate-700 p-5">
+    <section id="new-workspace" className="rounded-lg border border-dashed border-slate-700 p-5">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">

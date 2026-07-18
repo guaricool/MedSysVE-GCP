@@ -81,7 +81,7 @@ export function WorkspaceSwitcher() {
           ))}
           <div className="border-t border-slate-700 mt-1 pt-1">
             <Link
-              href="/doctor/workspace"
+              href="/doctor/workspace#new-workspace"
               onClick={() => setOpen(false)}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-slate-300 hover:text-blue-400 hover:bg-slate-800 transition-colors"
             >
