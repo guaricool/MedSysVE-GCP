@@ -138,12 +138,4 @@ export async function clearLockout(email: string): Promise<void> {
   }
 }
 
-/**
- * Manually unlock an account (admin action).
- * Endpoint: admin can call this from /admin to unlock a user who was locked
- * out for legitimate reasons.
- */
-export async function adminUnlock(email: string): Promise<void> {
-  await clearLockout(email);
-  safeLog("info", "auth.admin_unlock", { email: email.slice(0, 3) + "***" });
-}
+// adminUnlock ha sido removido como parte de la purga de deuda técnica

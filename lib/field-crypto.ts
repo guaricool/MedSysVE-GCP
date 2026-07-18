@@ -121,12 +121,8 @@ export function hmacIndex(plaintext: string): string {
  */
 export function assertEncryptionConfigured(): void {
   getKey();
-  // HMAC key is optional but recommended
   if (!process.env.FIELD_HMAC_KEY) {
-    // Warn but don't fail
-    console.warn(
-      "[encryption] FIELD_HMAC_KEY not set — searchable encryption disabled",
-    );
+    throw new Error("FIELD_HMAC_KEY not set — failing fast to protect searchable encryption.");
   }
 }
 

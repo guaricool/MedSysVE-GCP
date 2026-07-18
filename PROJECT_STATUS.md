@@ -49,10 +49,10 @@ SaaS multi-tenant de **Historia Clínica Electrónica (HCE) / EMR** para el merc
 | 2026-06-29 | `9e7f695` | **Patient Edit/Delete + Encounter Delete** — Lógica de edición y eliminación segura manteniendo integridad referencial. Dirección del paciente añadida al schema. |
 | 2026-06-30 | `8f16fc7` | **Referral Data Transfer + Leak Fix** — Copia de perfil clínico (labs<90d, vacunas, alergias, seguros, historia) de doctor a doctor al aceptar un referido. Fix de tenant isolation cross-workspace. |
 | 2026-06-30 | `fbc9670` | **UI/PDF Fixes** — Renombrado global de 'Anamnesis' a 'Historia Clínica' y corrección del renderizado de la lista de diagnósticos en resúmenes PDF que usaban viñetas incompatibles con Helvetica. |
-| 2026-06-30 | `a4c5a55` | **Deploy fixes** — Prevención de `whole project trace` de Next.js (que causaba gigabytes en la carpeta standalone) y optimización en Dockerfile para evitar `chown -R` masivo que crasheaba en Coolify. |
+| 2026-06-30 | `a4c5a55` | **Deploy fixes** — Prevención de `whole project trace` de Next.js (que causaba gigabytes en la carpeta standalone) y optimización en Dockerfile para evitar `chown -R` masivo que crasheaba en Cloud Run. |
 | 2026-06-30 | `4d61a11` | **Digital Seals on PDFs** — Se corrigió la importación de `buildPdfBranding` en los endpoints de PDF y se implementó el renderizado del sello en todos los documentos. |
 | 2026-06-30 | `9accae2` | **PDF Styling** — Se movió el sello digital y el bloque de firmas hacia el lado derecho de las páginas en todos los documentos generados. |
-| 2026-07-06 | `6509011` | **Audit #18 cerrado** — Backup chain v2 (GFS retention 7d/4w/12m, sha256 integrity, OAuth pre-flight, msmtp alerts) + monthly restore drill via Coolify Scheduled Task UUID `bljazmj4u5g3cmvbpqlg5m6i`. End-to-end verificado contra VPS real. |
+| 2026-07-06 | `6509011` | **Audit #18 cerrado** — Backup chain v2 (GFS retention 7d/4w/12m, sha256 integrity, OAuth pre-flight, msmtp alerts) + monthly restore drill via Cloud Run Scheduled Task UUID `bljazmj4u5g3cmvbpqlg5m6i`. End-to-end verificado contra GCP real. |
 | 2026-07-06 | `2578564` | **Audit #16 cerrado** — Notification bell + TIPO_HREF completo para los 7 `NotificationType` (APPOINTMENT_REQUEST, PORTAL_MESSAGE, REFERRAL_*, IMAGING_RESULT, SYSTEM). 6 con destino navegable + 1 mark-read-only. |
 | 2026-07-06 | `ec28975` + `9ca0ba6` | **Audit S5+S6** — 9 routers migrados a `doctorProcedure` (alergia, tag, vaccine, labResult, medication, template, staffNote, billing, analytics). Gap #1 parcial + Gap #2 + Gap #3 cerrados. |
 | 2026-07-06 | `cb74c56` | **Sync** — Regeneración de `SYSTEM_INDEX.md` contra HEAD + script `scripts/generate-graph3d.py` para viz 3D del knowledge graph (189 comunidades, 2117 nodos). |
@@ -88,7 +88,7 @@ SaaS multi-tenant de **Historia Clínica Electrónica (HCE) / EMR** para el merc
 
 | Capa | Tecnología | Versión | Notas |
 |------|-----------|---------|-------|
-| Runtime | Node.js | 20.x LTS | Coolify container |
+| Runtime | Node.js | 20.x LTS | Cloud Run container |
 | Framework | Next.js (App Router, `output: standalone`) | 16.2.9 | ⚠️ Lee `node_modules/next/dist/docs/` antes de escribir código. |
 | UI | React + shadcn/ui + Tailwind CSS v4 | 19.2.4 / ^4 | **Tailwind v4** = sin `tailwind.config.js`, keyframes vía `@theme inline`. |
 | Lenguaje | TypeScript | ^5 strict | `tsc --noEmit` debe pasar siempre. |
@@ -105,7 +105,7 @@ SaaS multi-tenant de **Historia Clínica Electrónica (HCE) / EMR** para el merc
 | QR codes | qrcode | ^1.5.4 | Para 2FA TOTP enrollment. |
 | Charts | Recharts | ^3.8.0 | Analytics + vitales. |
 | Forms | react-hook-form + zodResolver | ^7.79.0 | |
-| Deploy | Coolify (Docker standalone) | v4.1.2 | VPS Contabo `13.140.181.29`. App ID `jes48vqxcs3l2lyk1lkpa5zt`. |
+| Deploy | Cloud Run (Docker standalone) | v4.1.2 | GCP GCP `13.140.181.29`. App ID `jes48vqxcs3l2lyk1lkpa5zt`. |
 | Tests E2E | Playwright | ^1.61.0 | `tests/`. |
 | Tests unit | vitest | ^4.1.9 | `vitest.config.ts`. |
 | Lint | ESLint | ^9 | `eslint.config.mjs`. |
@@ -120,7 +120,7 @@ npx next build           → 54 rutas, 0 errores ✅ (verificar tras cambios gra
 git push origin master   → último commit 5b65856 ✅
 ```
 
-Último deploy **verificado**: container `hze8mocuh4xqskqwrm3mx50b-011021577885` corriendo imagen `b8d3a44bfc43112686bd19d7da014635fddab123`, healthy, creado 2026-06-27 01:19:23Z. Deploys posteriores (`20c0f07`, `37cb1bd`, `5b65856`) auto-disparados por Coolify vía webhook de GitHub, pero **`37cb1bd` requiere intervención manual** post-deploy (ver Open Follow-ups).
+Último deploy **verificado**: container `hze8mocuh4xqskqwrm3mx50b-011021577885` corriendo imagen `b8d3a44bfc43112686bd19d7da014635fddab123`, healthy, creado 2026-06-27 01:19:23Z. Deploys posteriores (`20c0f07`, `37cb1bd`, `5b65856`) auto-disparados por Cloud Run vía webhook de GitHub, pero **`37cb1bd` requiere intervención manual** post-deploy (ver Open Follow-ups).
 
 ---
 
@@ -130,7 +130,7 @@ git push origin master   → último commit 5b65856 ✅
 
 | # | Fase | Estado | Detalle |
 |---|---|---|---|
-| 1 | Autenticación y Base | ✅ | Auth.js v5, workspaces, roles, registro pacientes, dashboards por rol, Dockerfile/Coolify. |
+| 1 | Autenticación y Base | ✅ | Auth.js v5, workspaces, roles, registro pacientes, dashboards por rol, Dockerfile/Cloud Run. |
 | 2 | Módulo Clínico (Consulta) | ✅ | Schema: Encounter, Diagnosis, Medication, Prescription, LabOrder, ImagingOrder, Document. Redis autocomplete de medicamentos, IMC, alertas vitales, PDF con membrete. |
 | 3 | Citas y Facturación | ✅ | Schema: Appointment, Invoice. Calendario semanal, tasa BCV manual, facturas PDF, numeración F-000001+. |
 | 4 | OCR + WhatsApp + Clínica Pública + Portal | ✅ | `/api/lab-ocr` con Claude Vision. Notificaciones WhatsApp (Meta Cloud). Portal de citas. `/clinica/[slug]` público. |
@@ -186,7 +186,7 @@ git push origin master   → último commit 5b65856 ✅
 | Accordion sections | `97aad84` | Patient history + encounter workspace a `<AccordionSection>` con empty states informativos. |
 | In-app REFERRAL_RECEIVED | `37cb1bd` | Notificación in-app cuando recibís un referido, con bell wiggle + click → `/doctor/referrals`. Antes solo email. |
 | Comprehensive AGENTS.md | `5b65856` | Entry point para AI agents con 3 capas de memoria. |
-| **Backup migration: Google Drive → Backblaze B2** | 2026-07-13 (manual ops, no code) | Drive OAuth token venció y Service Accounts de Drive no tienen storage quota en cuentas personales (requiere Workspace + Shared Drives, $7-14/user/mo, descartado). B2 es la solución permanente: bucket privado `medsysve-backups`, app key con scope solo al bucket, doble encryption (gpg + rclone crypt), retention 7 daily + 4 weekly + 12 monthly. **4 retention bugs arreglados en `/opt/medsysve-backup/backup.sh`** (awk, ((COUNT++)), `[[ ]]`, date syntax — los 4 estaban rotos desde el deploy inicial). Backup mensual de configs/scripts/cron/rclone.conf con passphrase en 1Password. Drill end-to-end de recovery verificado. |
+| **Backup migration: Google Drive → Google Cloud Storage** | 2026-07-13 (manual ops, no code) | Drive OAuth token venció y Service Accounts de Drive no tienen storage quota en cuentas personales (requiere Workspace + Shared Drives, $7-14/user/mo, descartado). B2 es la solución permanente: bucket privado `medsysve-backups`, app key con scope solo al bucket, doble encryption (gpg + rclone crypt), retention 7 daily + 4 weekly + 12 monthly. **4 retention bugs arreglados en `/opt/medsysve-backup/backup.sh`** (awk, ((COUNT++)), `[[ ]]`, date syntax — los 4 estaban rotos desde el deploy inicial). Backup mensual de configs/scripts/cron/rclone.conf con passphrase en 1Password. Drill end-to-end de recovery verificado. |
 | **Drug-allergy interaction check (safety feature)** | `9a963d0` | `lib/drug-allergies.ts` con ~30 familias farmacológicas VE (penicilinas, AINEs, cefalosporinas, sulfas, etc.) + match exact/synonym/family + 31 unit tests. UI warning + override button en `prescription-form.tsx`. Defense-in-depth en `prescription.ts` rechaza sin `overrideAlerta=true`. PDF: banner rojo en ambas mitades + badge "OVR". AI: alergias inyectadas en prompts. Audit `ALLERGY_OVERRIDE`. 3 capas: UI → server → audit. |
 
 ---
@@ -211,7 +211,7 @@ git push origin master   → último commit 5b65856 ✅
 
 ### PDFs on-demand (regla de oro)
 
-**CERO escrituras a disco.** El filesystem de Coolify es efímero — `public/uploads/` se borra al reiniciar el contenedor. Todos los PDFs son rutas GET de API que leen la DB y renderizan con `@react-pdf/renderer`. `Buffer → Response` con cast `as unknown as BodyInit`.
+**CERO escrituras a disco.** El filesystem de Cloud Run es efímero — `public/uploads/` se borra al reiniciar el contenedor. Todos los PDFs son rutas GET de API que leen la DB y renderizan con `@react-pdf/renderer`. `Buffer → Response` con cast `as unknown as BodyInit`.
 
 | PDF | Ruta API | Verificado |
 |-----|---------|------------|
@@ -350,11 +350,11 @@ CRON_SECRET=<32+ char>
 # LOPDP / Legal
 LEGAL_SUPPORT_EMAIL=yoguitech@gmail.com
 
-# Allowed IPs para la DB de Coolify (compartida entre Carlos / debug)
+# Allowed IPs para la DB de Cloud Run (compartida entre Carlos / debug)
 # Restaurar a "73.8.161.68,65.155.46.36" si se abre durante debug.
 ```
 
-> **SEGURIDAD:** La contraseña de base de datos JAMÁS debe colocarse en la configuración de Coolify directamente — se almacena en la DB de Coolify y aparece en logs. Usar Docker secrets o variables de entorno cifradas.
+> **SEGURIDAD:** La contraseña de base de datos JAMÁS debe colocarse en la configuración de Cloud Run directamente — se almacena en la DB de Cloud Run y aparece en logs. Usar Docker secrets o variables de entorno cifradas.
 
 ---
 
@@ -371,7 +371,7 @@ LEGAL_SUPPORT_EMAIL=yoguitech@gmail.com
 - **PHI encriptado:** campos `*Cifrado` se prefieren en escrituras nuevas; legacy plaintext se tolera como fallback. HMAC indexes (`hmacCedula`, `hmacNombre`, etc.) habilitan queries buscables sin descifrar.
 - **No escribir secretos a logs.** `lib/log-sanitizer.ts` trunca IPs a `/24` (IPv4) / `/48` (IPv6).
 - **Single quote en commits:** mensajes con scope (`feat(scope):`, `fix(scope):`, `docs:`).
-- **Git author:** SIEMPRE `Carlos Pierluissi <cpierluissis@gmail.com>` — Vercel/Coolify rechaza otros emails.
+- **Git author:** SIEMPRE `Carlos Pierluissi <cpierluissis@gmail.com>` — Vercel/Cloud Run rechaza otros emails.
 
 ---
 
@@ -421,7 +421,7 @@ LEGAL_SUPPORT_EMAIL=yoguitech@gmail.com
 ### Técnico
 
 - ✅ **17 migrations idempotentes** aplicadas en producción sin downtime.
-- ✅ **Standalone Docker build** funcionando en Coolify con contenedor efímero + uploads persistentes.
+- ✅ **Serverless Containers build** funcionando en Cloud Run con contenedor efímero + uploads persistentes.
 - ✅ **Traefik apex → www cookie handling** dominado (siempre curl con `www.medsysve.com`).
 - ✅ **Hot module reload estable** — `proxy.ts` reemplaza `middleware.ts` (edge runtime sin `node:util/types`).
 - ✅ **Audit exhaustivo** — 9 PDFs + 3 CSVs + 3 AI + todas las mutations clínicas con `AuditEvent`.
@@ -461,7 +461,7 @@ LEGAL_SUPPORT_EMAIL=yoguitech@gmail.com
 ### 🟢 Mantenimiento continuo
 
 - [ ] **Sembrar medicamentos en prod** si se tocaron: `POST /api/admin/seed-medications` desde navegador con sesión DOCTOR. Esperado: `{ ok: true, upserted: ~501, redisLoaded: ~501 }`.
-- [ ] **Verificar `allowed_ips`** de la DB de Coolify después de cualquier debug. Valor correcto: `73.8.161.68,65.155.46.36`.
+- [ ] **Verificar `allowed_ips`** de la DB de Cloud Run después de cualquier debug. Valor correcto: `73.8.161.68,65.155.46.36`.
 
 ### 🔵 Backlog (audits S9-S11 candidatos, scope confirmado)
 
@@ -474,7 +474,7 @@ LEGAL_SUPPORT_EMAIL=yoguitech@gmail.com
 
 ### 🔵 Futuro (post-lanzamiento v2)
 
-- [ ] **Auto-migrate en build de Coolify** — agregar `prestart` o script de release que corra `npx prisma migrate deploy` automáticamente. Hoy es manual.
+- [ ] **Auto-migrate en build de Cloud Run** — agregar `prestart` o script de release que corra `npx prisma migrate deploy` automáticamente. Hoy es manual.
 - [ ] **Real-time notifications** — reemplazar polling cada 30s con SSE o WebSocket. Latencia menor, menos requests.
 - [ ] **Mobile app** — actualmente es web responsive. App nativa (React Native) sería plus.
 - [ ] **Telemedicina mejorada** — Jitsi funciona pero UX puede mejorar (calendar integration, recording).
@@ -501,7 +501,7 @@ npx prisma generate              # regenerar cliente (post schema change)
 npx prisma migrate dev --name X  # nueva migration (dev)
 npx prisma studio                # GUI
 
-# En prod (vía SSH al VPS, después docker exec al container)
+# En prod (vía SSH al GCP, después docker exec al container)
 docker ps                                          # ver containers corriendo
 docker inspect <container> --format '{{.Config.Image}}'   # ver SHA del image
 docker exec -it <container> npx prisma migrate deploy      # aplicar migrations

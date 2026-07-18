@@ -8,7 +8,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # MedSysVE — Agent Entry Point
 
-> **Resumen ejecutivo (1 minuto):** SaaS multi-tenant de Historia Clínica Electrónica para médicos venezolanos. Tema oscuro, asistencia IA, facturación dual USD/Bs con tasa BCV, portal para pacientes, red de referidos entre doctores, suscripciones mensuales/trimestrales via Stripe. Stack: Next.js 16 + React 19 + tRPC 11 + Prisma 7 + PostgreSQL + Auth.js v5 + Tailwind v4 + shadcn/ui + Redis. Deploy: Coolify + Docker standalone en VPS Contabo `13.140.181.29`. Repo: `github.com/guaricool/MedSysVE` (`master`).
+> **Resumen ejecutivo (1 minuto):** SaaS multi-tenant de Historia Clínica Electrónica para médicos venezolanos. Tema oscuro, asistencia IA, facturación dual USD/Bs con tasa BCV, portal para pacientes, red de referidos entre doctores, suscripciones mensuales/trimestrales via Stripe. Stack: Next.js 16 + React 19 + tRPC 11 + Prisma 7 + PostgreSQL + Auth.js v5 + Tailwind v4 + shadcn/ui + Redis. Deploy: Cloud Run + Docker standalone en GCP GCP `13.140.181.29`. Repo: `github.com/guaricool/MedSysVE` (`master`).
 
 ---
 
@@ -26,8 +26,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - `f6dec8a` + `6949f2f` feat(observability): wire @sentry/nextjs to self-hosted GlitchTip
 - **Último deploy verificado:** container `hze8mocuh4xqskqwrm3mx50b-...` con image `9a963d0f5fc09a7bd07b1400e3c928742a52ba4f` healthy (running:healthy, last_online_at 2026-07-14 22:24 UTC).
 - **Drug-allergy safety feature (LIVE):** nueva `lib/drug-allergies.ts` con 30+ familias farmacológicas VE (penicilinas, AINEs, cefalosporinas, sulfas, macrólidos, etc.) + 3-level matcher. UI warning al seleccionar med contraindicado (rojo=naranja según severidad). Server defense-in-depth rechaza addItem sin overrideAlerta=true. PDF de receta muestra banner "ALERGIAS DEL PACIENTE" en ambas mitades (farmacia + paciente) + badge "OVR" en items con override. AI inyecta alergias activas en system prompt de encounter-assist y plan-suggestion. Audit `ALLERGY_OVERRIDE` por cada override aceptado. 31 unit tests, `tsc --noEmit` clean, `next build` Compiled successfully in 8.0s.
-- **Backup infrastructure migrada a Backblaze B2 (2026-07-13, manual ops):** Drive OAuth token venció y Service Accounts de Google Drive no tienen storage quota en cuentas personales (requiere Workspace + Shared Drives, descartado por costo). B2 es la solución permanente: bucket privado `medsysve-backups`, app key con scope solo al bucket, doble encryption (gpg + rclone crypt). **4 retention bugs acumulados en `/opt/medsysve-backup/backup.sh` arreglados** (awk $1↔$2, `((COUNT++))` con set -e, `[[ ]] && action` propagando exit 1, `date -d "$EPOCH seconds ago -N days"` inválido) — los 4 estaban rotos desde el deploy inicial, archivos se acumulaban sin límite. Backup mensual de configs/scripts/cron/rclone.conf con passphrase en 1Password. Drill end-to-end de recovery verificado (20 archivos extraídos, todos los scripts MATCH byte-a-byte).
-- **Stripe LIVE mode deployed:** 9 envs creadas en Coolify, webhook endpoint suscrito a 5 eventos. **Smoke test incompleto** — $25 procesado bajo sesión de Dayana, pendiente refund.
+- **Backup infrastructure migrada a Google Cloud Storage (2026-07-13, manual ops):** Drive OAuth token venció y Service Accounts de Google Drive no tienen storage quota en cuentas personales (requiere Workspace + Shared Drives, descartado por costo). B2 es la solución permanente: bucket privado `medsysve-backups`, app key con scope solo al bucket, doble encryption (gpg + rclone crypt). **4 retention bugs acumulados en `/opt/medsysve-backup/backup.sh` arreglados** (awk $1↔$2, `((COUNT++))` con set -e, `[[ ]] && action` propagando exit 1, `date -d "$EPOCH seconds ago -N days"` inválido) — los 4 estaban rotos desde el deploy inicial, archivos se acumulaban sin límite. Backup mensual de configs/scripts/cron/rclone.conf con passphrase en 1Password. Drill end-to-end de recovery verificado (20 archivos extraídos, todos los scripts MATCH byte-a-byte).
+- **Stripe LIVE mode deployed:** 9 envs creadas en Cloud Run, webhook endpoint suscrito a 5 eventos. **Smoke test incompleto** — $25 procesado bajo sesión de Dayana, pendiente refund.
 - **Auditorías S8-S11 todas cerradas + deployadas:** AI guardrails (45 tests), Encounter optimistic locking (10 tests), Doctor feature flag override (14 tests), PHI key rotation scripts (6 tests). Score MetaHarness 91.2/100 (A+ en Audit Completion).
 - **`tsc --noEmit`:** clean ✅
 - **`next build`:** Compiled successfully in 8.0s (post-9a963d0)
@@ -84,10 +84,10 @@ Con esos 7 archivos deberías poder hacer cualquier cambio sin pedirle a Carlos 
 | DB | PostgreSQL | Tenant isolation por `workspaceId`. PHI fields cifrados (AES-256-GCM) con fallback a plaintext en lecturas legacy. HMAC indexes para searchable encryption de cédula/nombre/apellido/teléfono/email. |
 | Cache | Redis (ioredis) | Sorted set `meds:autocomplete` para medicamentos. **Se vacía al reiniciar** — re-sembrar con `POST /api/admin/seed-medications` después de cada deploy. |
 | IA | Anthropic Claude (haiku + sonnet) | `/api/ai/encounter-assist` para diagnóstico diferencial + plan. `/api/lab-ocr` con Claude Vision para resultados de lab. |
-| PDF | `@react-pdf/renderer` | **CERO escrituras a disco.** Todas las rutas son GET que renderizan on-demand desde DB. Container de Coolify es efímero → `public/uploads/` se borra al reiniciar. |
+| PDF | `@react-pdf/renderer` | **CERO escrituras a disco.** Todas las rutas son GET que renderizan on-demand desde DB. Container de Cloud Run es efímero → `public/uploads/` se borra al reiniciar. |
 | Email | nodemailer + Gmail SMTP (App Password) | `lib/email.ts`. **Drop Resend en 2026-06-25** (`e294b90`). Plantillas: confirmación de cita, recordatorio, bienvenida portal, referido, OTP. |
 | WhatsApp | Meta Cloud API | `lib/whatsapp.ts`. Solo documentos listos (`notifyDocumentReady`). |
-| Deploy | Coolify (Docker standalone) | VPS Contabo `13.140.181.29`. App ID `jes48vqxcs3l2lyk1lkpa5zt`. |
+| Deploy | Cloud Run (Docker standalone) | GCP GCP `13.140.181.29`. App ID `jes48vqxcs3l2lyk1lkpa5zt`. |
 
 ### Multi-tenancy — reglas duras
 
@@ -165,9 +165,9 @@ PATIENT     → portal solo-lectura (portal.*)
    git add <specific-files>
    git -c user.name='Carlos Pierluissi' -c user.email='cpierluissis@gmail.com' commit -m "..."
    ```
-   ⚠️ El `user.email` DEBE ser `cpierluissis@gmail.com` — Coolify rechaza pushes con cualquier otro email.
+   ⚠️ El `user.email` DEBE ser `cpierluissis@gmail.com` — Cloud Run rechaza pushes con cualquier otro email.
 5. **Push:** `git push origin master`.
-6. **Coolify auto-deploya** vía webhook de GitHub. Tarda ~3-5 min. Container image se reemplaza atómicamente.
+6. **Cloud Run auto-deploya** vía webhook de GitHub. Tarda ~3-5 min. Container image se reemplaza atómicamente.
 7. **Si tocaste schema.prisma:** después del deploy automático, abrir consola del container y correr:
    ```bash
    npx prisma migrate deploy
@@ -175,7 +175,7 @@ PATIENT     → portal solo-lectura (portal.*)
    Debe decir "1 migration(s) applied" (o N si eran varias). Prisma 7 + ALTER TYPE ADD VALUE es non-transactional — Prisma's migrator maneja esto automáticamente.
 8. **Re-sembrar Redis si tocaste medicamentos:** `fetch('/api/admin/seed-medications', { method: 'POST' })` desde el navegador con sesión DOCTOR. Esperado: `{ ok: true, upserted: ~501, redisLoaded: ~501 }`.
 9. **Verificar:**
-   - `docker ps` en VPS → container nuevo con el SHA esperado.
+   - `docker ps` en GCP → container nuevo con el SHA esperado.
    - `docker inspect <container> --format '{{.Config.Image}}'` → debe terminar con el SHA del HEAD.
    - Smoke test: `curl -I https://www.medsysve.com/login` → 200.
    - Login + bell badge en `/dashboard` debería aparecer.
@@ -243,9 +243,9 @@ Las rutas de notificación viven en `server/routers/notification.ts` con `list`,
 - **Doctor.cedula es UNIQUE global** (no por workspace). Esto es OK porque un doctor es un doctor — pero un doctor no es un paciente.
 - **`Patient.numeroIdentificacion` NO es unique global** — removido para evitar leak cross-tenant. Usar `hmacCedula` indexable + filter por workspace.
 - **Redis `meds:autocomplete`** se siembra via POST. Cada deploy toca algo → re-sembrar.
-- **Coolify auto-ejecuta `prisma migrate deploy`** — el `Dockerfile` línea 51 corre `CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]` desde commit `112ed33`. Las migrations se aplican automáticamente al startup del container, ~3 segundos antes de que Node levante. NO hace falta correr `docker exec ... npx prisma migrate deploy` post-deploy — el entrypoint ya lo hace. Confirmado en deploys `575c3b8` (rename) y `b2eef56` (DoctorReportPreferences). Lo que sigue pendiente (PROJECT_STATUS.md §474): auto-migrate en el **build step de Coolify** (prestart script) para que el `prisma generate` del build corra con el schema ya migrado.
-- **Container es efímero** — cualquier archivo escrito a disco (que no sea volumen montado) se pierde al reiniciar. PDFs son on-demand, uploads están en Coolify volume.
-- **Allowed IPs** en la config del DB de Coolify a veces se "abre a 0.0.0.0" durante debug. Restaurar a `73.8.161.68,65.155.46.36` (IPs de Carlos). El cron de MedSysVE verifica esto en cada run.
+- **Cloud Run auto-ejecuta `prisma migrate deploy`** — el `Dockerfile` línea 51 corre `CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]` desde commit `112ed33`. Las migrations se aplican automáticamente al startup del container, ~3 segundos antes de que Node levante. NO hace falta correr `docker exec ... npx prisma migrate deploy` post-deploy — el entrypoint ya lo hace. Confirmado en deploys `575c3b8` (rename) y `b2eef56` (DoctorReportPreferences). Lo que sigue pendiente (PROJECT_STATUS.md §474): auto-migrate en el **build step de Cloud Run** (prestart script) para que el `prisma generate` del build corra con el schema ya migrado.
+- **Container es efímero** — cualquier archivo escrito a disco (que no sea volumen montado) se pierde al reiniciar. PDFs son on-demand, uploads están en Cloud Run volume.
+- **Allowed IPs** en la config del DB de Cloud Run a veces se "abre a 0.0.0.0" durante debug. Restaurar a `73.8.161.68,65.155.46.36` (IPs de Carlos). El cron de MedSysVE verifica esto en cada run.
 
 ---
 
@@ -288,8 +288,8 @@ Las rutas de notificación viven en `server/routers/notification.ts` con `list`,
 1. Generate new keys: `openssl rand -base64 32` × 2. Store in 1Password + vault.
 2. Take a fresh backup (defense-in-depth, audit #18).
 3. **Stop the app container** (downtime window — single-key encryption).
-4. SSH to VPS, run `scripts/rotate-field-keys.sh` with old + new keys.
-5. Update Coolify env vars.
+4. SSH to GCP, run `scripts/rotate-field-keys.sh` with old + new keys.
+5. Update Cloud Run env vars.
 6. Smoke test: login + view a known patient.
 7. Retain old keys in vault for 30 days.
 
@@ -367,7 +367,7 @@ npx prisma generate
 npx prisma migrate dev --name <slug>
 
 # Aplicar migrations en prod (vía SSH al container)
-#   Primero SSH al VPS, después docker exec al container
+#   Primero SSH al GCP, después docker exec al container
 docker exec -it <container> npx prisma migrate deploy
 
 # Ver logs del container de prod

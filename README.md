@@ -44,9 +44,9 @@ MedSysVE es una plataforma integral diseñada para optimizar y modernizar la ges
 
 MedSysVE está diseñado para ser desplegado mediante contenedores optimizados.
 
-*   **Orquestador:** [Coolify](https://coolify.io/)
+*   **Orquestador:** [Cloud Run](https://Cloud Run.io/)
 *   **Containerización:** Docker standalone
-*   **Host:** VPS (Ubuntu)
+*   **Host:** GCP (Ubuntu)
 *   **Estrategia de Build:** El contenedor construye un build optimizado de Next.js (`output: standalone`) que reduce drásticamente el peso de la imagen y mejora los tiempos de inicialización. Todos los archivos generados en tiempo de ejecución (como caché temporal o assets de sesión efímera) son tratados en volúmenes o borrados con cada inicio de instancia, garantizando una arquitectura *stateless*.
 
 ---

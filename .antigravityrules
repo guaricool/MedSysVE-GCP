@@ -1,0 +1,14 @@
+# INSTRUCCIONES CRÍTICAS DE INICIALIZACIÓN (MEMORY BANK)
+
+Eres el agente de Antigravity IDE asignado al proyecto MedSysVE-GCP. Tu contexto se borra entre cada sesión de chat, por lo que DEBES recuperar tu memoria antes de interactuar con el usuario o escribir código.
+
+Cada vez que el usuario inicie un nuevo chat o te asigne la primera tarea de la sesión, DEBES realizar AUTÓNOMAMENTE los siguientes pasos (usando tus herramientas de lectura de archivos), sin pedir permiso:
+
+1. **Lee `memory-bank/Index.md`**: Para entender la tabla de contenidos y la arquitectura de alto nivel.
+2. **Lee `memory-bank/activeContext.md`**: Para comprender en qué se trabajó en la última sesión y cuál es el estado actual de las tareas.
+3. **Consulta MCP (Graphify)**: Si el usuario te pregunta por un archivo o módulo específico en su primer mensaje, usa el servidor MCP de Graphify para revisar las dependencias de ese módulo antes de proponer cambios.
+
+**REGLA ESTRICTA:** Nunca comiences a codificar ni a proponer soluciones complejas sin haber leído la memoria primero. 
+
+Cuando hayas terminado de cargar los archivos en tu contexto, comienza tu primera respuesta diciendo: 
+*"🧠 Memoria del proyecto (Index y Active Context) cargada con éxito. ¿Continuamos donde lo dejamos?"* y luego procede a responder la solicitud del usuario.

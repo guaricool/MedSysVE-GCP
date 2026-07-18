@@ -376,6 +376,4 @@ export const authRouter = router({
     }),
 })
 
-// Re-export the verified-token helpers in case any other router wants to
-// verify tokens (e.g., a doctor.register replacement that accepts a token).
-export { verifyVerifiedToken }
+// Se eliminó la exportación sin uso de verifyVerifiedToken

@@ -36,7 +36,7 @@ export function signEncounterHash(input: {
   const raw = process.env.FIELD_SIGN_KEY
   if (!raw) {
     throw new Error(
-      "FIELD_SIGN_KEY required to sign encounters. Set it in Coolify " +
+      "FIELD_SIGN_KEY required to sign encounters. Set it in Cloud Run " +
         "env vars (can match FIELD_ENCRYPTION_KEY on first deploy).",
     )
   }

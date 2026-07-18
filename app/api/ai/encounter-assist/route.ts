@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { GoogleGenAI } from "@google/genai"
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai"
 import { auth } from "@/lib/auth"
 import { auditFromHeaders } from "@/lib/audit"
 import { isAIFeatureEnabled } from "@/lib/feature-flags"
@@ -168,8 +168,8 @@ export async function POST(req: NextRequest) {
       responseMimeType: "application/json",
       safetySettings: [
         {
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-          threshold: "BLOCK_NONE",
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_NONE,
         },
       ],
     }

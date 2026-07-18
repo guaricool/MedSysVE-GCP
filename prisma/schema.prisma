@@ -100,8 +100,8 @@ model Doctor {
   dataExportRequests     DataExportRequest[]
   dataDeletionRequests   DataDeletionRequest[]
   usedInvitationCodes    ClinicInvitationCode[]
-  featureOverrides       DoctorFeatureOverride[]  @relation("OverrideDoctor")
-  featureOverridesSet    DoctorFeatureOverride[]  @relation("OverrideSetBy")
+  featureOverrides       DoctorFeatureOverride[]   @relation("OverrideDoctor")
+  featureOverridesSet    DoctorFeatureOverride[]   @relation("OverrideSetBy")
   reportPreferences      DoctorReportPreferences?
 
   /// Version of the legal terms the doctor has accepted. Bumped when ToS,
@@ -248,65 +248,64 @@ model DoctorClinicAffiliation {
 }
 
 model Workspace {
-  id                     String                  @id @default(cuid())
-  nombre                 String
-  nombreCifrado          String?                 @db.Text
-  direccion              String?
-  direccionCifrada       String?                 @db.Text
-  telefono               String?
-  telefonoCifrado        String?                 @db.Text
-  logoUrl                String?
-  membreteUrl            String?
-  rif                    String?
-  razonSocial            String?
-  razonSocialCifrada     String?                 @db.Text
-  direccionFiscal        String?
-  direccionFiscalCifrada String?                 @db.Text
+  id                           String                  @id @default(cuid())
+  nombre                       String
+  nombreCifrado                String?                 @db.Text
+  direccion                    String?
+  direccionCifrada             String?                 @db.Text
+  telefono                     String?
+  telefonoCifrado              String?                 @db.Text
+  logoUrl                      String?
+  membreteUrl                  String?
+  rif                          String?
+  razonSocial                  String?
+  razonSocialCifrada           String?                 @db.Text
+  direccionFiscal              String?
+  direccionFiscalCifrada       String?                 @db.Text
   /// Estado de Venezuela donde opera este consultorio. Requerido para que el
   /// doctor aparezca en el picker de referidos de otros doctores de su zona.
   /// Nullable para workspaces existentes pre-feature.
-  estado                 String?
+  estado                       String?
   /// Ciudad donde opera el consultorio. Match exacto en el doctor picker.
-  ciudad                 String?
-  tasaBcvActual          Decimal?                @db.Decimal(10, 4)
-  tasaBcvAt              DateTime?
-  recordatorioHoras      Int                     @default(24)
-  recordatorioWa         Boolean                 @default(false)
-  recordatorioEmail      Boolean                 @default(true)
-  autoCreateHistoryOnEncounter Boolean           @default(false)
-  emailAppointmentReminders   Boolean           @default(true)
-  allowedIps                 String?
-  doctorId               String
-  doctor                 Doctor                  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  clinicId               String?
-  clinic                 Clinic?                 @relation(fields: [clinicId], references: [id])
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  staff                  Staff[]
-  patientRegs            PatientRegistration[]
-  encounters             Encounter[]
-  appointments           Appointment[]
-  invoices               Invoice[]
-  availability           DoctorAvailability[]
-  mensajes               Mensaje[]
-  alergias               Alergia[]
-  templates              EncounterTemplate[]
-  patientTags            PatientTag[]
-  availabilityExceptions AvailabilityException[]
-  documentTemplates      DocumentTemplate[]
-  announcements          Announcement[]
-  staffNotes             StaffNote[]
-  vaccines               Vaccine[]
-  waitingEntries         WaitingEntry[]
-  notifications          Notification[]
-  tasks                  Task[]
-  insuranceProviders     InsuranceProvider[]
-  consentTemplates       ConsentTemplate[]
-  patientConsents        PatientConsent[]
-  auditLogs              AuditLog[]
-  auditEvents            AuditEvent[]
-  expressOrders          ExpressOrder[]
-
+  ciudad                       String?
+  tasaBcvActual                Decimal?                @db.Decimal(10, 4)
+  tasaBcvAt                    DateTime?
+  recordatorioHoras            Int                     @default(24)
+  recordatorioWa               Boolean                 @default(false)
+  recordatorioEmail            Boolean                 @default(true)
+  autoCreateHistoryOnEncounter Boolean                 @default(false)
+  emailAppointmentReminders    Boolean                 @default(true)
+  allowedIps                   String?
+  doctorId                     String
+  doctor                       Doctor                  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  clinicId                     String?
+  clinic                       Clinic?                 @relation(fields: [clinicId], references: [id])
+  createdAt                    DateTime                @default(now())
+  updatedAt                    DateTime                @updatedAt
+  staff                        Staff[]
+  patientRegs                  PatientRegistration[]
+  encounters                   Encounter[]
+  appointments                 Appointment[]
+  invoices                     Invoice[]
+  availability                 DoctorAvailability[]
+  mensajes                     Mensaje[]
+  alergias                     Alergia[]
+  templates                    EncounterTemplate[]
+  patientTags                  PatientTag[]
+  availabilityExceptions       AvailabilityException[]
+  documentTemplates            DocumentTemplate[]
+  announcements                Announcement[]
+  staffNotes                   StaffNote[]
+  vaccines                     Vaccine[]
+  waitingEntries               WaitingEntry[]
+  notifications                Notification[]
+  tasks                        Task[]
+  insuranceProviders           InsuranceProvider[]
+  consentTemplates             ConsentTemplate[]
+  patientConsents              PatientConsent[]
+  auditLogs                    AuditLog[]
+  auditEvents                  AuditEvent[]
+  expressOrders                ExpressOrder[]
 
   @@index([doctorId])
   @@index([clinicId])
@@ -386,7 +385,6 @@ model Patient {
   // The hmacCedula index is kept (without unique constraint) so a future autofill query
   // can search across workspaces at registration time without leaking data.
   @@unique([workspaceId, tipoIdentificacion, numeroIdentificacion])
-  @@index([workspaceId])
   @@index([hmacCedula])
   @@index([hmacNombre])
   @@index([hmacApellido])
@@ -456,22 +454,22 @@ model Encounter {
 
   appointmentId String?
 
-  motivoCifrado    String? @db.Text
+  motivoCifrado          String? @db.Text
   /// HMAC-SHA-256 index for searchable motivo (see lib/field-crypto.ts).
   /// Computed at write time using FIELD_HMAC_KEY.
-  motivoHmac       String?
+  motivoHmac             String?
   /// Encrypted with AES-256-GCM (field-level encryption).
   /// Plaintext is NEVER written to disk.
   historiaClinicaCifrada String? @db.Text
-  planCifrado      String? @db.Text
+  planCifrado            String? @db.Text
   /// Legacy plaintext fields kept for migration. Will be removed after
   /// migration runs in production. Until then, routers write to *Cifrada only.
-  historiaClinica  String? @db.Text
-  plan             String? @db.Text
-  vitales          Json?
-  examenFisico     Json?
-  reportOverride   Json?
-  datosEspecialidad Json?
+  historiaClinica        String? @db.Text
+  plan                   String? @db.Text
+  vitales                Json?
+  examenFisico           Json?
+  reportOverride         Json?
+  datosEspecialidad      Json?
 
   status        EncounterStatus @default(DRAFT)
   signedAt      DateTime?
@@ -491,7 +489,7 @@ model Encounter {
   /// this, two doctors (or a doctor + auto-save debounce) editing the same
   /// encounter concurrently would last-write-wins and silently drop edits.
   /// See docs/AUDIT_BACKLOG.md #12 and server/routers/encounter.ts.
-  version    Int     @default(0)
+  version   Int      @default(0)
 
   workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
@@ -513,14 +511,14 @@ model Encounter {
 }
 
 model EncounterScale {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   encounterId String
-  tipo        String    // "WOMAC" | "QUICKDASH" | "IKDC"
-  valores     Json      // Individual question scores / responses
-  puntuacion  Float     // Overall calculated score
-  createdAt   DateTime  @default(now())
+  tipo        String // "WOMAC" | "QUICKDASH" | "IKDC"
+  valores     Json // Individual question scores / responses
+  puntuacion  Float // Overall calculated score
+  createdAt   DateTime @default(now())
 
-  encounter   Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  encounter Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
 
   @@index([encounterId])
 }
@@ -685,7 +683,7 @@ model Document {
   ///          instrucciones?: Record<ReportSectionKey, string> }.
   /// The doctor's `DoctorReportPreferences` is the source of truth — this
   /// field only stores the delta for that one consulta.
-  reportOverride        Json?
+  reportOverride Json?
 
   referidoANombre       String?
   referidoAEspecialidad String?
@@ -771,6 +769,7 @@ model Appointment {
   waitingEntry        WaitingEntry?
 
   @@index([workspaceId])
+  @@index([workspaceId, fechaHora])
   @@index([patientRegistrationId])
   @@index([fechaHora])
   @@index([serieId])
@@ -1511,26 +1510,26 @@ model EmailOtp {
 // during a hotfix and not have to remember to clear it. The cron-friendly
 // index supports a future cleanup job.
 model DoctorFeatureOverride {
-  id        String    @id @default(cuid())
+  id          String    @id @default(cuid())
   /// The doctor whose AI access we're controlling.
-  doctorId  String
+  doctorId    String
   /// The flag being overridden. Today: "ai" (the only tier we expose per-doctor).
   /// Future keys could be e.g. "experimental.newDashboard".
-  flagKey   String
+  flagKey     String
   /// Whether AI features are ON for this doctor. False = the master switch
   /// and rollout percent don't apply; doctor has AI disabled for them
   /// until the override is cleared or expires.
-  enabled   Boolean
+  enabled     Boolean
   /// Why this override exists. Required when disabling, optional when enabling.
-  reason    String?
+  reason      String?
   /// Set NULL for a permanent override. Past this moment, the row is
   /// ignored by `isAIFeatureEnabled` and the global rollout applies.
-  expiresAt DateTime?
+  expiresAt   DateTime?
   /// Admin who set this. Audit trail (also recorded in AuditEvent on every
   /// set/clear mutation).
   setByUserId String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   doctor Doctor @relation("OverrideDoctor", fields: [doctorId], references: [id], onDelete: Cascade)
   setBy  Doctor @relation("OverrideSetBy", fields: [setByUserId], references: [id], onDelete: NoAction)
@@ -1554,8 +1553,8 @@ model DoctorFeatureOverride {
 /// `/dashboard/preferencias-informe` — see `DEFAULT_REPORT_SECCIONES` in
 /// `types/report.ts` for the default section set.
 model DoctorReportPreferences {
-  id          String   @id @default(cuid())
-  doctorId    String   @unique
+  id                   String   @id @default(cuid())
+  doctorId             String   @unique
   /// Map from ReportSectionKey (motivoConsulta, historiaClinica, …) to
   /// boolean. Sections not in the map default to TRUE on first render
   /// (the doctor toggles them OFF). Sections explicitly FALSE are
@@ -1563,7 +1562,7 @@ model DoctorReportPreferences {
   ///
   /// Shape: { motivoConsulta: true, historiaClinica: true,
   ///           signosVitales: false, examenFisico: true, … }
-  secciones   Json
+  secciones            Json
   /// Default instructions the doctor wants the AI to follow per section
   /// on every informe. Free-text, optional. The doctor can override
   /// per-consulta via Document.reportOverride.instrucciones.
@@ -1571,24 +1570,24 @@ model DoctorReportPreferences {
   /// Shape: { examenFisico: "En pacientes quirúrgicos, incluir siempre
   ///            descripción del sitio quirúrgico", … }
   instruccionesDefault Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
 }
 
 model ExpressOrder {
-  id               String   @id @default(cuid())
-  tipo             String   // "RECETA" | "LABORATORIO" | "IMAGEN"
+  id               String    @id @default(cuid())
+  tipo             String // "RECETA" | "LABORATORIO" | "IMAGEN"
   pacienteNombre   String
   pacienteApellido String
   pacienteCedula   String?
   pacienteEdad     Int
   pacienteSexo     String?
-  items            Json     // List of items (medications or studies)
-  diagnosticos     String?  // Opcional
-  indicaciones     String?  // Opcional
-  createdAt        DateTime @default(now())
+  items            Json // List of items (medications or studies)
+  diagnosticos     String? // Opcional
+  indicaciones     String? // Opcional
+  createdAt        DateTime  @default(now())
   workspaceId      String
   workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
