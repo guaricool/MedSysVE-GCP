@@ -84,7 +84,7 @@ export function PlanTratamientoForm({
   // next build's incremental tsc trips TS2589 here even though plain
   // `tsc --noEmit` does not.
   const updatePlan = (trpc.encounter.update.useMutation as any)({
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       setSavedPlan(true)
       setSavedRec(true)
       setDirty("plan-tratamiento", false)
@@ -92,42 +92,51 @@ export function PlanTratamientoForm({
         setSavedPlan(false)
         setSavedRec(false)
       }, 2000)
-      // Audit S9 (2026-07-07): refetch so the next save picks up the new
-      // version (instead of reusing the stale one and getting a CONFLICT).
+      
+      // Update version synchronously to prevent 409 Conflicts on fast typing
+      if (data?.version !== undefined) {
+        utils.encounter.get.setData({ id: encounterId }, (old: any) => {
+          if (!old) return old
+          return { ...old, version: data.version }
+        })
+      }
+      
+      // Audit S9 (2026-07-07): refetch to ensure everything is in sync
       utils.encounter.get.invalidate({ id: encounterId })
     },
   })
 
-  function schedulePlan(value: string) {
-    if (timerPlan.current) clearTimeout(timerPlan.current)
-    setSavedPlan(false)
-    setDirty("plan-tratamiento", true)
-    timerPlan.current = setTimeout(() => {
-      updatePlan.mutate({
-        id: encounterId,
-        plan: [value, recomendaciones].filter(Boolean).join("\n\n--- Recomendaciones ---\n\n") || undefined,
-        ...(typeof enc?.version === "number" ? { version: enc.version } : {}),
-      })
-    }, 1500)
-  }
+  // Single timer for both fields to avoid race conditions when both update at once (e.g. AI Plan)
+  const timerSave = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const latestPlan = useRef(plan)
+  const latestRec = useRef(recomendaciones)
 
-  function scheduleRec(value: string) {
-    if (timerRec.current) clearTimeout(timerRec.current)
+  // Keep refs in sync with state for the timer closure
+  useEffect(() => { latestPlan.current = plan }, [plan])
+  useEffect(() => { latestRec.current = recomendaciones }, [recomendaciones])
+
+  function scheduleSave() {
+    if (timerSave.current) clearTimeout(timerSave.current)
+    setSavedPlan(false)
     setSavedRec(false)
     setDirty("plan-tratamiento", true)
-    timerRec.current = setTimeout(() => {
+    
+    // Read the latest version directly from the query cache to avoid closure staleness
+    const currentVersion = utils.encounter.get.getData({ id: encounterId })?.version
+
+    timerSave.current = setTimeout(() => {
+      const merged = [latestPlan.current, latestRec.current].filter(Boolean).join("\n\n--- Recomendaciones ---\n\n") || undefined
       updatePlan.mutate({
         id: encounterId,
-        plan: [plan, value].filter(Boolean).join("\n\n--- Recomendaciones ---\n\n") || undefined,
-        ...(typeof enc?.version === "number" ? { version: enc.version } : {}),
+        plan: merged,
+        ...(typeof currentVersion === "number" ? { version: currentVersion } : {}),
       })
     }, 1500)
   }
 
   useEffect(
     () => () => {
-      if (timerPlan.current) clearTimeout(timerPlan.current)
-      if (timerRec.current) clearTimeout(timerRec.current)
+      if (timerSave.current) clearTimeout(timerSave.current)
     },
     [],
   )
@@ -178,15 +187,14 @@ export function PlanTratamientoForm({
       const next = parts.join("\n").trim()
       if (next) {
         setPlan(next)
-        schedulePlan(next)
       }
     }
     if (target === "recomendaciones" || target === "all") {
       if (aiSuggestion.recomendaciones) {
         setRecomendaciones(aiSuggestion.recomendaciones)
-        scheduleRec(aiSuggestion.recomendaciones)
       }
     }
+    scheduleSave()
     setAiSuggestion(null)
   }
 
@@ -366,7 +374,7 @@ export function PlanTratamientoForm({
           value={plan}
           onChange={(e) => {
             setPlan(e.target.value)
-            schedulePlan(e.target.value)
+            scheduleSave()
           }}
           rows={6}
           className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 focus:outline-none"
@@ -391,7 +399,7 @@ export function PlanTratamientoForm({
           value={recomendaciones}
           onChange={(e) => {
             setRecomendaciones(e.target.value)
-            scheduleRec(e.target.value)
+            scheduleSave()
           }}
           rows={4}
           className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 focus:outline-none"

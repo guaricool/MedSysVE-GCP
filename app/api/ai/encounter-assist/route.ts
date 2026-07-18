@@ -165,7 +165,13 @@ export async function POST(req: NextRequest) {
     config: {
       systemInstruction: buildSafeSystemPrompt("encounter-assist"),
       maxOutputTokens: 1024,
-      responseMimeType: "application/json"
+      responseMimeType: "application/json",
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_NONE",
+        },
+      ],
     }
   })
 
