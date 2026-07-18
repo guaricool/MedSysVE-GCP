@@ -81,7 +81,8 @@ export function RecetaForm({ encounterId, disabled }: Props) {
   const [draft, setDraft] = useState<ItemDraft | null>(null)
   const [checkingInteraction, setCheckingInteraction] = useState(false)
   const [interactionWarning, setInteractionWarning] = useState<string | null>(null)
-  const [pendingAdd, setPendingAdd] = useState<{ prescId: string } | null>(null)
+  const [pendingAdd, setPendingAdd] = useState<{ prescId: string; type?: "ai" | "allergy" } | null>(null)
+  const [overrideReason, setOverrideReason] = useState("")
   const [loadingDose, setLoadingDose] = useState(false)
   const { setDirty } = useUnsaved()
 
@@ -105,6 +106,7 @@ export function RecetaForm({ encounterId, disabled }: Props) {
       setDraft(null)
       setInteractionWarning(null)
       setPendingAdd(null)
+      setOverrideReason("")
     },
   })
   const removeItem = (trpc.prescription.removeItem.useMutation as any)({
@@ -159,7 +161,7 @@ export function RecetaForm({ encounterId, disabled }: Props) {
         const check = (await res.json()) as { hasInteraction: boolean; warning: string | null }
         if (check.hasInteraction && check.warning) {
           setInteractionWarning(check.warning)
-          setPendingAdd({ prescId: finalPrescId })
+          setPendingAdd({ prescId: finalPrescId, type: "ai" })
           setCheckingInteraction(false)
           return
         }
@@ -169,22 +171,37 @@ export function RecetaForm({ encounterId, disabled }: Props) {
       setCheckingInteraction(false)
     }
 
-    addItem.mutate({
-      prescriptionId: finalPrescId,
-      item: {
-        medicationId: draft.med.id,
-        concentracion: draft.concentracion,
-        dosis: draft.dosis,
-        frecuencia: draft.frecuencia,
-        duracion: draft.duracion,
-        indicacionesEspeciales: draft.indicacionesEspeciales || undefined,
-        overrideAlerta: false,
-      },
-    })
+    try {
+      await addItem.mutateAsync({
+        prescriptionId: finalPrescId,
+        item: {
+          medicationId: draft.med.id,
+          concentracion: draft.concentracion,
+          dosis: draft.dosis,
+          frecuencia: draft.frecuencia,
+          duracion: draft.duracion,
+          indicacionesEspeciales: draft.indicacionesEspeciales || undefined,
+          overrideAlerta: false,
+        },
+      })
+    } catch (error: any) {
+      if (error.message && error.message.includes("overrideAlerta=true")) {
+        setInteractionWarning(error.message.replace(" Reenvía con overrideAlerta=true si confirmas la indicación.", ""))
+        setPendingAdd({ prescId: finalPrescId, type: "allergy" })
+      }
+    }
   }
 
   function handleOverrideAdd() {
     if (!draft || !pendingAdd) return
+    
+    let finalIndicaciones = draft.indicacionesEspeciales || ""
+    if (pendingAdd.type === "allergy" && overrideReason) {
+      finalIndicaciones = finalIndicaciones 
+        ? `${finalIndicaciones} - JUSTIFICACIÓN MÉDICA PARA ALERGIA: ${overrideReason}` 
+        : `JUSTIFICACIÓN MÉDICA PARA ALERGIA: ${overrideReason}`
+    }
+
     addItem.mutate({
       prescriptionId: pendingAdd.prescId,
       item: {
@@ -193,7 +210,7 @@ export function RecetaForm({ encounterId, disabled }: Props) {
         dosis: draft.dosis,
         frecuencia: draft.frecuencia,
         duracion: draft.duracion,
-        indicacionesEspeciales: draft.indicacionesEspeciales || undefined,
+        indicacionesEspeciales: finalIndicaciones || undefined,
         overrideAlerta: true,
       },
     })
@@ -349,6 +366,7 @@ export function RecetaForm({ encounterId, disabled }: Props) {
                 setDraft(null)
                 setInteractionWarning(null)
                 setPendingAdd(null)
+                setOverrideReason("")
               }}
               className="text-slate-500 hover:text-slate-300"
             >
@@ -481,22 +499,35 @@ export function RecetaForm({ encounterId, disabled }: Props) {
           </div>
 
           {interactionWarning && (
-            <div className="rounded-lg border border-yellow-700 bg-yellow-950/40 p-3">
+            <div className={`rounded-lg border p-3 ${pendingAdd?.type === "allergy" ? "border-red-700 bg-red-950/40" : "border-yellow-700 bg-yellow-950/40"}`}>
               <div className="mb-2 flex items-start gap-2">
-                <AlertTriangle size={14} className="mt-0.5 shrink-0 text-yellow-400" />
-                <div>
-                  <p className="text-xs font-medium text-yellow-300">
-                    Posible interacción medicamentosa
+                <AlertTriangle size={14} className={`mt-0.5 shrink-0 ${pendingAdd?.type === "allergy" ? "text-red-400" : "text-yellow-400"}`} />
+                <div className="flex-1">
+                  <p className={`text-xs font-medium ${pendingAdd?.type === "allergy" ? "text-red-300" : "text-yellow-300"}`}>
+                    {pendingAdd?.type === "allergy" ? "Choque con Alergia Registrada" : "Posible interacción medicamentosa"}
                   </p>
-                  <p className="mt-1 text-xs text-yellow-400/80">{interactionWarning}</p>
+                  <p className={`mt-1 text-xs ${pendingAdd?.type === "allergy" ? "text-red-400/80" : "text-yellow-400/80"}`}>{interactionWarning}</p>
+                  
+                  {pendingAdd?.type === "allergy" && (
+                    <div className="mt-3">
+                      <Label className="text-red-300/80 text-[11px] uppercase tracking-wider font-semibold">Justificación clínica obligatoria</Label>
+                      <Input 
+                        value={overrideReason}
+                        onChange={(e) => setOverrideReason(e.target.value)}
+                        placeholder="Ej: El beneficio supera al riesgo, administrar bajo observación..."
+                        className="mt-1 h-8 border-red-800/50 bg-red-950/50 text-xs text-red-200 placeholder:text-red-800/70 focus:border-red-500"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-3">
                 <button
                   onClick={() => {
                     setDraft(null)
                     setInteractionWarning(null)
                     setPendingAdd(null)
+                    setOverrideReason("")
                   }}
                   className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
                 >
@@ -504,10 +535,14 @@ export function RecetaForm({ encounterId, disabled }: Props) {
                 </button>
                 <button
                   onClick={handleOverrideAdd}
-                  disabled={addItem.isPending}
-                  className="rounded border border-yellow-700 px-2 py-1 text-xs text-yellow-300 hover:bg-yellow-900/30 disabled:opacity-50"
+                  disabled={addItem.isPending || (pendingAdd?.type === "allergy" && !overrideReason.trim())}
+                  className={`rounded border px-2 py-1 text-xs disabled:opacity-50 ${
+                    pendingAdd?.type === "allergy" 
+                      ? "border-red-700 text-red-300 hover:bg-red-900/30" 
+                      : "border-yellow-700 text-yellow-300 hover:bg-yellow-900/30"
+                  }`}
                 >
-                  Agregar de todas formas
+                  {pendingAdd?.type === "allergy" ? "Autorizar bajo mi responsabilidad" : "Agregar de todas formas"}
                 </button>
               </div>
             </div>
