@@ -49,7 +49,6 @@ next-env.d.ts
 
 # playwright QA session artifacts
 .playwright-mcp/
-*.png
 /test-results/
 /playwright-report/
 
