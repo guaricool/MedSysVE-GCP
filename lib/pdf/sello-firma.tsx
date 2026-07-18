@@ -3,19 +3,10 @@ import type { Style } from "@react-pdf/types"
 
 interface SelloFirmaProps {
   selloPath?: string
-  signatureLine?: string
-  /**
-   * Width of the signature line in approximate characters. The line is
-   * rendered as a Text of underscores so it scales with the surrounding
-   * font size. Defaults to 31 underscores — long enough for a 9pt name
-   * + specialty + C.M. triple, short enough to stay inside the
-   * right-aligned box.
-   */
-  signatureChars?: number
   /**
    * Sello image dimensions in pt. The sello sits *on top of* the
-   * signature line (typical medical practice — doctor signs, then
-   * stamps on the signature), so it is layered above the line in
+   * signature space (typical medical practice — doctor signs, then
+   * stamps), so it is layered above the space in
    * DOM order.
    */
   selloSize?: number
@@ -50,12 +41,9 @@ interface SelloFirmaProps {
  */
 export function SelloFirma({
   selloPath,
-  signatureLine,
-  signatureChars = 31,
   selloSize = 70,
   style,
 }: SelloFirmaProps) {
-  const line = signatureLine ?? "_".repeat(signatureChars)
   return (
     <View
       style={{
@@ -67,18 +55,6 @@ export function SelloFirma({
         ...style,
       }}
     >
-      {/* Signature line: anchored to the bottom of the box. */}
-      <Text
-        style={{
-          position: "absolute",
-          bottom: 8,
-          right: 0,
-          fontSize: 9,
-          color: "#111",
-        }}
-      >
-        {line}
-      </Text>
       {/* Sello: anchored to the top of the box. Renders AFTER the
           signature line in the DOM, so in react-pdf (no real z-index)
           the sello paints on top of the line — exactly what you want
