@@ -14,7 +14,7 @@ export function InactivityGuard() {
   const tickRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
 
   const doLogout = useCallback(() => {
-    signOut({ callbackUrl: "/login" })
+    signOut({ callbackUrl: `${window.location.origin}/login` })
   }, [])
 
   const clearAll = useCallback(() => {

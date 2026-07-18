@@ -196,7 +196,7 @@ export function Sidebar({ role, nombre, apellido, workspaceNombre, workspaceLogo
           <p className="text-slate-500 text-xs">{role.charAt(0) + role.slice(1).toLowerCase()}</p>
         </div>
         <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}
           className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-slate-400 hover:text-white hover:bg-slate-800 w-full transition-colors"
         >
           <LogOut size={16} />

@@ -16,7 +16,7 @@ export function PortalLogoutButton() {
   return (
     <button
       type="button"
-      onClick={() => signOut({ callbackUrl: "/portal/login" })}
+      onClick={() => signOut({ callbackUrl: `${window.location.origin}/portal/login` })}
       className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-300 hover:text-white hover:border-slate-600 transition-colors"
       aria-label="Cerrar sesión del portal"
     >
