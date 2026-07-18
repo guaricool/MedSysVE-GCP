@@ -8,7 +8,10 @@ const globalForRedis = globalThis as unknown as {
 // a live Redis connection. Connection errors surface at runtime, not build time.
 export const redis =
   globalForRedis.redis ??
-  new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", { lazyConnect: true })
+  new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", { 
+    lazyConnect: true,
+    maxRetriesPerRequest: process.env.REDIS_URL ? 20 : 0,
+  })
 
 redis.on("error", (err) => console.error("[Redis]", err.message))
 

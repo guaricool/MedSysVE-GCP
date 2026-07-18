@@ -64,6 +64,9 @@ async function checkIpRateLimit(
   const now = Date.now()
 
   try {
+    if (!process.env.REDIS_URL) {
+      return { ok: true, retryAfter: 0, bucket: matched }
+    }
     const raw = await redis.get(key)
     const bucket: IpBucket = raw ? JSON.parse(raw) : { count: 0, resetAt: now + cfg.windowMs }
 
