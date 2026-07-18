@@ -230,7 +230,7 @@ export function EncounterWorkspace({
     }
 
     if (especialidad === "Traumatología" || especialidad === "Ortopedia") {
-      core.push({ id: "traumatologia", label: "Traumatología", icon: "🦴" })
+      core.push({ id: "traumatologia", label: "Traumatología y Ortopedia", icon: "🦴" })
       core.push({ id: "escalas", label: "Escalas SVCOT", icon: "📊" })
     }
     else if (especialidad === "Ginecología y Obstetricia") core.push({ id: "obstetricia", label: "Obstetricia", icon: "🤰" })
@@ -835,7 +835,7 @@ export function EncounterWorkspace({
           <Section
             id="traumatologia"
             key="traumatologia"
-            title="Evaluación Traumatológica"
+            title="Traumatología y Ortopedia"
             icon="🦴"
             collapsible
             open={openSections.has("traumatologia")}

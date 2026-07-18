@@ -53,8 +53,8 @@ export interface PdfHeader {
 }
 
 export function buildPdfHeader(doctor: DoctorInfo, clinic?: ClinicInfo | null): PdfHeader {
-  const mappedEspecialidad = doctor.especialidad === "Traumatología" ? "Traumatología y ortopedia" : doctor.especialidad
-  const mappedSub = (doctor.subEspecialidades ?? []).map(s => s === "Traumatología" ? "Traumatología y ortopedia" : s)
+  const mappedEspecialidad = (doctor.especialidad === "Traumatología" || doctor.especialidad === "Ortopedia") ? "Traumatología y ortopedia" : doctor.especialidad
+  const mappedSub = (doctor.subEspecialidades ?? []).map(s => (s === "Traumatología" || s === "Ortopedia") ? "Traumatología y ortopedia" : s)
 
   if (clinic) {
     return {

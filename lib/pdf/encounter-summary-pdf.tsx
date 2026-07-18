@@ -182,7 +182,7 @@ const SPECIALTY_PDF_LABELS: Record<string, string> = {
 
 const SPECIALTY_SIGNATURES_PDF: { name: string; keys: string[] }[] = [
   { name: "Cardiología", keys: ["ritmo", "hallazgosEcg", "nyhaClase"] },
-  { name: "Traumatología", keys: ["procedimiento", "osteosintesis", "clasificacionAO"] },
+  { name: "Traumatología y Ortopedia", keys: ["procedimiento", "osteosintesis", "clasificacionAO"] },
   { name: "Endocrinología", keys: ["hba1c", "tsh", "tipoDiabetes"] },
   { name: "Neurología", keys: ["glasgow", "fuerzaMrc", "reflejos"] },
   { name: "Gastroenterología", keys: ["bristolType", "childPugh", "mayoScore"] },

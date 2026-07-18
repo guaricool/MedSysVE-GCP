@@ -29,9 +29,9 @@ export function SharedPdfHeader({
   branding?: PdfBranding
   docTitle?: string
 }) {
-  const mainSpec = doctor.especialidad === "Traumatología" ? "Traumatología y ortopedia" : doctor.especialidad
+  const mainSpec = (doctor.especialidad === "Traumatología" || doctor.especialidad === "Ortopedia") ? "Traumatología y ortopedia" : doctor.especialidad
   const subSpecs = (doctor.subEspecialidades ?? [])
-    .map(s => s === "Traumatología" ? "Traumatología y ortopedia" : s)
+    .map(s => (s === "Traumatología" || s === "Ortopedia") ? "Traumatología y ortopedia" : s)
     .filter(Boolean)
 
   const uniqueList = Array.from(new Set([mainSpec, ...subSpecs])).filter(Boolean) as string[]
