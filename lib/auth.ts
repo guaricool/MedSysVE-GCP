@@ -346,7 +346,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session
     },
     redirect({ url, baseUrl }) {
-      const canonicalBase = process.env.NEXTAUTH_URL ?? baseUrl
+      const canonicalBase = process.env.NEXTAUTH_URL || "https://www.medsysve.com"
       if (url.startsWith("/")) return `${canonicalBase}${url}`
       else if (new URL(url).origin === baseUrl || new URL(url).origin === canonicalBase) return url
       return canonicalBase
