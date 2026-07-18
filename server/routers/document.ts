@@ -390,8 +390,13 @@ export const documentRouter = router({
       // No conflict — proceed with normal accept.
       // We must ALWAYS create a new Patient row in the receiving workspace to
       // maintain strict tenant isolation (1 Patient = 1 workspace).
-      const count = await ctx.db.patientRegistration.count({ where: { workspaceId: ws.id } })
-      const idDisplay = `REF-${String(count + 1).padStart(5, "0")}`
+      const lastRef = await ctx.db.patientRegistration.findFirst({
+        where: { workspaceId: ws.id, idDisplay: { startsWith: "REF-" } },
+        orderBy: { idDisplay: "desc" },
+        select: { idDisplay: true },
+      })
+      const nextRef = lastRef ? parseInt(lastRef.idDisplay.replace("REF-", ""), 10) + 1 : 1
+      const idDisplay = `REF-${String(nextRef).padStart(5, "0")}`
 
       const newPatient = await ctx.db.patient.create({
         data: {
@@ -625,8 +630,13 @@ export const documentRouter = router({
         where: { workspaceId: ws.id, patientId: ownPatient.id },
       })
       if (!existingReg) {
-        const count = await ctx.db.patientRegistration.count({ where: { workspaceId: ws.id } })
-        const idDisplay = `REF-${String(count + 1).padStart(5, "0")}`
+        const lastRef = await ctx.db.patientRegistration.findFirst({
+          where: { workspaceId: ws.id, idDisplay: { startsWith: "REF-" } },
+          orderBy: { idDisplay: "desc" },
+          select: { idDisplay: true },
+        })
+        const nextRef = lastRef ? parseInt(lastRef.idDisplay.replace("REF-", ""), 10) + 1 : 1
+        const idDisplay = `REF-${String(nextRef).padStart(5, "0")}`
         existingReg = await ctx.db.patientRegistration.create({
           data: { idDisplay, patientId: ownPatient.id, workspaceId: ws.id },
         })
