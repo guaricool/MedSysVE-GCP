@@ -18,6 +18,22 @@ const TIPO_LABEL: Record<string, string> = {
   RECETA: "Receta médica",
 }
 
+async function getNextIdDisplay(db: any, workspaceId: string): Promise<string> {
+  const last = await db.patientRegistration.findFirst({
+    where: { 
+      workspaceId,
+      NOT: [
+        { idDisplay: { startsWith: "REF-" } },
+        { idDisplay: { contains: "NaN" } }
+      ]
+    },
+    orderBy: { idDisplay: "desc" },
+    select: { idDisplay: true },
+  })
+  const next = last ? parseInt(last.idDisplay, 10) + 1 : 1
+  return String(next).padStart(6, "0")
+}
+
 export const documentRouter = router({
   generateAIDraft: doctorProcedure
     .input(z.object({ encounterId: z.string() }))
@@ -311,6 +327,28 @@ export const documentRouter = router({
 
       const referredPatient = doc.patientRegistration.patient
 
+      // ───────────────────────────────────────────────────────────────────────
+      // If the referral is INTERNAL (same workspace, e.g. doctor referring
+      // to themselves during testing), we don't need to copy the patient
+      // or duplicate data. Just mark the document as ACCEPTED.
+      // ───────────────────────────────────────────────────────────────────────
+      if (ws.id === doc.patientRegistration.workspaceId) {
+        await ctx.db.document.update({
+          where: { id: doc.id },
+          data: { referidoStatus: "ACCEPTED" },
+        })
+        void ctx.db.notification.create({
+          data: {
+            workspaceId: ws.id,
+            tipo: "REFERRAL_ACCEPTED",
+            titulo: "Referido aceptado",
+            mensaje: `El referido interno de ${referredPatient.nombre} ${referredPatient.apellido} fue aceptado.`,
+            referenciaId: doc.id,
+          },
+        })
+        return { needsMerge: false, documentId: doc.id }
+      }
+
       // ─────────────────────────────────────────────────────────────────────
       // Cédula-merge detection.
       //
@@ -330,12 +368,16 @@ export const documentRouter = router({
             : null
       )
 
-      if (hmac && referredPatient.tipoIdentificacion) {
+      const searchClauses = []
+      if (hmac) searchClauses.push({ hmacCedula: hmac })
+      if (referredPatient.numeroIdentificacion) searchClauses.push({ numeroIdentificacion: referredPatient.numeroIdentificacion })
+
+      if (referredPatient.tipoIdentificacion && searchClauses.length > 0) {
         const ownPatient = await ctx.db.patient.findFirst({
           where: {
             workspaceId: ws.id,
-            hmacCedula: hmac,
             tipoIdentificacion: referredPatient.tipoIdentificacion,
+            OR: searchClauses,
           },
           select: {
             id: true,
@@ -366,7 +408,7 @@ export const documentRouter = router({
               source: "REFERRAL_MERGE_PENDING",
               referredPatientId: doc.patientRegistration.patientId,
               conflictingPatientId: ownPatient.id,
-              hmacCedulaPrefix: hmac.slice(0, 8),
+              hmacCedulaPrefix: hmac ? hmac.slice(0, 8) : null,
             },
           })
 
@@ -390,13 +432,7 @@ export const documentRouter = router({
       // No conflict — proceed with normal accept.
       // We must ALWAYS create a new Patient row in the receiving workspace to
       // maintain strict tenant isolation (1 Patient = 1 workspace).
-      const lastRef = await ctx.db.patientRegistration.findFirst({
-        where: { workspaceId: ws.id, idDisplay: { startsWith: "REF-" } },
-        orderBy: { idDisplay: "desc" },
-        select: { idDisplay: true },
-      })
-      const nextRef = lastRef ? parseInt(lastRef.idDisplay.replace("REF-", ""), 10) + 1 : 1
-      const idDisplay = `REF-${String(nextRef).padStart(5, "0")}`
+      const idDisplay = await getNextIdDisplay(ctx.db, ws.id)
 
       const newPatient = await ctx.db.patient.create({
         data: {
@@ -630,13 +666,7 @@ export const documentRouter = router({
         where: { workspaceId: ws.id, patientId: ownPatient.id },
       })
       if (!existingReg) {
-        const lastRef = await ctx.db.patientRegistration.findFirst({
-          where: { workspaceId: ws.id, idDisplay: { startsWith: "REF-" } },
-          orderBy: { idDisplay: "desc" },
-          select: { idDisplay: true },
-        })
-        const nextRef = lastRef ? parseInt(lastRef.idDisplay.replace("REF-", ""), 10) + 1 : 1
-        const idDisplay = `REF-${String(nextRef).padStart(5, "0")}`
+        const idDisplay = await getNextIdDisplay(ctx.db, ws.id)
         existingReg = await ctx.db.patientRegistration.create({
           data: { idDisplay, patientId: ownPatient.id, workspaceId: ws.id },
         })
