@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs";
+
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -146,41 +146,4 @@ const nextConfig: NextConfig = {
 // Disable X-Powered-By globally (don't leak framework fingerprint).
 // `poweredByHeader: false` already handles this.
 
-/**
- * Sentry Next.js SDK build-time wrapper.
- *
- * Wrapping the config with withSentryConfig() does three things at build time:
- *  1. Injects Sentry CLI into the build to upload source maps (so stack
- *     traces in GlitchTip show original TypeScript, not minified JS).
- *  2. Replaces `NEXT_PUBLIC_SENTRY_DSN` placeholders.
- *  3. Adds the Sentry tunnel route to bypass ad-blockers / corp proxies.
- *
- * We pass options that are safe for our environment:
- *  - silent: don't print Sentry CLI chatter to build output.
- *  - widenClientFileUpload: true — upload client source maps too (for browser errors).
- *  - hideSourceMaps: true — keep source maps out of the runtime bundle.
- *  - disableLogger: true — strip Sentry's debug console.* calls from prod.
- *
- * If SENTRY_DSN is not set at build time, the wrapper still works but
- * emits a warning. Runtime init is gated on the env var being present
- * (see sentry.{server,client,edge}.config.ts).
- */
-const sentryBuildOptions = {
-  silent: true,
-  widenClientFileUpload: true,
-  hideSourceMaps: true,
-  // Modern replacement for `disableLogger` (deprecated in @sentry/nextjs 8+).
-  // Strips Sentry's debug console.* calls from prod bundles.
-  webpack: {
-    treeshake: {
-      removeDebugLogging: true,
-    },
-  },
-  // Tunnel: any path starting with this gets routed to Sentry ingest,
-  // useful if a corp proxy or browser extension blocks sentry.io.
-  tunnelRoute: "/monitoring-tunnel",
-};
-
-export default process.env.SENTRY_DSN
-  ? withSentryConfig(nextConfig, sentryBuildOptions)
-  : nextConfig;
+export default nextConfig;
