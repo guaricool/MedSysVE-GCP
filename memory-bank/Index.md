@@ -1,33 +1,21 @@
-# MedSysVE-GCP: Memory Bank Index
+# Memory Bank - Índice Maestro
 
-Bienvenido al registro de memoria del proyecto **MedSysVE-GCP**, un SaaS multi-tenant de Historia Clínica Electrónica para médicos venezolanos.
+Bienvenido a la tabla de contenidos maestra del repositorio **[[MedSysVE]]**. Esta carpeta actúa como la memoria persistente del estado arquitectónico, contexto de desarrollo y decisiones de producto del sistema.
 
-Esta carpeta centraliza el contexto operativo, arquitectónico y de estado para optimizar la inteligencia del equipo y asegurar la continuidad de los agentes automatizados, estando en total sincronía con nuestro análisis dinámico del código a través de `[[graphify-out/GRAPH_REPORT.md]]`.
+## Documentos Principales
 
-## Nodos Principales
+- **[[activeContext]]**: Resumen del estado más reciente de desarrollo, features desplegados (como las especialidades de Psiquiatría e Infectología) y arquitectura operativa activa.
+- **[[PROJECT_STATUS]]**: Definición del esquema, fases implementadas y variables de entorno del proyecto.
+- **[[SISTEMA]]**: Descripción funcional del sistema completo, enfocado en las reglas de dominio multi-tenant y roles.
+- **[[RUNBOOK]]**: Protocolos operativos de emergencia, restauraciones, despliegues y resolución de problemas.
 
-### 1. Estado y Operación
-- **`[[activeContext.md]]`**: El estado actual de la plataforma en Google Cloud, incidentes recientes resueltos (como el fix del conflicto en referidos) y próximos pasos. Es el punto de partida para cualquier sesión nueva.
-- **`[[PROJECT_STATUS.md]]`**: Documento de fases históricas de desarrollo, diagrama del schema, arquitectura on-demand y variables de entorno críticas de Google Cloud.
-- **`[[RUNBOOK.md]]`**: Procedimientos operativos estándar adaptados a GCP, recuperación de desastres (DR), rotación de llaves, despliegues serverless en Cloud Run y troubleshooting de Cloud SQL.
+## Integración con Graphify
 
-### 2. Diseño y Dominio Funcional
-- **`[[SISTEMA.md]]`**: Descripción funcional y de negocio orientada a los roles y casos de uso del dominio clínico venezolano (médicos, secretarias, portal de pacientes).
-- **`[[SECURITY_HARDENING_CHANGELOG.md]]`**: Registro de aplicación de normativas HIPAA/LOPDP, cifrado nativo de campos PHI con llaves AES-256-GCM y bitácora de auditoría estricta, ahora con inyección de llaves a nivel de Cloud Run.
+Para una exploración visual de nodos de código y dependencias a través de AST estáticos (Abstract Syntax Trees), te recomendamos consultar directamente:
+- **[[graphify-out/GRAPH_REPORT]]**: Un análisis jerárquico actualizado sobre las ramas del frontend, el backend en tRPC, capas de base de datos e interconexiones de los archivos clave. 
+- Puedes generar un grafo semántico de un flujo ejecutando `graphify query "tu pregunta"`.
 
-### 3. Grafo de Código (Code Knowledge Graph)
-- **`[[graphify-out/GRAPH_REPORT.md]]`**: El análisis completo extraído por AST sobre todos los componentes, routers y servicios de este repositorio. Este reporte detalla la red de comunidades y dependencias críticas del ecosistema React/Next.js y tRPC.
-- **`[[graphify-out/graph.json]]`**: La base de datos persistente que nutre nuestras consultas rápidas de estructura.
-
-## Estructura de la Arquitectura
-Para un repaso veloz de las tecnologías clave:
-- **Core Framework**: `[[Next.js 16]]` (App Router) + `[[React 19]]`
-- **Comunicaciones**: `[[tRPC 11]]` + Routers (ej. `[[server/routers/document.ts]]`, `[[server/routers/patient.ts]]`)
-- **Datos y Persistencia**: `[[PostgreSQL]]` en `[[Cloud SQL]]` + `[[Prisma 7]]` (Adaptado vía `lib/db.ts`)
-- **Infraestructura Actual Única**: `[[Google Cloud Platform]]` (`[[CloudRun]]` + `[[CloudSQL]]`)
-- **Almacenamiento (Uploads)**: `[[Google Cloud Storage]]`
-- **Seguridad / Cifrado**: Criptografía nativa de campos PHI con llaves rotativas (`[[lib/patient-crypto.ts]]`, `[[lib/field-crypto.ts]]`) gestionadas desde el entorno de GCP.
-
----
-> **Nota para los Agentes y Desarrolladores:**
-> *Cualquier cambio sustancial en la arquitectura (ej. nueva integración de servicios de GCP) o en la resolución de bugs críticos debe reflejarse primero actualizando el `[[activeContext.md]]` y, de ser un rediseño de código, ejecutando `graphify . --code-only`.*
+## Flujos Destacados
+1. **[[EncounterWorkspace]]**: Núcleo del espacio de trabajo clínico donde se montan formularios según el rol, como **[[PsiquiatriaForm]]** o **[[InfectologiaForm]]**.
+2. **Sistema Multi-Tenant**: Gestión cruzada de clínicas mediante `workspaceId`.
+3. **Manejo de Pacientes y Referidos**: Flujos complejos de _Merge_ para historias clínicas.

@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { SexoType, IdentificationType, ParentRelationship } from "@prisma/client"
+import { CountryCodeSelect } from "@/components/ui/country-code-select"
 
 export function PatientForm() {
   const router = useRouter()
   const [sinCedula, setSinCedula] = useState(false)
+  const [codigoPais, setCodigoPais] = useState("+58")
   const [error, setError] = useState("")
 
   const register = (trpc.patient as any).register.useMutation({
@@ -36,6 +38,7 @@ export function PatientForm() {
       fechaNacimiento: fd.get("fechaNacimiento") as string,
       sexo: fd.get("sexo") as SexoType,
       telefono: (fd.get("telefono") as string) || undefined,
+      codigoPais: codigoPais,
       email: (fd.get("email") as string) || undefined,
       representante: sinCedula
         ? {
@@ -131,7 +134,10 @@ export function PatientForm() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-slate-300">Teléfono</Label>
-              <Input name="telefono" className="bg-slate-800 border-slate-700 text-white w-full" />
+              <div className="flex gap-2">
+                <CountryCodeSelect value={codigoPais} onChange={setCodigoPais} />
+                <Input name="telefono" className="bg-slate-800 border-slate-700 text-white w-full" />
+              </div>
             </div>
             <div className="space-y-1">
               <Label className="text-slate-300">Email</Label>

@@ -9,11 +9,13 @@ import { Label } from "@/components/ui/label"
 import { trpc } from "@/lib/trpc-client"
 import { toast } from "sonner"
 import { Pencil } from "lucide-react"
+import { CountryCodeSelect } from "@/components/ui/country-code-select"
 
 interface EditPatientModalProps {
   patientId: string
   initialData: {
     telefono?: string | null
+    codigoPais?: string | null
     email?: string | null
     direccion?: string | null
   }
@@ -22,6 +24,7 @@ interface EditPatientModalProps {
 export function EditPatientModal({ patientId, initialData }: EditPatientModalProps) {
   const [open, setOpen] = useState(false)
   const [telefono, setTelefono] = useState(initialData.telefono || "")
+  const [codigoPais, setCodigoPais] = useState(initialData.codigoPais || "+58")
   const [email, setEmail] = useState(initialData.email || "")
   const [direccion, setDireccion] = useState(initialData.direccion || "")
   
@@ -45,6 +48,7 @@ export function EditPatientModal({ patientId, initialData }: EditPatientModalPro
     updatePatient.mutate({
       patientId,
       telefono: telefono.trim(),
+      codigoPais: codigoPais,
       email: email.trim(),
       direccion: direccion.trim(),
     })
@@ -74,13 +78,16 @@ export function EditPatientModal({ patientId, initialData }: EditPatientModalPro
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="telefono" className="text-slate-300">Teléfono</Label>
-                  <Input
-                    id="telefono"
-                    value={telefono}
-                    onChange={(e) => setTelefono(e.target.value)}
-                    className="bg-slate-900 border-slate-800"
-                    placeholder="+58 412 1234567"
-                  />
+                  <div className="flex gap-2">
+                    <CountryCodeSelect value={codigoPais} onChange={setCodigoPais} />
+                    <Input
+                      id="telefono"
+                      value={telefono}
+                      onChange={(e) => setTelefono(e.target.value)}
+                      className="bg-slate-900 border-slate-800 flex-1"
+                      placeholder="412 1234567"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-slate-300">Correo Electrónico</Label>

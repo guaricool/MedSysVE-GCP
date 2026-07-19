@@ -361,6 +361,7 @@ model Patient {
   direccion            String?               @db.Text
   direccionCifrada     String?               @db.Text
   telefono             String?
+  codigoPais           String?               @default("+58")
   telefonoCifrado      String?               @db.Text
   hmacTelefono         String?
   email                String?

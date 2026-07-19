@@ -57,17 +57,35 @@ async function handleIncomingMessage(message: any, contact: any) {
     return
   }
 
-  let phoneToMatch = phone
-  // Meta sends numbers with country code (e.g. 58414...). MedSysVE uses 0414...
-  if (phone.startsWith("58") && phone.length === 12) {
-    phoneToMatch = "0" + phone.substring(2)
+  // Generate possible local phone formats to match existing DB entries
+  const possiblePhones = [phone]
+  
+  // Venezuela (+58)
+  if (phone.startsWith("58")) {
+    const local = phone.substring(2) // 414...
+    possiblePhones.push("0" + local) // 0414...
+    possiblePhones.push(local)       // 414...
   }
+  // USA/Canada (+1)
+  else if (phone.startsWith("1")) {
+    possiblePhones.push(phone.substring(1)) // 305...
+  }
+  // Colombia (+57)
+  else if (phone.startsWith("57")) {
+    possiblePhones.push(phone.substring(2))
+  }
+  // Ecuador (+593)
+  else if (phone.startsWith("593")) {
+    possiblePhones.push(phone.substring(3))
+    possiblePhones.push("0" + phone.substring(3))
+  }
+  // Add other countries as needed
 
-  // Look up patient by phone (HMAC indexed)
-  const hmacTelefono = createHmac("sha256", FIELD_HMAC_KEY).update(phoneToMatch).digest("hex")
+  // Look up patient by any of the possible phone formats
+  const hmacs = possiblePhones.map(p => createHmac("sha256", FIELD_HMAC_KEY).update(p).digest("hex"))
   
   const patient = await db.patient.findFirst({
-    where: { hmacTelefono },
+    where: { hmacTelefono: { in: hmacs } },
     include: { registrations: true }
   })
 

@@ -96,6 +96,7 @@ const patientInputSchema = z
     fechaNacimiento: z.string(), // ISO date string YYYY-MM-DD
     sexo: z.nativeEnum(SexoType),
     telefono: z.string().optional(),
+    codigoPais: z.string().optional(),
     email: z.string().email().optional(),
     representante: representanteSchema.optional(),
   })
@@ -143,6 +144,7 @@ export const patientRouter = router({
           fechaNacimiento: true,
           sexo: true,
           telefono: true,
+          codigoPais: true,
           email: true,
           sinCedula: true,
         },
@@ -188,11 +190,12 @@ export const patientRouter = router({
       // para cada doctor".
 
       let autofill: {
-        nombre?: string
-        apellido?: string
-        fechaNacimiento?: string
-        sexo?: SexoType
+        nombre: string
+        apellido: string
+        fechaNacimiento: string
+        sexo: SexoType
         telefono?: string | null
+        codigoPais?: string | null
         email?: string | null
       } | null = null
 
@@ -209,6 +212,7 @@ export const patientRouter = router({
             fechaNacimiento: true,
             sexo: true,
             telefono: true,
+            codigoPais: true,
             email: true,
           },
           orderBy: { createdAt: "desc" },
@@ -220,6 +224,7 @@ export const patientRouter = router({
             fechaNacimiento: match.fechaNacimiento.toISOString().slice(0, 10),
             sexo: match.sexo,
             telefono: match.telefono,
+            codigoPais: match.codigoPais,
             email: match.email,
           }
           // Audit cross-workspace autofill.
@@ -294,6 +299,8 @@ export const patientRouter = router({
             const finalSexo = input.sexo || autofill?.sexo
             const finalTelefono =
               input.telefono?.trim() || autofill?.telefono || undefined
+            const finalCodigoPais =
+              input.codigoPais?.trim() || autofill?.codigoPais || "+58"
             // Emails are case-insensitive for login (see lib/auth.ts portal
             // provider). Normalize on write so the plaintext column matches
             // the lowercase HMAC index — keeps the two columns consistent and
@@ -328,6 +335,7 @@ export const patientRouter = router({
                 fechaNacimiento: new Date(finalFechaNac),
                 sexo: finalSexo,
                 telefono: finalTelefono,
+                codigoPais: finalCodigoPais,
                 telefonoCifrado: encryptField(finalTelefono ?? null),
                 hmacTelefono: finalTelefono ? hmacIndex(finalTelefono) : null,
                 email: finalEmail,
@@ -430,6 +438,7 @@ export const patientRouter = router({
                 direccion: source.direccion,
                 direccionCifrada: source.direccionCifrada,
                 telefono: source.telefono,
+                codigoPais: source.codigoPais,
                 telefonoCifrado: source.telefonoCifrado,
                 hmacTelefono: source.hmacTelefono,
                 email: source.email,
@@ -743,9 +752,10 @@ export const patientRouter = router({
     .input(
       z.object({
         patientId: z.string(),
-        telefono: z.string().optional(),
-        email: z.string().email().optional().or(z.literal("")),
         direccion: z.string().optional(),
+        telefono: z.string().optional(),
+        codigoPais: z.string().optional(),
+        email: z.string().email("El email no es válido").optional().or(z.literal("")),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -756,6 +766,10 @@ export const patientRouter = router({
       if (!reg) throw new TRPCError({ code: "NOT_FOUND" })
 
       const data: Record<string, unknown> = {}
+      
+      if (input.codigoPais !== undefined) {
+        data.codigoPais = input.codigoPais || "+58"
+      }
       
       if (input.telefono !== undefined) {
         data.telefono = input.telefono || null
