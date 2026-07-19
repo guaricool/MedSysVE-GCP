@@ -23,6 +23,7 @@ const PUBLIC_PREFIXES = [
   "/reset-password",
   "/sitemap.xml",
   "/robots.txt",
+  "/api/webhooks",
 ]
 
 // ============================================================================
