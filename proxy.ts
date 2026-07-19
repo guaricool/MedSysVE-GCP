@@ -3,6 +3,12 @@ import { safeLog } from "./lib/log-sanitizer"
 import { auth } from "@/lib/auth-edge"
 
 import { db } from "./lib/db"
+import { Redis } from "@upstash/redis"
+
+// Create Redis client if env vars exist
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN
+const redis = redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken }) : null
 
 const AUTH_PAGES = ["/login", "/register"]
 const PORTAL_AUTH_PAGES = ["/portal/login"]
@@ -65,25 +71,41 @@ async function checkIpRateLimit(
   const now = Date.now()
 
   try {
-    const raw = globalIpBuckets.get(key)
-    const bucket: IpBucket = raw ? raw : { count: 0, resetAt: now + cfg.windowMs }
+    if (redis) {
+      // UPSTASH REDIS IMPLEMENTATION (Distributed)
+      const windowSec = Math.ceil(cfg.windowMs / 1000)
+      
+      const [[_countResult], [count]] = await redis.pipeline()
+        .incr(key)
+        .expire(key, windowSec, "NX")
+        .exec() as any[]
+      
+      if (count > cfg.max) {
+        const ttl = await redis.ttl(key)
+        return { ok: false, retryAfter: Math.max(1, ttl), bucket: matched }
+      }
+      return { ok: true, retryAfter: 0, bucket: matched }
+    } else {
+      // IN-MEMORY FALLBACK (Ephemeral)
+      const raw = globalIpBuckets.get(key)
+      const bucket: IpBucket = raw ? raw : { count: 0, resetAt: now + cfg.windowMs }
 
-    // Reset if window expired.
-    if (now >= bucket.resetAt) {
-      bucket.count = 0
-      bucket.resetAt = now + cfg.windowMs
-    }
+      if (now >= bucket.resetAt) {
+        bucket.count = 0
+        bucket.resetAt = now + cfg.windowMs
+      }
 
-    bucket.count += 1
+      bucket.count += 1
 
-    if (bucket.count > cfg.max) {
-      const retryAfter = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))
+      if (bucket.count > cfg.max) {
+        const retryAfter = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))
+        globalIpBuckets.set(key, bucket)
+        return { ok: false, retryAfter, bucket: matched }
+      }
+
       globalIpBuckets.set(key, bucket)
-      return { ok: false, retryAfter, bucket: matched }
+      return { ok: true, retryAfter: 0, bucket: matched }
     }
-
-    globalIpBuckets.set(key, bucket)
-    return { ok: true, retryAfter: 0, bucket: matched }
   } catch (err) {
     safeLog("error", "proxy.ratelimit_failed", {
       ip: ip.slice(0, 8) + "***",
@@ -91,7 +113,6 @@ async function checkIpRateLimit(
       bucket: matched,
       error: err instanceof Error ? err.message : "unknown",
     })
-    // Fail-closed for security-sensitive buckets (auth, admin, portal-login)
     return { ok: !cfg.failClosed, retryAfter: cfg.failClosed ? 60 : 0, bucket: matched }
   }
 }

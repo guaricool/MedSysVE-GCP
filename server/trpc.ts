@@ -3,6 +3,13 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { ZodError } from "zod"
 import type { SessionUser } from "@/types"
+import { Redis } from "@upstash/redis"
+import { audit } from "@/lib/audit"
+
+// Create Redis client if env vars exist
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN
+const redis = redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken }) : null
 
 export async function createContext() {
   const session = await auth()
@@ -30,8 +37,46 @@ const t = initTRPC.context<Context>().create({
 export const router = t.router
 export const publicProcedure = t.procedure
 
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+export const protectedProcedure = t.procedure.use(async ({ ctx, path, next }) => {
   if (!ctx.session) throw new TRPCError({ code: "UNAUTHORIZED" })
+  
+  // Anti-Scraping / Pagination Anomaly Detection
+  // We limit each authenticated user to 300 tRPC requests per 5 minutes.
+  // This is generous enough for normal use but blocks aggressive scraping scripts.
+  if (redis && ctx.session.id) {
+    const key = `rl:user:trpc:${ctx.session.id}`
+    const windowSec = 300
+    const maxRequests = 300
+
+    try {
+      const [[_countResult], [count]] = await redis.pipeline()
+        .incr(key)
+        .expire(key, windowSec, "NX")
+        .exec() as any[]
+
+      if (count > maxRequests) {
+        // Log critical security anomaly
+        await audit("PAGINATION_ANOMALY", {
+          userId: ctx.session.id,
+          userRole: ctx.session.role,
+          workspaceId: ctx.session.workspaceId,
+          channel: "API",
+          metadata: { path, count, windowSec },
+          outcome: "DENIED",
+          reason: "User exceeded tRPC rate limit (Slow Scraping defense)",
+        })
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Rate limit exceeded. Please slow down.",
+        })
+      }
+    } catch (err) {
+      if (err instanceof TRPCError) throw err
+      // If Redis fails, we fail open to not break the app for legitimate users
+      console.error("[tRPC Rate Limit Error]", err)
+    }
+  }
+
   return next({ ctx: { ...ctx, session: ctx.session } })
 })
 

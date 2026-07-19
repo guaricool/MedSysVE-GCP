@@ -110,6 +110,9 @@ export type AuditAction =
   // Operationally important for spotting both legitimate multi-doctor
   // collaboration and potential data-loss scenarios.
   | "ENCOUNTER_CONFLICT"
+  // Scraping / rate-limit anomalies
+  | "PAGINATION_ANOMALY"
+
 
 export interface AuditContext {
   userId?: string | null
@@ -186,6 +189,7 @@ export async function audit(
     "TWO_FACTOR_ENABLED", "TWO_FACTOR_DISABLED",
     "DATA_EXPORT_GDPR", "DATA_DELETE_GDPR",
     "ACCESS_DENIED",
+    "PAGINATION_ANOMALY",
   ];
   if (LEGACY_SEVERE.includes(action)) {
     try {
