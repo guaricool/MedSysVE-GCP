@@ -855,11 +855,17 @@ enum MensajeAutor {
   PATIENT
 }
 
+enum MensajeCanal {
+  PORTAL
+  WHATSAPP
+}
+
 model Mensaje {
   id                    String       @id @default(cuid())
   workspaceId           String
   patientRegistrationId String
   autor                 MensajeAutor
+  canal                 MensajeCanal @default(PORTAL)
   texto                 String       @db.Text
   /// Encrypted (AES-256-GCM). Preferred for new writes. Readers fall back to
   /// `texto` (plaintext) when this is NULL — legacy rows.
@@ -1092,6 +1098,7 @@ model ClinicPost {
 enum NotificationType {
   APPOINTMENT_REQUEST
   PORTAL_MESSAGE
+  WHATSAPP_MESSAGE
   /// Created in the RECEIVING doctor's workspace when another doctor sends
   /// them a referral. Distinct from REFERRAL_ACCEPTED (notified to the sender
   /// after the receiver acts) and REFERRAL_REJECTED.

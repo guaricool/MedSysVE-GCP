@@ -7,18 +7,32 @@ export const mensajeRouter = router({
     .input(z.object({
       patientRegistrationId: z.string(),
       texto: z.string().min(1).max(2000),
+      canal: z.enum(["PORTAL", "WHATSAPP"]).default("PORTAL")
     }))
     .mutation(async ({ ctx, input }) => {
       const reg = await ctx.db.patientRegistration.findFirst({
         where: { id: input.patientRegistrationId, workspaceId: ctx.session.workspaceId },
-        select: { id: true },
+        include: { patient: true },
       })
       if (!reg) throw new TRPCError({ code: "NOT_FOUND" })
+
+      if (input.canal === "WHATSAPP") {
+        if (!reg.patient.telefono) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "El paciente no tiene número de teléfono registrado" })
+        }
+        const { sendWhatsAppText } = await import("@/lib/whatsapp")
+        const wa = await sendWhatsAppText(reg.patient.telefono, input.texto)
+        if (!wa.success) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Error enviando WhatsApp: " + wa.error })
+        }
+      }
+
       return ctx.db.mensaje.create({
         data: {
           workspaceId: ctx.session.workspaceId,
           patientRegistrationId: input.patientRegistrationId,
           autor: "DOCTOR",
+          canal: input.canal,
           texto: input.texto,
           leido: true,
         },

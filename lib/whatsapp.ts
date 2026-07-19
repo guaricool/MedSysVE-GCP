@@ -1,13 +1,14 @@
-const OPENWA_URL = process.env.OPENWA_URL || "http://localhost:2785"
-const OPENWA_API_KEY = process.env.OPENWA_API_KEY
-const OPENWA_SESSION_ID = process.env.OPENWA_SESSION_ID || "default"
+const WA_URL = process.env.WA_API_URL || "https://graph.facebook.com/v19.0"
+const WA_PHONE_NUMBER_ID = process.env.WA_PHONE_NUMBER_ID
+const WA_ACCESS_TOKEN = process.env.WA_ACCESS_TOKEN
 
-async function sendOpenWAMessage(
+async function sendWhatsAppTemplate(
   to: string,
-  text: string,
+  templateName: string,
+  parameters: string[]
 ): Promise<{ success: boolean; error?: string }> {
-  if (!OPENWA_API_KEY) {
-    console.warn("[WhatsApp] Not configured — set OPENWA_API_KEY")
+  if (!WA_PHONE_NUMBER_ID || !WA_ACCESS_TOKEN) {
+    console.warn("[WhatsApp] Not configured — set WA_PHONE_NUMBER_ID and WA_ACCESS_TOKEN")
     return { success: false, error: "not_configured" }
   }
 
@@ -15,19 +16,27 @@ async function sendOpenWAMessage(
   const phone = to.replace(/\D/g, "")
   if (!phone) return { success: false, error: "invalid_phone" }
 
-  // whatsapp-web.js requires the @c.us suffix
-  const jid = `${phone}@c.us`
+  const bodyComponents = parameters.length > 0 ? [{
+    type: "body",
+    parameters: parameters.map(p => ({ type: "text", text: p }))
+  }] : []
 
   try {
-    const res = await fetch(`${OPENWA_URL}/api/sessions/${OPENWA_SESSION_ID}/messages/send-text`, {
+    const res = await fetch(`${WA_URL}/${WA_PHONE_NUMBER_ID}/messages`, {
       method: "POST",
       headers: {
-        "X-API-Key": OPENWA_API_KEY,
+        "Authorization": `Bearer ${WA_ACCESS_TOKEN}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        to: jid,
-        text,
+        messaging_product: "whatsapp",
+        to: phone,
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: "es" },
+          components: bodyComponents
+        }
       }),
     })
     
@@ -44,14 +53,61 @@ async function sendOpenWAMessage(
   }
 }
 
+export async function sendWhatsAppText(
+  to: string,
+  text: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!WA_PHONE_NUMBER_ID || !WA_ACCESS_TOKEN) {
+    console.warn("[WhatsApp] Not configured")
+    return { success: false, error: "not_configured" }
+  }
+
+  const phone = to.replace(/\D/g, "")
+  if (!phone) return { success: false, error: "invalid_phone" }
+
+  try {
+    const res = await fetch(`${WA_URL}/${WA_PHONE_NUMBER_ID}/messages`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${WA_ACCESS_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: phone,
+        type: "text",
+        text: {
+          preview_url: false,
+          body: text
+        }
+      }),
+    })
+    
+    if (!res.ok) {
+      const err = await res.text()
+      console.error("[WhatsApp] Text send failed:", err)
+      return { success: false, error: err }
+    }
+    
+    return { success: true }
+  } catch (e) {
+    console.error("[WhatsApp] Network error:", e)
+    return { success: false, error: "network_error" }
+  }
+}
+
 export async function notifyAppointmentCreated(opts: {
   phone: string
   patientName: string
   doctorName: string
   fechaHora: string
 }) {
-  const text = `Hola ${opts.patientName},\n\nTu cita con el/la Dr/a. ${opts.doctorName} ha sido agendada para el ${opts.fechaHora}.\n\n¡Te esperamos!`
-  return sendOpenWAMessage(opts.phone, text)
+  return sendWhatsAppTemplate(opts.phone, "appointment_created", [
+    opts.patientName,
+    opts.doctorName,
+    opts.fechaHora
+  ])
 }
 
 export async function notifyAppointmentConfirmed(opts: {
@@ -59,8 +115,10 @@ export async function notifyAppointmentConfirmed(opts: {
   patientName: string
   fechaHora: string
 }) {
-  const text = `Hola ${opts.patientName},\n\nTu cita del ${opts.fechaHora} ha sido confirmada.\n\nNos vemos pronto.`
-  return sendOpenWAMessage(opts.phone, text)
+  return sendWhatsAppTemplate(opts.phone, "appointment_confirmed", [
+    opts.patientName,
+    opts.fechaHora
+  ])
 }
 
 export async function notifyAppointmentReminder(opts: {
@@ -69,8 +127,11 @@ export async function notifyAppointmentReminder(opts: {
   doctorName: string
   fechaHora: string
 }) {
-  const text = `Recordatorio para ${opts.patientName}:\n\nTienes una cita programada con el/la Dr/a. ${opts.doctorName} el ${opts.fechaHora}.\n\nPor favor asiste con 10 minutos de anticipación.`
-  return sendOpenWAMessage(opts.phone, text)
+  return sendWhatsAppTemplate(opts.phone, "appointment_reminder", [
+    opts.patientName,
+    opts.doctorName,
+    opts.fechaHora
+  ])
 }
 
 export async function notifyDocumentReady(opts: {
@@ -78,6 +139,8 @@ export async function notifyDocumentReady(opts: {
   patientName: string
   tipoDocumento: string
 }) {
-  const text = `Hola ${opts.patientName},\n\nTu documento "${opts.tipoDocumento}" ya está listo y disponible en tu portal de paciente.\n\nPuedes acceder para revisarlo o descargarlo.`
-  return sendOpenWAMessage(opts.phone, text)
+  return sendWhatsAppTemplate(opts.phone, "document_ready", [
+    opts.patientName,
+    opts.tipoDocumento
+  ])
 }

@@ -1,18 +1,19 @@
 "use client"
 import { useState } from "react"
 import { trpc } from "@/lib/trpc-client"
-import { MessageSquare, Send } from "lucide-react"
+import { MessageSquare, Send, Smartphone } from "lucide-react"
 
 interface Convo {
   patientRegistrationId: string
   patientName: string
-  lastMessage: { texto: string; creadoAt: string | Date; autor: string } | null
+  lastMessage: { texto: string; creadoAt: string | Date; autor: string; canal?: string } | null
   unread: number
 }
 
 export function MensajesClient({ initialConversations }: { initialConversations: Convo[] }) {
   const [selected, setSelected] = useState<string | null>(initialConversations[0]?.patientRegistrationId ?? null)
   const [text, setText] = useState("")
+  const [replyCanal, setReplyCanal] = useState<"PORTAL" | "WHATSAPP">("PORTAL")
   const utils = trpc.useUtils()
 
   const { data: messages = [] } = trpc.mensaje.list.useQuery(
@@ -51,6 +52,12 @@ export function MensajesClient({ initialConversations }: { initialConversations:
   function handleSelect(id: string) {
     setSelected(id)
     markRead.mutate({ patientRegistrationId: id })
+    const convo = initialConversations.find(c => c.patientRegistrationId === id)
+    if (convo?.lastMessage?.canal === "WHATSAPP") {
+      setReplyCanal("WHATSAPP")
+    } else {
+      setReplyCanal("PORTAL")
+    }
   }
 
   const selectedConvo = initialConversations.find((c) => c.patientRegistrationId === selected)
@@ -114,21 +121,32 @@ export function MensajesClient({ initialConversations }: { initialConversations:
                     }`}
                   >
                     <p>{m.texto}</p>
-                    <p className="text-xs mt-1 opacity-60">
-                      {new Date(m.creadoAt).toLocaleTimeString("es-VE", { hour: "2-digit", minute: "2-digit", timeZone: 'America/Caracas' })}
-                    </p>
+                    <div className="flex items-center justify-between mt-1 opacity-60 text-xs">
+                      <p>
+                        {new Date(m.creadoAt).toLocaleTimeString("es-VE", { hour: "2-digit", minute: "2-digit", timeZone: 'America/Caracas' })}
+                      </p>
+                      {m.canal === "WHATSAPP" && <Smartphone size={12} className="ml-2" />}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="p-4 border-t border-slate-800 flex gap-2">
+            <div className="p-4 border-t border-slate-800 flex gap-2 items-center">
+              <select
+                value={replyCanal}
+                onChange={(e) => setReplyCanal(e.target.value as "PORTAL" | "WHATSAPP")}
+                className="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-2 focus:outline-none focus:ring-1 focus:ring-blue-600"
+              >
+                <option value="PORTAL">Portal</option>
+                <option value="WHATSAPP">WhatsApp</option>
+              </select>
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault()
-                    if (text.trim()) send.mutate({ patientRegistrationId: selected, texto: text.trim() })
+                    if (text.trim()) send.mutate({ patientRegistrationId: selected, texto: text.trim(), canal: replyCanal })
                   }
                 }}
                 placeholder="Escribir mensaje..."
@@ -136,7 +154,7 @@ export function MensajesClient({ initialConversations }: { initialConversations:
               />
               <button
                 disabled={!text.trim() || send.isPending}
-                onClick={() => { if (text.trim()) send.mutate({ patientRegistrationId: selected, texto: text.trim() }) }}
+                onClick={() => { if (text.trim()) send.mutate({ patientRegistrationId: selected, texto: text.trim(), canal: replyCanal }) }}
                 className="rounded-lg bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 <Send size={16} />
