@@ -23,8 +23,13 @@ async function getSecret(secretName: string) {
       headers: { "Authorization": `Bearer ${access_token}` }
     });
     const secretData = await secretRes.json();
-    return Buffer.from(secretData.payload.data, 'base64').toString('utf8').trim();
+    if (!secretData || !secretData.payload) {
+      console.error("No payload in secretData", secretData);
+      return process.env[secretName];
+    }
+    return atob(secretData.payload.data).trim();
   } catch (e) {
+    console.error("getSecret Error:", e);
     return process.env[secretName];
   }
 }
