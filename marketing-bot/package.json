@@ -1,0 +1,25 @@
+{
+  "name": "medsysve-marketing-bot",
+  "version": "1.0.0",
+  "description": "Instagram Marketing Bot using Puppeteer and Vertex AI",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "@google-cloud/secret-manager": "^5.0.1",
+    "@google-cloud/storage": "^7.21.0",
+    "@google-cloud/vertexai": "^1.2.0",
+    "@google/genai": "^2.12.0",
+    "axios": "^1.7.2",
+    "google-auth-library": "^10.9.0",
+    "puppeteer": "^22.12.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.3"
+  }
+}

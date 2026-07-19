@@ -1593,3 +1593,14 @@ model ExpressOrder {
 
   @@index([workspaceId])
 }
+
+model MarketingPost {
+  id           String   @id @default(cuid())
+  imageUrl     String   @db.Text
+  caption      String   @db.Text
+  hashtags     String   @db.Text
+  style        String   // "hyperrealistic", "cartoon", "screenshot"
+  status       String   // "PUBLISHED", "FAILED"
+  igMediaId    String?  
+  publishedAt  DateTime @default(now())
+}

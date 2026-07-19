@@ -39,6 +39,7 @@ import { billingRouter } from "./billing"
 import { featureFlagRouter } from "./feature-flag"
 import { reportPreferencesRouter } from "./report-preferences"
 import { expressOrderRouter } from "./expressOrder"
+import { marketingRouter } from "./marketing"
 
 export const appRouter = router({
   auth: authRouter,
@@ -81,6 +82,7 @@ export const appRouter = router({
   featureFlag: featureFlagRouter,
   reportPreferences: reportPreferencesRouter,
   expressOrder: expressOrderRouter,
+  marketing: marketingRouter,
 })
 
 export type AppRouter = typeof appRouter
