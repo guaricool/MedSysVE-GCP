@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { createHmac } from "crypto"
-
 // Meta requires a verify token for the webhook setup
 const VERIFY_TOKEN = process.env.WA_VERIFY_TOKEN || "medsysve_webhook_secure_2026"
-const FIELD_HMAC_KEY = process.env.FIELD_HMAC_KEY
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -52,73 +49,16 @@ async function handleIncomingMessage(message: any, contact: any) {
   const phone = message.from
   const text = message.text.body
 
-  if (!FIELD_HMAC_KEY) {
-    console.error("[WhatsApp Webhook] Missing FIELD_HMAC_KEY, cannot lookup patient")
-    return
-  }
-
-  // Generate possible local phone formats to match existing DB entries
-  const possiblePhones = [phone]
-  
-  // Venezuela (+58)
-  if (phone.startsWith("58")) {
-    const local = phone.substring(2) // 414...
-    possiblePhones.push("0" + local) // 0414...
-    possiblePhones.push(local)       // 414...
-  }
-  // USA/Canada (+1)
-  else if (phone.startsWith("1")) {
-    possiblePhones.push(phone.substring(1)) // 305...
-  }
-  // Colombia (+57)
-  else if (phone.startsWith("57")) {
-    possiblePhones.push(phone.substring(2))
-  }
-  // Ecuador (+593)
-  else if (phone.startsWith("593")) {
-    possiblePhones.push(phone.substring(3))
-    possiblePhones.push("0" + phone.substring(3))
-  }
-  // Add other countries as needed
-
-  // Look up patient by any of the possible phone formats
-  const hmacs = possiblePhones.map(p => createHmac("sha256", FIELD_HMAC_KEY).update(p).digest("hex"))
-  
-  const patient = await db.patient.findFirst({
-    where: { hmacTelefono: { in: hmacs } },
-    include: { registrations: true }
-  })
-
-  if (!patient || patient.registrations.length === 0) {
-    console.log(`[WhatsApp Webhook] Unrecognized phone number: ${phone}`)
-    return
-  }
-
-  // Find the first registration (for the first doctor they are registered with)
-  const registration = patient.registrations[0]
-
-  // Insert message as PATIENT and canal WHATSAPP
-  await db.mensaje.create({
+  // Insert message into MarketingMessage
+  await db.marketingMessage.create({
     data: {
-      workspaceId: registration.workspaceId,
-      patientRegistrationId: registration.id,
-      autor: "PATIENT",
-      canal: "WHATSAPP",
-      texto: text, // Saving plaintext for now, should use textoCifrado in production
+      telefono: phone,
+      nombrePerfil: contact?.profile?.name || "Desconocido",
+      texto: text,
+      direccion: "INBOUND",
       leido: false,
     }
   })
 
-  // Trigger Notification for the doctor
-  await db.notification.create({
-    data: {
-      workspaceId: registration.workspaceId,
-      tipo: "WHATSAPP_MESSAGE",
-      titulo: `Nuevo WhatsApp de ${patient.nombre} ${patient.apellido}`,
-      mensaje: text.length > 50 ? text.substring(0, 50) + "..." : text,
-      referenciaId: registration.id, // Linking to patient profile / messages
-    }
-  })
-
-  console.log(`[WhatsApp Webhook] Message processed for ${phone}`)
+  console.log(`[WhatsApp Webhook] Marketing message processed for ${phone}`)
 }

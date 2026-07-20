@@ -40,6 +40,7 @@ import { featureFlagRouter } from "./feature-flag"
 import { reportPreferencesRouter } from "./report-preferences"
 import { expressOrderRouter } from "./expressOrder"
 import { marketingRouter } from "./marketing"
+import { adminMensajesRouter } from "./admin-mensajes"
 
 export const appRouter = router({
   auth: authRouter,
@@ -83,6 +84,7 @@ export const appRouter = router({
   reportPreferences: reportPreferencesRouter,
   expressOrder: expressOrderRouter,
   marketing: marketingRouter,
+  adminMensajes: adminMensajesRouter,
 })
 
 export type AppRouter = typeof appRouter

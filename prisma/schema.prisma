@@ -1612,3 +1612,13 @@ model MarketingPost {
   igMediaId    String?  
   publishedAt  DateTime @default(now())
 }
+
+model MarketingMessage {
+  id           String   @id @default(cuid())
+  telefono     String
+  nombrePerfil String?
+  texto        String   @db.Text
+  direccion    String   // "INBOUND" o "OUTBOUND"
+  leido        Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
