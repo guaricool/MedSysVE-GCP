@@ -2,7 +2,9 @@
 
 import { trpc } from "@/lib/trpc-client"
 import { Button } from "@/components/ui/button"
-import { FileDown } from "lucide-react"
+import { FileDown, Share2 } from "lucide-react"
+import { sharePdfFile } from "@/lib/utils"
+import { toast } from "sonner"
 
 const TIPO_LABELS: Record<string, string> = {
   REPOSO: "Reposo Médico",
@@ -58,16 +60,32 @@ export function EncounterDownloads({ encounterId }: { encounterId: string }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       {items.map((item) => (
-        <Button
-          key={item.url}
-          variant="outline"
-          size="sm"
-          onClick={() => window.open(item.url, "_blank")}
-          className="border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
-        >
-          <FileDown size={13} className="mr-1.5" />
-          {item.label}
-        </Button>
+        <div key={item.url} className="flex rounded-md shadow-sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(item.url, "_blank")}
+            className="rounded-r-none border-r-0 border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
+          >
+            <FileDown size={13} className="mr-1.5" />
+            {item.label}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              const promise = sharePdfFile(item.url, `${item.label}.pdf`, item.label)
+              toast.promise(promise, {
+                loading: 'Preparando archivo...',
+                success: 'Menú de compartir abierto',
+                error: 'Tu navegador no soporta compartir archivos'
+              })
+            }}
+            className="rounded-l-none border-slate-700 bg-slate-900 px-2 text-slate-300 hover:bg-slate-800 hover:text-white"
+          >
+            <Share2 size={13} />
+          </Button>
+        </div>
       ))}
     </div>
   )

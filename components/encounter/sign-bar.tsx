@@ -3,10 +3,11 @@
 import { useRouter } from "next/navigation"
 import { trpc } from "@/lib/trpc-client"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, Lock, FileDown, Edit3 } from "lucide-react"
+import { CheckCircle, Lock, FileDown, Edit3, Share2 } from "lucide-react"
 import { EncounterDownloads } from "./encounter-downloads"
 import { DeleteEncounterModal } from "./delete-encounter-modal"
 import { toast } from "sonner"
+import { sharePdfFile } from "@/lib/utils"
 
 interface Props {
   encounterId: string
@@ -64,15 +65,32 @@ export function SignBar({ encounterId, patientRegId, status }: Props) {
                 <Edit3 size={14} className="mr-1.5" />
                 {reopen.isPending ? "Reabriendo..." : "Editar consulta"}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open(`/api/pdf/encounter/${encounterId}`, "_blank")}
-                className="border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
-              >
-                <FileDown size={14} className="mr-1.5" />
-                Informe
-              </Button>
+              <div className="flex rounded-md shadow-sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(`/api/pdf/encounter/${encounterId}`, "_blank")}
+                  className="rounded-r-none border-r-0 border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
+                >
+                  <FileDown size={14} className="mr-1.5" />
+                  Informe
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    const promise = sharePdfFile(`/api/pdf/encounter/${encounterId}`, `Informe Médico.pdf`, `Informe Médico`)
+                    toast.promise(promise, {
+                      loading: 'Preparando archivo...',
+                      success: 'Menú de compartir abierto',
+                      error: 'Tu navegador no soporta compartir archivos'
+                    })
+                  }}
+                  className="rounded-l-none border-slate-700 bg-slate-900 px-2 text-slate-300 hover:bg-slate-800 hover:text-white"
+                >
+                  <Share2 size={14} />
+                </Button>
+              </div>
               <EncounterDownloads encounterId={encounterId} />
             </>
           )}
