@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { db } from "@/lib/db"
 import type { SessionUser } from "@/types"
 import { DashboardAlerts } from "@/components/dashboard/dashboard-alerts"
@@ -180,16 +181,19 @@ export default async function DoctorDashboard() {
           label="Pacientes registrados"
           value={workspace?._count.patientRegs ?? 0}
           color="blue"
+          href="/doctor/patients"
         />
         <StatCard
           label="Staff activo"
           value={workspace?._count.staff ?? 0}
           color="green"
+          href="/doctor/staff"
         />
         <StatCard
           label="Citas hoy"
           value={workspace?._count.appointments ?? 0}
           color="purple"
+          href="/doctor/appointments"
         />
       </div>
 
@@ -199,24 +203,35 @@ export default async function DoctorDashboard() {
             Citas de hoy
           </h2>
           <ul className="space-y-2">
-            {citasHoy.map((c) => (
-              <li key={c.id} className="flex items-center gap-3 text-sm">
-                <span className="text-blue-400 font-mono text-xs w-12 shrink-0">
-                  {new Date(c.fechaHora).toLocaleTimeString("es-VE", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false,
-                    timeZone: 'America/Caracas',
-                  })}
-                </span>
-                <span className="text-white">
-                  {c.patientRegistration
-                    ? `${c.patientRegistration.patient.nombre} ${c.patientRegistration.patient.apellido}`
-                    : c.titulo ?? "Cita"}
-                </span>
-                <span className="text-slate-500 text-xs">{c.duracionMinutos} min</span>
-              </li>
-            ))}
+            {citasHoy.map((c) => {
+              const href = c.patientRegistration 
+                ? `/doctor/patients/${c.patientRegistration.id}` 
+                : "/doctor/appointments";
+              
+              return (
+                <li key={c.id}>
+                  <Link 
+                    href={href}
+                    className="flex items-center gap-3 text-sm hover:bg-slate-800/60 p-2 -mx-2 rounded transition-colors group"
+                  >
+                    <span className="text-blue-400 font-mono text-xs w-12 shrink-0">
+                      {new Date(c.fechaHora).toLocaleTimeString("es-VE", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                        timeZone: 'America/Caracas',
+                      })}
+                    </span>
+                    <span className="text-white group-hover:text-amber-400 transition-colors">
+                      {c.patientRegistration
+                        ? `${c.patientRegistration.patient.nombre} ${c.patientRegistration.patient.apellido}`
+                        : c.titulo ?? "Cita"}
+                    </span>
+                    <span className="text-slate-500 text-xs ml-auto">{c.duracionMinutos} min</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -232,22 +247,31 @@ function StatCard({
   label,
   value,
   color,
+  href,
 }: {
   label: string
   value: number
   color: "blue" | "green" | "purple"
+  href?: string
 }) {
   const borderColors = {
-    blue: "border-l-blue-500",
-    green: "border-l-emerald-500",
-    purple: "border-l-purple-500",
+    blue: "border-l-blue-500 hover:border-l-blue-400",
+    green: "border-l-emerald-500 hover:border-l-emerald-400",
+    purple: "border-l-purple-500 hover:border-l-purple-400",
   }
-  return (
+  
+  const content = (
     <div
-      className={`bg-slate-900 border border-slate-800 rounded-lg p-5 border-l-4 ${borderColors[color]}`}
+      className={`bg-slate-900 border border-slate-800 rounded-lg p-5 border-l-4 transition-colors ${borderColors[color]} ${href ? 'hover:bg-slate-800/80 cursor-pointer' : ''}`}
     >
       <p className="text-slate-400 text-sm">{label}</p>
       <p className="text-3xl font-bold text-white mt-1">{value}</p>
     </div>
   )
+
+  if (href) {
+    return <Link href={href} className="block">{content}</Link>
+  }
+  
+  return content
 }
