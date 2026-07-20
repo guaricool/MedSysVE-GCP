@@ -9,19 +9,7 @@ import { headers } from "next/headers"
 import { loadAllLegalDocs } from "@/lib/legal/load-legal"
 import { encryptField } from "@/lib/field-crypto"
 import { verifyVerifiedToken } from "@/lib/otp"
-
-const ESPECIALIDADES_VE = [
-  "Medicina General", "Cardiología", "Gastroenterología", "Traumatología",
-  "Pediatría", "Ginecología y Obstetricia", "Neurología", "Dermatología",
-  "Oftalmología", "Otorrinolaringología", "Urología", "Neumología",
-  "Endocrinología", "Nefrología", "Oncología", "Psiquiatría", "Cirugía General",
-  "Cirugía Plástica", "Ortopedia", "Anestesiología", "Radiología", "Patología",
-  "Medicina Interna", "Geriatría", "Reumatología", "Infectología",
-  "Medicina de Emergencia", "Hematología", "Inmunología", "Medicina Ocupacional",
-  "Nutrición y Dietética", "Fisiatría", "Medicina Familiar", "Neonatología",
-  "Cirugía Cardiovascular", "Cirugía Torácica", "Cirugía Pediátrica",
-  "Medicina Nuclear", "Genética Médica", "Toxicología",
-]
+import { ESPECIALIDADES_VE } from "@/lib/venezuela-specialties"
 
 // LOPDP Art. 25 — consentimiento expreso. All three required checkboxes
 // must be true; we persist a ConsentAcceptance row for each so the doctor

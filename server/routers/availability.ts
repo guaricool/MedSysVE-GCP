@@ -53,18 +53,32 @@ export const availabilityRouter = router({
           },
         },
       })
-      if (!avail || !avail.activo) return []
+      
+      const isDefaultWorkday = diaSemana >= 1 && diaSemana <= 5 // Mon-Fri
+      const finalAvail = avail || {
+        id: "default",
+        workspaceId: input.workspaceId,
+        diaSemana,
+        horaInicio: "08:00",
+        horaFin: "17:00",
+        duracionMinutos: 30,
+        activo: isDefaultWorkday,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
 
-      const [startH, startM] = avail.horaInicio.split(":").map(Number)
-      const [endH, endM] = avail.horaFin.split(":").map(Number)
+      if (!finalAvail.activo) return []
+
+      const [startH, startM] = finalAvail.horaInicio.split(":").map(Number)
+      const [endH, endM] = finalAvail.horaFin.split(":").map(Number)
       const slots: string[] = []
       let cursor = startH * 60 + startM
       const end = endH * 60 + endM
-      while (cursor + avail.duracionMinutos <= end) {
+      while (cursor + finalAvail.duracionMinutos <= end) {
         const h = Math.floor(cursor / 60).toString().padStart(2, "0")
         const m = (cursor % 60).toString().padStart(2, "0")
         slots.push(`${h}:${m}`)
-        cursor += avail.duracionMinutos
+        cursor += finalAvail.duracionMinutos
       }
 
       const dayStart = new Date(date)

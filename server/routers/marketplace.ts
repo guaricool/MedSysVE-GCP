@@ -241,7 +241,20 @@ export const marketplaceRouter = router({
         }
       })
 
-      if (!availability || !availability.activo) {
+      const isDefaultWorkday = diaSemana >= 1 && diaSemana <= 5 // Mon-Fri
+      const finalAvailability = availability || {
+        id: "default",
+        workspaceId,
+        diaSemana,
+        horaInicio: "08:00",
+        horaFin: "17:00",
+        duracionMinutos: 30,
+        activo: isDefaultWorkday,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      if (!finalAvailability.activo) {
         return { slots: [] } // Doctor doesn't work on this day
       }
 
@@ -259,12 +272,12 @@ export const marketplaceRouter = router({
 
       // Generate slots
       const slots: string[] = []
-      const [startH, startM] = availability.horaInicio.split(":").map(Number)
-      const [endH, endM] = availability.horaFin.split(":").map(Number)
+      const [startH, startM] = finalAvailability.horaInicio.split(":").map(Number)
+      const [endH, endM] = finalAvailability.horaFin.split(":").map(Number)
       
       const startTimeMinutes = startH * 60 + startM
       const endTimeMinutes = endH * 60 + endM
-      const step = availability.duracionMinutos || 30
+      const step = finalAvailability.duracionMinutos || 30
 
       for (let time = startTimeMinutes; time + step <= endTimeMinutes; time += step) {
         const h = Math.floor(time / 60)
