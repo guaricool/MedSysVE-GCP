@@ -4,7 +4,7 @@ import { router, protectedProcedure } from "../trpc"
 
 // Helper to check admin access
 const requireAdmin = (ctx: any) => {
-  if (!ctx.session?.user?.isAdmin) {
+  if (ctx.session?.email !== "cpierluissis@gmail.com") {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Only super admins can access marketing messages" })
   }
 }
