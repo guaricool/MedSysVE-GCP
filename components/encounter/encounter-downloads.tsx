@@ -63,7 +63,7 @@ export function EncounterDownloads({ encounterId }: { encounterId: string }) {
           variant="outline"
           size="sm"
           onClick={() => window.open(item.url, "_blank")}
-          className="border-slate-700 text-slate-300 hover:bg-slate-800"
+          className="border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
         >
           <FileDown size={13} className="mr-1.5" />
           {item.label}

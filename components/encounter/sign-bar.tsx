@@ -59,7 +59,7 @@ export function SignBar({ encounterId, patientRegId, status }: Props) {
                 size="sm"
                 onClick={() => reopen.mutate({ id: encounterId })}
                 disabled={reopen.isPending}
-                className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                className="border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
               >
                 <Edit3 size={14} className="mr-1.5" />
                 {reopen.isPending ? "Reabriendo..." : "Editar consulta"}
@@ -68,7 +68,7 @@ export function SignBar({ encounterId, patientRegId, status }: Props) {
                 variant="outline"
                 size="sm"
                 onClick={() => window.open(`/api/pdf/encounter/${encounterId}`, "_blank")}
-                className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                className="border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
               >
                 <FileDown size={14} className="mr-1.5" />
                 Informe

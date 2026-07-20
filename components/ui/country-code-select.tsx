@@ -49,7 +49,7 @@ export function CountryCodeSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[110px] justify-between px-2"
+          className="w-[110px] justify-between px-2 bg-slate-900 border-slate-800 text-white hover:bg-slate-800 hover:text-white"
         >
           {countries.find((country) => country.value === currentValue)?.label?.split(" ")[0]} {currentValue}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
