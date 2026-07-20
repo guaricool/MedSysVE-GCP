@@ -28,6 +28,7 @@ export default function PortalRegisterPage() {
   const [userId, setUserId] = useState("")
   const [intentId, setIntentId] = useState("")
   const [method, setMethod] = useState<"WHATSAPP" | "EMAIL" | null>(null)
+  const [codigo, setCodigo] = useState("")
   const [otp, setOtp] = useState("")
 
   const registerMutation = trpc.marketplace.registerPortalUser.useMutation()
@@ -74,6 +75,7 @@ export default function PortalRegisterPage() {
         method: selectedMethod
       })
       setIntentId(res.intentId)
+      setCodigo(res.codigo)
       setStep(3)
     } catch (err: any) {
       setError(err.message || "Error al iniciar verificación.")
@@ -246,7 +248,7 @@ export default function PortalRegisterPage() {
                 1. Envía un WhatsApp al <strong>+1234567890</strong> con el texto:
               </p>
               <div className="bg-black/50 p-3 rounded font-mono text-center text-green-400 text-lg tracking-widest font-bold">
-                VERIFICAR
+                {codigo}
               </div>
               <p className="text-sm text-slate-300">
                 2. El bot te responderá con un código de 6 dígitos. Introdúcelo abajo.
