@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { trpc } from "@/lib/trpc-client"
 import { Button } from "@/components/ui/button"
 import { Calendar, Clock, MapPin, User } from "lucide-react"
 
-export default function SchedulePage() {
+function ScheduleForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const workspaceId = searchParams?.get("workspaceId")
@@ -158,5 +158,13 @@ export default function SchedulePage() {
 
       </div>
     </div>
+  )
+}
+
+export default function SchedulePage() {
+  return (
+    <Suspense fallback={<div className="text-center text-white mt-8">Cargando formulario de agendamiento...</div>}>
+      <ScheduleForm />
+    </Suspense>
   )
 }
