@@ -8,6 +8,7 @@ import { PasswordInput } from "@/components/ui/password-input"
 import { Button } from "@/components/ui/button"
 // Removed unused Select import
 import { MessageSquare, Mail } from "lucide-react"
+import { CountryCodeSelect } from "@/components/ui/country-code-select"
 
 export default function PortalRegisterPage() {
   const router = useRouter()
@@ -17,7 +18,8 @@ export default function PortalRegisterPage() {
   // Step 1 State
   const [nombre, setNombre] = useState("")
   const [apellido, setApellido] = useState("")
-  const [telefono, setTelefono] = useState("")
+  const [codigoPais, setCodigoPais] = useState("+58")
+  const [telefonoLocal, setTelefonoLocal] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [tipoIdentificacion, setTipoIdentificacion] = useState<"CEDULA_V" | "CEDULA_E" | "PASAPORTE" | "">("")
@@ -52,7 +54,7 @@ export default function PortalRegisterPage() {
       const res = await registerMutation.mutateAsync({
         nombre,
         apellido,
-        telefono,
+        telefono: `${codigoPais}${telefonoLocal}`,
         email,
         password,
         tipoIdentificacion: tipoIdentificacion || undefined,
@@ -157,13 +159,16 @@ export default function PortalRegisterPage() {
 
           <div className="space-y-2">
             <label className="text-sm text-slate-300">Teléfono (con código de país)</label>
-            <Input
-              placeholder="+584141234567"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              required
-              className="bg-slate-800 border-slate-700 text-white"
-            />
+            <div className="flex gap-2">
+              <CountryCodeSelect value={codigoPais} onChange={setCodigoPais} />
+              <Input
+                placeholder="4141234567"
+                value={telefonoLocal}
+                onChange={(e) => setTelefonoLocal(e.target.value)}
+                required
+                className="bg-slate-800 border-slate-700 text-white w-full"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
