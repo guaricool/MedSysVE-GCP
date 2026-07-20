@@ -64,9 +64,21 @@ export default async function PatientHistoryPage({
               <EditPatientModal 
                 patientId={reg.patient.id} 
                 initialData={{
+                  nombre: reg.patient.nombre,
+                  apellido: reg.patient.apellido,
+                  fechaNacimiento: reg.patient.fechaNacimiento,
+                  sexo: reg.patient.sexo,
+                  tipoIdentificacion: reg.patient.tipoIdentificacion,
+                  numeroIdentificacion: reg.patient.numeroIdentificacion,
+                  sinCedula: reg.patient.sinCedula,
                   telefono: reg.patient.telefono,
+                  codigoPais: reg.patient.codigoPais,
                   email: reg.patient.email,
-                  direccion: (reg.patient as any).direccion ?? null
+                  direccion: (reg.patient as any).direccion ?? null,
+                  repCedula: reg.patient.repCedula,
+                  repNombreCompleto: reg.patient.repNombreCompleto,
+                  repParentesco: reg.patient.repParentesco,
+                  repTelefono: reg.patient.repTelefono,
                 }} 
               />
               <DeletePatientModal 

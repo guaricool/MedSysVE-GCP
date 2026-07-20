@@ -776,21 +776,30 @@ export const patientRouter = router({
         telefono: z.string().optional(),
         codigoPais: z.string().optional(),
         email: z.string().email("El email no es válido").optional().or(z.literal("")),
+        nombre: z.string().min(2).optional(),
+        apellido: z.string().min(2).optional(),
+        fechaNacimiento: z.string().optional(),
+        sexo: z.nativeEnum(SexoType).optional(),
+        tipoIdentificacion: z.nativeEnum(IdentificationType).optional(),
+        numeroIdentificacion: z.string().optional(),
+        sinCedula: z.boolean().optional(),
+        representante: representanteSchema.optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       // Validar que el paciente pertenece al consultorio
       const reg = await ctx.db.patientRegistration.findFirst({
         where: { patientId: input.patientId, workspaceId: ctx.session.workspaceId },
+        include: { patient: true }
       })
       if (!reg) throw new TRPCError({ code: "NOT_FOUND" })
 
+      const patient = reg.patient
       const data: Record<string, unknown> = {}
       
       if (input.codigoPais !== undefined) {
         data.codigoPais = input.codigoPais || "+58"
       }
-      
       if (input.telefono !== undefined) {
         data.telefono = input.telefono || null
         data.telefonoCifrado = input.telefono ? encryptField(input.telefono) : null
@@ -805,6 +814,83 @@ export const patientRouter = router({
       if (input.direccion !== undefined) {
         data.direccion = input.direccion || null
         data.direccionCifrada = input.direccion ? encryptField(input.direccion) : null
+      }
+
+      // Nuevos campos personales
+      if (input.nombre !== undefined) {
+        const n = input.nombre.trim()
+        data.nombre = n
+        data.nombreCifrado = encryptField(n)
+        data.hmacNombre = hmacIndex(n)
+      }
+      if (input.apellido !== undefined) {
+        const a = input.apellido.trim()
+        data.apellido = a
+        data.apellidoCifrado = encryptField(a)
+        data.hmacApellido = hmacIndex(a)
+      }
+      if (input.fechaNacimiento !== undefined) {
+        data.fechaNacimiento = new Date(input.fechaNacimiento)
+      }
+      if (input.sexo !== undefined) {
+        data.sexo = input.sexo
+      }
+      if (input.representante !== undefined) {
+        data.repCedula = input.representante?.cedulaRepresentante || null
+        data.repNombreCompleto = input.representante?.nombreCompleto || null
+        data.repParentesco = input.representante?.parentesco || null
+        data.repTelefono = input.representante?.telefono || null
+        data.repEmail = input.representante?.email || null
+      }
+
+      // Validar cédula si cambia
+      const sinCedulaToUse = input.sinCedula !== undefined ? input.sinCedula : patient.sinCedula
+      const tipoIdToUse = input.tipoIdentificacion !== undefined ? input.tipoIdentificacion : patient.tipoIdentificacion
+      // Note: patient.numeroIdentificacion in DB is encrypted base64! So we can't just pass it to packPatientCedula if it hasn't changed.
+      // But we only care if they explicitly sent a new numeroIdentificacion OR changed sinCedula/tipo.
+      const idChanged = input.numeroIdentificacion !== undefined || input.tipoIdentificacion !== undefined || input.sinCedula !== undefined
+      
+      if (idChanged) {
+        let rawNumero = ""
+        if (!sinCedulaToUse) {
+          rawNumero = input.numeroIdentificacion !== undefined ? input.numeroIdentificacion : (readPatientCedula(patient) || "")
+          
+          if (!rawNumero || !tipoIdToUse) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Debe proveer tipo y número de identificación si no marca 'sin cédula'"
+            })
+          }
+
+          // Conflict check inside same workspace
+          const hmac = hmacIndex(rawNumero)
+          const ownPatient = await ctx.db.patient.findFirst({
+            where: {
+              workspaceId: ctx.session.workspaceId,
+              hmacCedula: hmac,
+              tipoIdentificacion: tipoIdToUse,
+              id: { not: input.patientId }
+            },
+            select: { id: true },
+          })
+          if (ownPatient) {
+             throw new TRPCError({
+                code: "CONFLICT",
+                message: "Ya existe otro paciente con esta cédula en tu consultorio",
+             })
+          }
+        }
+        
+        const cedulaPack = await packPatientCedula({
+          tipoIdentificacion: tipoIdToUse,
+          numeroIdentificacion: rawNumero || undefined,
+          sinCedula: sinCedulaToUse,
+        })
+        
+        data.sinCedula = sinCedulaToUse
+        data.tipoIdentificacion = cedulaPack.tipoIdentificacion
+        data.numeroIdentificacion = cedulaPack.numeroIdentificacion
+        data.hmacCedula = cedulaPack.hmacCedula
       }
 
       const updated = await ctx.db.patient.update({
