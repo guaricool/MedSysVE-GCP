@@ -473,6 +473,8 @@ export const portalRouter = router({
       z.object({
         grupoSanguineo: z.string().optional().nullable(),
         alergias: z.array(z.string()).optional(),
+        vacunas: z.array(z.string()).optional(),
+        seguros: z.array(z.string()).optional(),
         antecedentes: z.string().optional().nullable(),
         fechaNacimiento: z.string().optional().nullable(),
         sexo: z.enum(["MASCULINO", "FEMENINO", "OTRO"]).optional().nullable(),
@@ -493,6 +495,8 @@ export const portalRouter = router({
           data: {
             grupoSanguineo: input.grupoSanguineo,
             alergias: input.alergias,
+            vacunas: input.vacunas,
+            seguros: input.seguros,
             antecedentes: input.antecedentes,
             sexo: input.sexo || undefined,
             fechaNacimiento: input.fechaNacimiento ? new Date(input.fechaNacimiento) : undefined,
@@ -506,6 +510,8 @@ export const portalRouter = router({
           apellido: "",
           grupoSanguineo: input.grupoSanguineo,
           alergias: input.alergias,
+          vacunas: input.vacunas,
+          seguros: input.seguros,
           antecedentes: input.antecedentes,
           sexo: input.sexo || undefined,
           fechaNacimiento: input.fechaNacimiento ? new Date(input.fechaNacimiento) : undefined,
