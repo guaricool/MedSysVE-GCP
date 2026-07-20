@@ -241,6 +241,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             : (await bcrypt.compare(portalPassword, await getDummyHash()), false)
         }
 
+        if (portalUser && !portalUser.isVerified) {
+          throw new Error("unverified")
+        }
+
         if (!valid || (!portalUser && (!patient || !patient.portalPasswordHash))) {
           await recordFailedLogin(identifier)
           safeLog("warn", "auth.portal_login_failed", {

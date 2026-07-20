@@ -1660,21 +1660,23 @@ model GlobalPatientProfile {
   grupoSanguineo       String?
 
   // Opcionales para importación (Global EHR)
-  alergias String[] @default([])
-  vacunas  String[] @default([])
+  alergias     String[] @default([])
+  vacunas      String[] @default([])
+  antecedentes String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model VerificationIntent {
-  id           String             @id @default(cuid())
-  codigo       String             @unique // Ej. "VERIFICAR-1234"
-  otp          String? // Generado post-webhook
-  method       VerificationMethod
-  expiresAt    DateTime
-  portalUserId String
-  portalUser   PortalUser         @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+  id               String             @id @default(cuid())
+  codigo           String             @unique // Ej. "VERIFICAR-1234"
+  otp              String? // Generado post-webhook
+  method           VerificationMethod
+  expiresAt        DateTime
+  portalUserId     String?
+  portalUser       PortalUser?        @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+  registrationData String?            // JSON string containing registration details if user is not created yet
 
   createdAt DateTime @default(now())
 }

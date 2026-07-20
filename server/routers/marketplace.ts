@@ -16,7 +16,7 @@ export const marketplaceRouter = router({
       numeroIdentificacion: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      // 1. Check if user already exists
+      // Check if user already exists (by email or phone)
       const existing = await ctx.db.portalUser.findFirst({
         where: {
           OR: [
@@ -25,54 +25,86 @@ export const marketplaceRouter = router({
           ]
         }
       })
-      
       if (existing) {
         throw new TRPCError({ code: "CONFLICT", message: "Ya existe un usuario con ese correo o teléfono." })
       }
-
-      // 2. Hash password
-      const passwordHash = await bcrypt.hash(input.password, BCRYPT_COST)
-
-      // 3. Create PortalUser and GlobalPatientProfile
-      const user = await ctx.db.portalUser.create({
-        data: {
-          email: input.email,
-          telefono: input.telefono,
-          passwordHash,
-          patientProfile: {
-            create: {
-              nombre: input.nombre,
-              apellido: input.apellido,
-              tipoIdentificacion: input.tipoIdentificacion,
-              numeroIdentificacion: input.numeroIdentificacion,
-            }
-          }
-        },
-        include: {
-          patientProfile: true
-        }
-      })
-
-      return { success: true, userId: user.id }
+      return { success: true }
     }),
 
   initiateVerification: publicProcedure
     .input(z.object({
-      userId: z.string(),
-      method: z.enum(["WHATSAPP", "EMAIL"])
+      userId: z.string().optional(),
+      method: z.enum(["WHATSAPP", "EMAIL"]),
+      registrationData: z.object({
+        nombre: z.string().min(1),
+        apellido: z.string().min(1),
+        telefono: z.string().min(1),
+        email: z.string().email(),
+        password: portalPasswordSchema,
+        tipoIdentificacion: z.enum(["CEDULA_V", "CEDULA_E", "PASAPORTE"]).optional(),
+        numeroIdentificacion: z.string().optional(),
+      }).optional()
     }))
     .mutation(async ({ ctx, input }) => {
-      const user = await ctx.db.portalUser.findUnique({ where: { id: input.userId } })
-      if (!user) throw new TRPCError({ code: "NOT_FOUND" })
+      if (!input.userId && !input.registrationData) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Se requiere userId o registrationData." })
+      }
 
       // Generate a short code for the intent e.g. VERIFICAR-8291
       const shortCode = `VERIFICAR-${Math.floor(1000 + Math.random() * 9000)}`
-      
+
+      let serializedRegistrationData: string | null = null
+      let targetEmail: string | null = null
+
+      if (input.registrationData) {
+        const { email, telefono, password } = input.registrationData
+        // Double check uniqueness
+        const existing = await ctx.db.portalUser.findFirst({
+          where: {
+            OR: [
+              { email },
+              { telefono }
+            ]
+          }
+        })
+        if (existing) {
+          throw new TRPCError({ code: "CONFLICT", message: "Ya existe un usuario con ese correo o teléfono." })
+        }
+
+        const passwordHash = await bcrypt.hash(password, BCRYPT_COST)
+        serializedRegistrationData = JSON.stringify({
+          ...input.registrationData,
+          passwordHash
+        })
+        targetEmail = email
+      } else if (input.userId) {
+        const user = await ctx.db.portalUser.findUnique({ where: { id: input.userId } })
+        if (!user) throw new TRPCError({ code: "NOT_FOUND" })
+        targetEmail = user.email
+      }
+
+      let otp: string | null = null
+      if (input.method === "EMAIL") {
+        if (!targetEmail) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "El usuario no tiene una dirección de correo válida." })
+        }
+        otp = Math.floor(100000 + Math.random() * 900000).toString()
+        const { sendOtpEmail } = await import("@/lib/email")
+        await sendOtpEmail({
+          to: targetEmail,
+          code: otp,
+          purpose: "EMAIL_VERIFY",
+          expiresInMinutes: 15
+        })
+      }
+
       const intent = await ctx.db.verificationIntent.create({
         data: {
           codigo: shortCode,
+          otp,
           method: input.method,
-          portalUserId: user.id,
+          portalUserId: input.userId || null,
+          registrationData: serializedRegistrationData,
           expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 mins
         }
       })
@@ -98,10 +130,50 @@ export const marketplaceRouter = router({
         throw new TRPCError({ code: "UNAUTHORIZED", message: "El OTP es incorrecto." })
       }
 
-      // Mark user as verified
-      await ctx.db.portalUser.update({
-        where: { id: intent.portalUserId },
-        data: { isVerified: true }
+      if (intent.registrationData) {
+        const regData = JSON.parse(intent.registrationData)
+        
+        // Double check uniqueness to prevent race condition
+        const existing = await ctx.db.portalUser.findFirst({
+          where: {
+            OR: [
+              { email: regData.email },
+              { telefono: regData.telefono }
+            ]
+          }
+        })
+        if (existing) {
+          throw new TRPCError({ code: "CONFLICT", message: "Ya existe un usuario con ese correo o teléfono." })
+        }
+
+        // Create PortalUser and GlobalPatientProfile at once
+        await ctx.db.portalUser.create({
+          data: {
+            email: regData.email,
+            telefono: regData.telefono,
+            passwordHash: regData.passwordHash,
+            isVerified: true,
+            patientProfile: {
+              create: {
+                nombre: regData.nombre,
+                apellido: regData.apellido,
+                tipoIdentificacion: regData.tipoIdentificacion,
+                numeroIdentificacion: regData.numeroIdentificacion,
+              }
+            }
+          }
+        })
+      } else if (intent.portalUserId) {
+        // Mark existing user as verified
+        await ctx.db.portalUser.update({
+          where: { id: intent.portalUserId },
+          data: { isVerified: true }
+        })
+      }
+
+      // Cleanup intent after successful verification
+      await ctx.db.verificationIntent.delete({
+        where: { id: intent.id }
       })
 
       return { success: true }
@@ -220,5 +292,32 @@ export const marketplaceRouter = router({
       }
 
       return { slots }
+    }),
+
+  checkPortalUserStatus: publicProcedure
+    .input(z.object({
+      identifier: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      let portalUser = await ctx.db.portalUser.findFirst({
+        where: { email: input.identifier }
+      })
+      if (!portalUser) {
+        portalUser = await ctx.db.portalUser.findFirst({
+          where: { telefono: input.identifier }
+        })
+      }
+
+      if (!portalUser) {
+        return { exists: false, isVerified: false, userId: null, email: null, telefono: null }
+      }
+
+      return {
+        exists: true,
+        isVerified: portalUser.isVerified,
+        userId: portalUser.id,
+        email: portalUser.email,
+        telefono: portalUser.telefono
+      }
     })
 })

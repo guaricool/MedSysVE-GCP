@@ -51,7 +51,7 @@ export default function PortalRegisterPage() {
     }
 
     try {
-      const res = await registerMutation.mutateAsync({
+      await registerMutation.mutateAsync({
         nombre,
         apellido,
         telefono: `${codigoPais}${telefonoLocal}`,
@@ -61,10 +61,9 @@ export default function PortalRegisterPage() {
         numeroIdentificacion: numeroIdentificacion || undefined,
       })
       
-      setUserId(res.userId)
       setStep(2)
     } catch (err: any) {
-      setError(err.message || "Error al crear cuenta.")
+      setError(err.message || "Error al verificar datos de registro.")
     }
   }
 
@@ -73,12 +72,25 @@ export default function PortalRegisterPage() {
       setError("")
       setMethod(selectedMethod)
       const res = await verifyInitMutation.mutateAsync({
-        userId,
-        method: selectedMethod
+        method: selectedMethod,
+        registrationData: {
+          nombre,
+          apellido,
+          telefono: `${codigoPais}${telefonoLocal}`,
+          email,
+          password,
+          tipoIdentificacion: tipoIdentificacion || undefined,
+          numeroIdentificacion: numeroIdentificacion || undefined,
+        }
       })
       setIntentId(res.intentId)
       setCodigo(res.codigo)
       setStep(3)
+
+      if (selectedMethod === "WHATSAPP") {
+        const waUrl = `https://wa.me/584244967367?text=${encodeURIComponent(res.codigo)}`
+        window.open(waUrl, "_blank", "noopener,noreferrer")
+      }
     } catch (err: any) {
       setError(err.message || "Error al iniciar verificación.")
     }
@@ -250,7 +262,16 @@ export default function PortalRegisterPage() {
           {method === "WHATSAPP" ? (
             <div className="bg-slate-800/50 p-4 rounded-md border border-slate-700 text-left space-y-2">
               <p className="text-sm text-slate-300">
-                1. Envía un WhatsApp al <strong>+1234567890</strong> con el texto:
+                1. Envía un WhatsApp al{" "}
+                <a
+                  href={`https://wa.me/584244967367?text=${encodeURIComponent(codigo)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-green-400 underline hover:text-green-300 font-bold"
+                >
+                  +58 424-4967367
+                </a>{" "}
+                con el texto:
               </p>
               <div className="bg-black/50 p-3 rounded font-mono text-center text-green-400 text-lg tracking-widest font-bold">
                 {codigo}

@@ -2,6 +2,8 @@ import Link from "next/link"
 import { PortalLogoutButton } from "@/components/portal/portal-logout-button"
 
 const NAV = [
+  { href: "/portal", label: "Inicio" },
+  { href: "/portal/search", label: "Buscar Médicos" },
   { href: "/portal/perfil", label: "Mi Perfil" },
 ]
 

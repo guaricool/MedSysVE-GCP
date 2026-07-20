@@ -6,10 +6,58 @@ import { portalPasswordSchema, BCRYPT_COST } from "@/lib/password-policy"
 import { safeLog } from "@/lib/log-sanitizer"
 import { readPatientCedula } from "@/lib/patient-crypto"
 
+async function getPatientIdsForPortalUser(ctx: any) {
+  const portalUser = await ctx.db.portalUser.findUnique({
+    where: { id: ctx.patientId },
+    include: { patientProfile: true },
+  })
+
+  if (!portalUser) {
+    return [ctx.patientId]
+  }
+
+  const conditions: any[] = []
+
+  if (portalUser.patientProfile?.numeroIdentificacion && portalUser.patientProfile?.tipoIdentificacion) {
+    const { hmacIndex } = await import("@/lib/field-crypto")
+    const hmac = hmacIndex(portalUser.patientProfile.numeroIdentificacion)
+    conditions.push({
+      hmacCedula: hmac,
+      tipoIdentificacion: portalUser.patientProfile.tipoIdentificacion,
+    })
+  }
+
+  if (portalUser.email) {
+    const { hmacIndex } = await import("@/lib/field-crypto")
+    const hmac = hmacIndex(portalUser.email)
+    conditions.push({ hmacEmail: hmac })
+    conditions.push({ email: portalUser.email })
+  }
+
+  if (portalUser.telefono) {
+    const { hmacIndex } = await import("@/lib/field-crypto")
+    const hmac = hmacIndex(portalUser.telefono)
+    conditions.push({ hmacTelefono: hmac })
+    conditions.push({ telefono: portalUser.telefono })
+  }
+
+  if (conditions.length === 0) {
+    return [ctx.patientId]
+  }
+
+  const patients = await ctx.db.patient.findMany({
+    where: { OR: conditions },
+    select: { id: true },
+  })
+
+  return Array.from(new Set([...patients.map((p: any) => p.id), ctx.patientId]))
+}
+
 export const portalRouter = router({
   myAppointments: portalProcedure.query(async ({ ctx }) => {
+    const patientIds = await getPatientIdsForPortalUser(ctx)
     const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: ctx.patientId },
+      where: { patientId: { in: patientIds } },
       select: { id: true },
     })
     const regIds = regs.map((r) => r.id)
@@ -31,8 +79,9 @@ export const portalRouter = router({
   }),
 
   myDocuments: portalProcedure.query(async ({ ctx }) => {
+    const patientIds = await getPatientIdsForPortalUser(ctx)
     const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: ctx.patientId },
+      where: { patientId: { in: patientIds } },
       select: { id: true },
     })
     const regIds = regs.map((r) => r.id)
@@ -44,8 +93,9 @@ export const portalRouter = router({
   }),
 
   myEncounters: portalProcedure.query(async ({ ctx }) => {
+    const patientIds = await getPatientIdsForPortalUser(ctx)
     const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: ctx.patientId },
+      where: { patientId: { in: patientIds } },
       include: {
         workspace: {
           select: {
@@ -84,15 +134,17 @@ export const portalRouter = router({
         where: { id: input.id },
         include: { patientRegistration: true },
       })
-      if (!doc || doc.patientRegistration.patientId !== ctx.patientId || !doc.visibleEnPortal) {
+      const patientIds = await getPatientIdsForPortalUser(ctx)
+      if (!doc || !patientIds.includes(doc.patientRegistration.patientId) || !doc.visibleEnPortal) {
         throw new TRPCError({ code: "FORBIDDEN" })
       }
       return doc
     }),
 
   myWorkspaces: portalProcedure.query(async ({ ctx }) => {
+    const patientIds = await getPatientIdsForPortalUser(ctx)
     const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: ctx.patientId },
+      where: { patientId: { in: patientIds } },
       include: {
         workspace: {
           include: { doctor: { select: { nombre: true, apellido: true, especialidadPrincipal: true } } },
@@ -107,8 +159,9 @@ export const portalRouter = router({
   }),
 
   myLabResults: portalProcedure.query(async ({ ctx }) => {
+    const patientIds = await getPatientIdsForPortalUser(ctx)
     const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: ctx.patientId },
+      where: { patientId: { in: patientIds } },
       select: { id: true },
     })
     const regIds = regs.map((r) => r.id)
@@ -123,8 +176,9 @@ export const portalRouter = router({
   cancelAppointment: portalProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      const patientIds = await getPatientIdsForPortalUser(ctx)
       const regs = await ctx.db.patientRegistration.findMany({
-        where: { patientId: ctx.patientId },
+        where: { patientId: { in: patientIds } },
         select: { id: true },
       })
       const regIds = new Set(regs.map((r) => r.id))
@@ -145,8 +199,9 @@ export const portalRouter = router({
     }),
 
   getAnnouncements: portalProcedure.query(async ({ ctx }) => {
+    const patientIds = await getPatientIdsForPortalUser(ctx)
     const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: ctx.patientId },
+      where: { patientId: { in: patientIds } },
       select: { workspaceId: true, workspace: { select: { nombre: true } } },
     })
     const workspaceIds = regs.map((r) => r.workspaceId)
@@ -226,8 +281,9 @@ export const portalRouter = router({
   rescheduleAppointment: portalProcedure
     .input(z.object({ appointmentId: z.string(), newFechaHora: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      const patientIds = await getPatientIdsForPortalUser(ctx)
       const regs = await ctx.db.patientRegistration.findMany({
-        where: { patientId: ctx.patientId },
+        where: { patientId: { in: patientIds } },
         select: { id: true },
       })
       const regIds = new Set(regs.map((r) => r.id))
@@ -266,8 +322,9 @@ export const portalRouter = router({
     }),
 
   myVaccines: portalProcedure.query(async ({ ctx }) => {
+    const patientIds = await getPatientIdsForPortalUser(ctx)
     const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: ctx.patientId },
+      where: { patientId: { in: patientIds } },
       select: {
         id: true,
         workspaceId: true,
@@ -303,8 +360,9 @@ export const portalRouter = router({
   }),
 
   myLabOrders: portalProcedure.query(async ({ ctx }) => {
+    const patientIds = await getPatientIdsForPortalUser(ctx)
     const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: ctx.patientId },
+      where: { patientId: { in: patientIds } },
       select: { id: true },
     })
     const regIds = regs.map((r) => r.id)
@@ -325,8 +383,9 @@ export const portalRouter = router({
   }),
 
   myImagingOrders: portalProcedure.query(async ({ ctx }) => {
+    const patientIds = await getPatientIdsForPortalUser(ctx)
     const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: ctx.patientId },
+      where: { patientId: { in: patientIds } },
       select: { id: true },
     })
     const regIds = regs.map((r) => r.id)
@@ -350,8 +409,9 @@ export const portalRouter = router({
   }),
 
   myPrescriptions: portalProcedure.query(async ({ ctx }) => {
+    const patientIds = await getPatientIdsForPortalUser(ctx)
     const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: ctx.patientId },
+      where: { patientId: { in: patientIds } },
       select: {
         id: true,
         workspaceId: true,
@@ -399,4 +459,57 @@ export const portalRouter = router({
       })),
     }))
   }),
+
+  getGlobalProfile: portalProcedure.query(async ({ ctx }) => {
+    const user = await ctx.db.portalUser.findUnique({
+      where: { id: ctx.patientId },
+      include: { patientProfile: true },
+    })
+    return user?.patientProfile ?? null
+  }),
+
+  updateGlobalProfile: portalProcedure
+    .input(
+      z.object({
+        grupoSanguineo: z.string().optional().nullable(),
+        alergias: z.array(z.string()).optional(),
+        antecedentes: z.string().optional().nullable(),
+        fechaNacimiento: z.string().optional().nullable(),
+        sexo: z.enum(["MASCULINO", "FEMENINO", "OTRO"]).optional().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.portalUser.findUnique({
+        where: { id: ctx.patientId },
+        include: { patientProfile: true },
+      })
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Usuario no encontrado" })
+      }
+
+      if (user.patientProfile) {
+        return ctx.db.globalPatientProfile.update({
+          where: { id: user.patientProfile.id },
+          data: {
+            grupoSanguineo: input.grupoSanguineo,
+            alergias: input.alergias,
+            antecedentes: input.antecedentes,
+            sexo: input.sexo || undefined,
+            fechaNacimiento: input.fechaNacimiento ? new Date(input.fechaNacimiento) : undefined,
+          }
+        })
+      }
+      return ctx.db.globalPatientProfile.create({
+        data: {
+          portalUserId: user.id,
+          nombre: "",
+          apellido: "",
+          grupoSanguineo: input.grupoSanguineo,
+          alergias: input.alergias,
+          antecedentes: input.antecedentes,
+          sexo: input.sexo || undefined,
+          fechaNacimiento: input.fechaNacimiento ? new Date(input.fechaNacimiento) : undefined,
+        }
+      })
+    }),
 })

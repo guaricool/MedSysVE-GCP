@@ -10,10 +10,27 @@ export default async function PortalPerfilPage() {
   const patientId = (session?.user as { patientId?: string } | undefined)?.patientId
   if (!patientId) redirect("/portal/login")
 
-  const patient = await db.patient.findUnique({
+  let patient = await db.patient.findUnique({
     where: { id: patientId },
     select: { nombre: true, apellido: true, telefono: true, email: true, numeroIdentificacion: true },
   })
+  
+  if (!patient) {
+    const portalUser = await db.portalUser.findUnique({
+      where: { id: patientId },
+      include: { patientProfile: true },
+    })
+    if (portalUser) {
+      patient = {
+        nombre: portalUser.patientProfile?.nombre ?? "",
+        apellido: portalUser.patientProfile?.apellido ?? "",
+        telefono: portalUser.telefono,
+        email: portalUser.email,
+        numeroIdentificacion: portalUser.patientProfile?.numeroIdentificacion ?? null,
+      }
+    }
+  }
+  
   if (!patient) redirect("/portal/login")
 
   return (
