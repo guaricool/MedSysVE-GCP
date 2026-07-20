@@ -64,7 +64,7 @@ fix category.
    planCifrado, vitales, examenFisico}` using FIELD_ENCRYPTION_KEY.
 
 10. **Timezone bug in `appointment.requestFromPortal`**: `setHours()` ran
-    in server local time (UTC on Coolify). Fixed: explicit `-04:00` ISO
+    in server local time (UTC on Google Cloud). Fixed: explicit `-04:00` ISO
     offset for Venezuela (no DST).
 
 11. **`generatePortalPassword` had Math.random fallback**. Fixed: throws

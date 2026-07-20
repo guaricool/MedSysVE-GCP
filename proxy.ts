@@ -117,7 +117,7 @@ async function checkIpRateLimit(
 }
 
 function getClientIp(req: NextRequest): string {
-  // Coolify/Traefik sets x-forwarded-for; the leftmost is the original client.
+  // Cloud Run / Load Balancer sets x-forwarded-for; the leftmost is the original client.
   const xff = req.headers.get("x-forwarded-for")
   if (xff) {
     const hops = xff.split(",").map((s) => s.trim()).filter(Boolean)
@@ -133,7 +133,7 @@ export default async function proxy(req: NextRequest) {
 
   // ------------------------------------------------------------------
   // 0. HTTPS enforcement in production.
-  //    Coolify terminates TLS via Traefik. The x-forwarded-proto header carries
+  //    Cloud Run Load Balancer terminates TLS. The x-forwarded-proto header carries
   //    the original scheme. If we see http://, redirect to https://
   //    (except in dev where this would loop).
   // ------------------------------------------------------------------

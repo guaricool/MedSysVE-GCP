@@ -8,7 +8,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # MedSysVE — Agent Entry Point
 
-> **Resumen ejecutivo (1 minuto):** SaaS multi-tenant de Historia Clínica Electrónica para médicos venezolanos. Tema oscuro, asistencia IA, facturación dual USD/Bs con tasa BCV, portal para pacientes, red de referidos entre doctores, suscripciones mensuales/trimestrales via Stripe. Stack: Next.js 16 + React 19 + tRPC 11 + Prisma 7 + PostgreSQL + Auth.js v5 + Tailwind v4 + shadcn/ui + Redis. Deploy: Cloud Run + Docker standalone en GCP GCP `13.140.181.29`. Repo: `github.com/guaricool/MedSysVE` (`master`).
+> **Resumen ejecutivo (1 minuto):** SaaS multi-tenant de Historia Clínica Electrónica para médicos venezolanos. Tema oscuro, asistencia IA, facturación dual USD/Bs con tasa BCV, portal para pacientes, red de referidos entre doctores, suscripciones mensuales/trimestrales via Stripe. Stack: Next.js 16 + React 19 + tRPC 11 + Prisma 7 + PostgreSQL + Auth.js v5 + Tailwind v4 + shadcn/ui + Redis. Deploy: Cloud Run + Docker standalone en GCP GCP `Google Cloud Run`. Repo: `github.com/guaricool/MedSysVE` (`master`).
 
 ---
 
@@ -87,7 +87,7 @@ Con esos 7 archivos deberías poder hacer cualquier cambio sin pedirle a Carlos 
 | PDF | `@react-pdf/renderer` | **CERO escrituras a disco.** Todas las rutas son GET que renderizan on-demand desde DB. Container de Cloud Run es efímero → `public/uploads/` se borra al reiniciar. |
 | Email | nodemailer + Gmail SMTP (App Password) | `lib/email.ts`. **Drop Resend en 2026-06-25** (`e294b90`). Plantillas: confirmación de cita, recordatorio, bienvenida portal, referido, OTP. |
 | WhatsApp | Meta Cloud API | `lib/whatsapp.ts`. Solo documentos listos (`notifyDocumentReady`). |
-| Deploy | Cloud Run (Docker standalone) | GCP GCP `13.140.181.29`. App ID `jes48vqxcs3l2lyk1lkpa5zt`. |
+| Deploy | Cloud Run (Docker standalone) | GCP GCP `Google Cloud Run`. App ID `jes48vqxcs3l2lyk1lkpa5zt`. |
 
 ### Multi-tenancy — reglas duras
 
@@ -295,7 +295,7 @@ Las rutas de notificación viven en `server/routers/notification.ts` con `list`,
 
 ```bash
 # Dry-run first (no writes)
-ssh root@13.140.181.29 "cd /opt/medsysve && \
+ssh root@Google Cloud Run "cd /opt/medsysve && \
   FIELD_ENCRYPTION_KEY=<old-enc> \
   FIELD_HMAC_KEY=<old-hmac> \
   ROTATE_FIELD_ENCRYPTION_KEY=$NEW_ENC_KEY \
@@ -304,7 +304,7 @@ ssh root@13.140.181.29 "cd /opt/medsysve && \
   node --no-warnings -r tsx/cjs scripts/rotate-field-keys.ts"
 
 # Real rotation (writes to DB)
-ssh root@13.140.181.29 "cd /opt/medsysve && \
+ssh root@Google Cloud Run "cd /opt/medsysve && \
   FIELD_ENCRYPTION_KEY=<old-enc> \
   FIELD_HMAC_KEY=<old-hmac> \
   ROTATE_FIELD_ENCRYPTION_KEY=$NEW_ENC_KEY \
@@ -386,3 +386,4 @@ docker logs --tail 200 <container>
 - **Operado por:** Yoguitech.LLC (footer del dashboard).
 - **Renombrar:** AJMedics → MedSysVE fue el rename público en 2026-06. Mantener nombre **MedSysVE** en cualquier comunicación externa.
 - **Repositorio:** `github.com/guaricool/MedSysVE`.
+

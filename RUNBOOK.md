@@ -3,7 +3,7 @@
 > **Última actualización:** 2026-07-02
 > **HEAD actual:** `fd73314` en `master`
 > **Dominio público:** `https://www.medsysve.com` (siempre usar `www`, apex pierde cookies — ver AGENTS.md / MEMORY.md sobre Traefik apex→www cookie drop)
-> **Cloud Run dashboard:** `http://13.140.181.29:8000/`
+> **Cloud Run dashboard:** `http://Google Cloud Run:8000/`
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Sistema | Usuario | Password | URL |
 |---|---|---|---|
-| **MedSysVE (doctor)** | `joguelpinto0810@gmail.com` | `<joel-password>` | https://medsysve.13.140.181.29.sslip.io/login |
-| **Cloud Run** | `cpierluissis@gmail.com` | `<Cloud Run-admin-password>` | http://13.140.181.29:8000/login |
+| **MedSysVE (doctor)** | `joguelpinto0810@gmail.com` | `<joel-password>` | https://medsysve.Google Cloud Run.sslip.io/login |
+| **Cloud Run** | `cpierluissis@gmail.com` | `<Cloud Run-admin-password>` | http://Google Cloud Run:8000/login |
 | **PostgreSQL** | `medsysve` | `<db-password>` | host: `tf03dm49her0vco2lprdqbjm:5432`, db: `medsysve` (solo accesible desde dentro del GCP) |
 
 > **Importante:** Las passwords reales NO viven en este documento (audit de seguridad #3 — ver git log). Para reset operacional, contactar al dev owner o rotar desde Cloud Run UI / psql directo.
@@ -28,7 +28,7 @@
 | Cache | Redis 7 (Cloud Run container) | Running |
 | Reverse proxy | Cloud Run v4.1.2 / Traefik | OK |
 | Build pack | Dockerfile | OK |
-| Dominio | `*.13.140.181.29.sslip.io` (wildcard sslip.io) | OK |
+| Dominio | `*.Google Cloud Run.sslip.io` (wildcard sslip.io) | OK |
 
 **Importante:** el FS de Cloud Run es **efímero**. Los archivos en `public/uploads/` se borran al reiniciar el contenedor. Por eso **todos los PDFs se generan on-demand** desde la DB (no se guardan en disco).
 
@@ -181,7 +181,7 @@ docker exec <medsysve-container> sh -c 'for v in DATABASE_URL FIELD_ENCRYPTION_K
 
 ## 🆘 Troubleshooting
 
-### El sistema no responde (`sysve.13.140.181.29.sslip.io` da 404)
+### El sistema no responde (`sysve.Google Cloud Run.sslip.io` da 404)
 
 **Causa probable:** El contenedor app está corriendo pero el proxy de Cloud Run no enrutó, o el contenedor crasheó al startup.
 
@@ -221,3 +221,4 @@ fetch('/api/admin/seed-medications', { method: 'POST' })
 ---
 
 **Nota final:** Este runbook se actualizó después de la sesión de validación 2026-06-21. Los 5 PDFs prioritarios (historia, encuentro, factura, reporte, carné) están validados y funcionando en producción.
+

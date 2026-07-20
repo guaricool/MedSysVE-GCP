@@ -27,7 +27,7 @@ SaaS multi-tenant de **Historia Clínica Electrónica (HCE) / EMR** para el merc
 | 2026-07-08 | `bedcd3a` | **Stripe LIVE launch** — 9 envs deployadas (sk_live_*, whsec_*, 6× price_*, NEXT_PUBLIC_*), webhook endpoint suscrito a 5 eventos. Smoke test end-to-end parcial: cargo real $25 procesado bajo sesión de Dayana (cross-session). Pending refund. |
 | 2026-07-14 | `9a963d0` | **Drug-allergy interaction check (safety feature)** — `lib/drug-allergies.ts` con ~30 familias farmacológicas VE + match exact/synonym/family + 31 unit tests. UI: warning en `prescription-form.tsx` al seleccionar med contraindicado. Server: defense-in-depth en `prescription.ts` rechaza `addItem` sin `overrideAlerta=true`. PDF: banner rojo "ALERGIAS DEL PACIENTE" en ambas mitades. AI: inyección de alergias activas en prompts de `encounter-assist` y `plan-suggestion`. Audit: nuevo `ALLERGY_OVERRIDE` action. Cross-reactivity cefalosporina↔penicilina NO modelada (out of scope, requiere side-chain analysis). |
 | 2026-07-08 | `51d4eac` | **Stripe checkout success_url fix** — derive de NEXTAUTH_URL con regex force www. (evita Traefik apex→www cookie drop). |
-| 2026-07-08 | `f6dec8a` + `6949f2f` | **Sentry/GlitchTip observability** — `@sentry/nextjs` wireado contra GlitchTip self-hosted en `glitchtip.13.140.181.29.sslip.io`. Error tracking en cliente + edge + server. |
+| 2026-07-08 | `f6dec8a` + `6949f2f` | **Sentry/GlitchTip observability** — `@sentry/nextjs` wireado contra GlitchTip self-hosted en `glitchtip.Google Cloud Run.sslip.io`. Error tracking en cliente + edge + server. |
 | 2026-07-07 | `0e8b003` | **Audit S11 — Automated PHI key rotation** — `scripts/rotate-field-keys.{sh,ts}` + DR-PLAN §5.1 runbook + 6 tests. Cierra audit #4. |
 
 | Fecha | Commit | Resumen |
@@ -105,7 +105,7 @@ SaaS multi-tenant de **Historia Clínica Electrónica (HCE) / EMR** para el merc
 | QR codes | qrcode | ^1.5.4 | Para 2FA TOTP enrollment. |
 | Charts | Recharts | ^3.8.0 | Analytics + vitales. |
 | Forms | react-hook-form + zodResolver | ^7.79.0 | |
-| Deploy | Cloud Run (Docker standalone) | v4.1.2 | GCP GCP `13.140.181.29`. App ID `jes48vqxcs3l2lyk1lkpa5zt`. |
+| Deploy | Cloud Run (Docker standalone) | v4.1.2 | GCP GCP `Google Cloud Run`. App ID `jes48vqxcs3l2lyk1lkpa5zt`. |
 | Tests E2E | Playwright | ^1.61.0 | `tests/`. |
 | Tests unit | vitest | ^4.1.9 | `vitest.config.ts`. |
 | Lint | ESLint | ^9 | `eslint.config.mjs`. |
@@ -324,7 +324,7 @@ PATIENT     → portal solo-lectura (portal.*)
 # Base
 DATABASE_URL=postgresql://user:pass@host:5432/medsysve
 NEXTAUTH_SECRET=<32+ char>
-NEXTAUTH_URL=https://medsysve.13.140.181.29.sslip.io
+NEXTAUTH_URL=https://medsysve.Google Cloud Run.sslip.io
 
 # Crypto (field-level PHI)
 FIELD_ENCRYPTION_KEY=<32 bytes base64>     # AES-256-GCM
@@ -546,3 +546,4 @@ curl -H "Cookie: __Secure-authjs.session-token=<jwt>" \
 - **Operado por:** Yoguitech.LLC.
 - **Renombrar:** AJMedics → MedSysVE fue el rename público en 2026-06. Dentro de algunos docs viejos todavía aparece AJMedics. Buscar si importa antes de mostrar a externos.
 - **Repositorio:** `github.com/guaricool/MedSysVE`.
+
