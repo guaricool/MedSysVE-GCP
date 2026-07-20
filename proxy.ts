@@ -50,8 +50,6 @@ const IP_LIMITS: Record<string, { max: number; windowMs: number; failClosed: boo
   "/api/trpc/": { max: 600, windowMs: 600_000, failClosed: false },         // 600 / 10 min
   // Generic API.
   "/api/": { max: 300, windowMs: 60_000, failClosed: false },               // 300 / min per IP
-  // Portal login attempts.
-  "/portal/login": { max: 10, windowMs: 60_000, failClosed: true },         // 10 / min
 }
 
 async function checkIpRateLimit(
@@ -154,7 +152,7 @@ export default async function proxy(req: NextRequest) {
   // ------------------------------------------------------------------
   // 1. Per-IP rate limit for API paths and sensitive auth pages.
   // ------------------------------------------------------------------
-  if (pathname.startsWith("/api/") || pathname.startsWith("/portal/login")) {
+  if (pathname.startsWith("/api/")) {
     const ip = getClientIp(req)
     const rl = await checkIpRateLimit(ip, pathname)
     if (!rl.ok) {
