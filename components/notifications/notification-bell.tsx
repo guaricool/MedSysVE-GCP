@@ -8,6 +8,7 @@ import { Bell, CheckCheck, Calendar, MessageSquare, Share2, Microscope, Info, Us
 const TIPO_CONFIG: Record<string, { icon: React.ElementType; cls: string; border: string }> = {
   APPOINTMENT_REQUEST: { icon: Calendar, cls: "text-blue-400 bg-blue-950/50", border: "border-blue-800/40" },
   PORTAL_MESSAGE: { icon: MessageSquare, cls: "text-emerald-400 bg-emerald-950/50", border: "border-emerald-800/40" },
+  WHATSAPP_MESSAGE: { icon: MessageSquare, cls: "text-green-400 bg-green-950/50", border: "border-green-800/40" },
   // Amber + UserPlus: visually distinct from ACCEPTED/REJECTED, conveys
   // "new patient incoming, needs your attention".
   REFERRAL_RECEIVED: { icon: UserPlus, cls: "text-amber-400 bg-amber-950/50", border: "border-amber-800/40" },
@@ -35,6 +36,7 @@ const TIPO_CONFIG: Record<string, { icon: React.ElementType; cls: string; border
 const TIPO_HREF: Record<string, string | null> = {
   APPOINTMENT_REQUEST: "/doctor/appointments",
   PORTAL_MESSAGE: "/doctor/mensajes",
+  WHATSAPP_MESSAGE: "/doctor/mensajes",
   REFERRAL_RECEIVED: "/doctor/referrals",
   REFERRAL_ACCEPTED: "/doctor/referrals",
   REFERRAL_REJECTED: "/doctor/referrals",

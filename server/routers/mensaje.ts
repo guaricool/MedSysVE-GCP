@@ -21,7 +21,19 @@ export const mensajeRouter = router({
           throw new TRPCError({ code: "PRECONDITION_FAILED", message: "El paciente no tiene número de teléfono registrado" })
         }
         const { sendWhatsAppText } = await import("@/lib/whatsapp")
-        const wa = await sendWhatsAppText(reg.patient.telefono, input.texto)
+        
+        // Build the full phone number for Meta API
+        // 1. Remove "+" from country code
+        const countryCode = (reg.patient.codigoPais || "+58").replace("+", "")
+        // 2. Remove all non-numeric characters from the local phone
+        let localPhone = reg.patient.telefono.replace(/\D/g, "")
+        // 3. Remove leading zero if present (common in VE 0414... -> 414...)
+        if (localPhone.startsWith("0")) {
+          localPhone = localPhone.substring(1)
+        }
+        
+        const fullPhone = `${countryCode}${localPhone}`
+        const wa = await sendWhatsAppText(fullPhone, input.texto)
         if (!wa.success) {
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Error enviando WhatsApp: " + wa.error })
         }
