@@ -10,12 +10,12 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     <div className="min-h-screen bg-slate-950">
       <header className="border-b border-slate-800 bg-slate-900 px-4 py-3">
         <div className="mx-auto max-w-6xl flex items-center justify-between gap-3 flex-wrap">
-          <h1 className="text-lg font-bold tracking-tight">
+          <Link href="/" className="text-lg font-bold tracking-tight hover:opacity-80 transition-opacity">
             <span className="text-[#FFD100]">Med</span>
             <span className="text-[#3B82F6]">Sys</span>
             <span className="text-[#EF4444]">VE</span>
             <span className="text-white font-normal text-sm ml-2">— Portal del Paciente</span>
-          </h1>
+          </Link>
           <div className="flex items-center gap-4">
             <nav className="flex gap-4 flex-wrap">
               {NAV.map((n) => (
