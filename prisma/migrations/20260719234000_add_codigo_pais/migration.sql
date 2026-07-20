@@ -1,0 +1,1 @@
+ALTER TABLE "Patient" ADD COLUMN "codigoPais" TEXT DEFAULT '+58';

@@ -47,9 +47,36 @@ async function handleIncomingMessage(message: any, contact: any) {
   if (message.type !== "text") return // We only handle text for now
   
   const phone = message.from
-  const text = message.text.body
+  const text = message.text.body.trim()
 
-  // Insert message into MarketingMessage
+  // 1. Interceptar solicitudes de verificación/recuperación
+  const match = text.match(/^(VERIFICAR|RECUPERAR)-(\d{4})$/i)
+  if (match) {
+    const codigo = match[0].toUpperCase()
+    const intent = await db.verificationIntent.findUnique({
+      where: { codigo }
+    })
+
+    if (intent && intent.expiresAt > new Date()) {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString()
+      await db.verificationIntent.update({
+        where: { id: intent.id },
+        data: { otp }
+      })
+      
+      const { sendWhatsAppText } = await import("@/lib/whatsapp")
+      await sendWhatsAppText(phone, `Tu código de seguridad para MedSysVE es: *${otp}*.\nIngrésalo en la página web para continuar.`)
+      console.log(`[WhatsApp Webhook] Sent OTP for intent ${codigo} to ${phone}`)
+      return
+    } else {
+      const { sendWhatsAppText } = await import("@/lib/whatsapp")
+      await sendWhatsAppText(phone, `El código de verificación *${codigo}* es inválido o ha expirado. Por favor, solicita uno nuevo en la página web.`)
+      console.log(`[WhatsApp Webhook] Invalid or expired intent ${codigo} from ${phone}`)
+      return
+    }
+  }
+
+  // 2. Si no es un comando del sistema, va a la bandeja de entrada de Marketing
   await db.marketingMessage.create({
     data: {
       telefono: phone,

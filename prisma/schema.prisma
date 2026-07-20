@@ -1603,14 +1603,14 @@ model ExpressOrder {
 }
 
 model MarketingPost {
-  id           String   @id @default(cuid())
-  imageUrl     String   @db.Text
-  caption      String   @db.Text
-  hashtags     String   @db.Text
-  style        String   // "hyperrealistic", "cartoon", "screenshot"
-  status       String   // "PUBLISHED", "FAILED"
-  igMediaId    String?  
-  publishedAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  imageUrl    String   @db.Text
+  caption     String   @db.Text
+  hashtags    String   @db.Text
+  style       String // "hyperrealistic", "cartoon", "screenshot"
+  status      String // "PUBLISHED", "FAILED"
+  igMediaId   String?
+  publishedAt DateTime @default(now())
 }
 
 model MarketingMessage {
@@ -1618,7 +1618,63 @@ model MarketingMessage {
   telefono     String
   nombrePerfil String?
   texto        String   @db.Text
-  direccion    String   // "INBOUND" o "OUTBOUND"
+  direccion    String // "INBOUND" o "OUTBOUND"
   leido        Boolean  @default(false)
   createdAt    DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// FASE PORTAL MARKETPLACE
+// ---------------------------------------------------------------------------
+
+enum VerificationMethod {
+  WHATSAPP
+  EMAIL
+}
+
+model PortalUser {
+  id           String  @id @default(cuid())
+  email        String? @unique
+  telefono     String? @unique
+  passwordHash String
+  isVerified   Boolean @default(false)
+
+  patientProfile GlobalPatientProfile?
+  intents        VerificationIntent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GlobalPatientProfile {
+  id           String     @id @default(cuid())
+  portalUserId String     @unique
+  portalUser   PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+
+  tipoIdentificacion   IdentificationType?
+  numeroIdentificacion String?
+  nombre               String
+  apellido             String
+  fechaNacimiento      DateTime?
+  sexo                 SexoType?
+  grupoSanguineo       String?
+
+  // Opcionales para importación (Global EHR)
+  alergias String[] @default([])
+  vacunas  String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationIntent {
+  id           String             @id @default(cuid())
+  codigo       String             @unique // Ej. "VERIFICAR-1234"
+  otp          String? // Generado post-webhook
+  method       VerificationMethod
+  expiresAt    DateTime
+  portalUserId String
+  portalUser   PortalUser         @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 }

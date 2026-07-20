@@ -218,10 +218,46 @@ export const appointmentRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const reg = await ctx.db.patientRegistration.findFirst({
+      let reg = await ctx.db.patientRegistration.findFirst({
         where: { patientId: ctx.patientId, workspaceId: input.workspaceId },
       })
-      if (!reg) throw new TRPCError({ code: "FORBIDDEN" })
+      
+      // If no local registration found, check if it's a PortalUser booking
+      if (!reg) {
+        const portalUser = await ctx.db.portalUser.findUnique({
+          where: { id: ctx.patientId },
+          include: { patientProfile: true }
+        })
+
+        if (portalUser && portalUser.patientProfile) {
+          // Auto-create local Patient and PatientRegistration
+          const profile = portalUser.patientProfile
+          const localPatient = await ctx.db.patient.create({
+            data: {
+              workspaceId: input.workspaceId,
+              nombre: profile.nombre,
+              apellido: profile.apellido,
+              tipoIdentificacion: profile.tipoIdentificacion,
+              numeroIdentificacion: profile.numeroIdentificacion, // Should be encrypted in a real setup if required
+              email: portalUser.email,
+              telefono: portalUser.telefono,
+              sexo: profile.sexo || "MASCULINO",
+              fechaNacimiento: profile.fechaNacimiento || new Date("2000-01-01"),
+              registrations: {
+                create: {
+                  workspaceId: input.workspaceId,
+                  idDisplay: `PAT-${Math.floor(1000 + Math.random() * 9000)}`
+                }
+              }
+            },
+            include: { registrations: true }
+          })
+          
+          reg = localPatient.registrations[0]
+        }
+      }
+
+      if (!reg) throw new TRPCError({ code: "FORBIDDEN", message: "Patient registration required." })
 
       const [h, m] = input.hora.split(":").map(Number)
       // Build the timestamp in America/Caracas explicitly. Previously this

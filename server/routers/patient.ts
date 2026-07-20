@@ -136,8 +136,6 @@ export const patientRouter = router({
           hmacCedula: hmac,
           tipoIdentificacion: input.tipoIdentificacion,
         },
-        // STRICT allowlist — never expose: id, portalPasswordHash, rep*,
-        // workspaceId, registrations, encrypted columns, or HMAC indices.
         select: {
           nombre: true,
           apellido: true,
@@ -151,23 +149,45 @@ export const patientRouter = router({
         take: 5,
         orderBy: { createdAt: "asc" },
       })
-      // Audit every cross-workspace lookup — this is a sensitive operation
-      // even though we only return a subset.
+      
+      // 2. Check GlobalPatientProfile (Marketplace)
+      const globalProfile = await ctx.db.globalPatientProfile.findFirst({
+        where: {
+          numeroIdentificacion: input.numeroIdentificacion,
+          tipoIdentificacion: input.tipoIdentificacion,
+        },
+        include: {
+          portalUser: { select: { email: true, telefono: true } }
+        }
+      })
+
       await audit("PATIENT_CEDULA_CROSS_WORKSPACE_LOOKUP", {
         workspaceId: ctx.session.workspaceId,
         userId: ctx.session.doctorId,
         userRole: ctx.session.role,
         resourceType: "Patient",
-        // No patientId: we don't know yet if a match exists.
-        outcome: matches.length > 0 ? "ALLOWED" : "ALLOWED",
+        outcome: "ALLOWED",
         channel: "API",
         metadata: {
           hmacCedulaPrefix: hmac.slice(0, 8),
           matchCount: matches.length,
+          globalMatch: !!globalProfile
         },
       })
-      // Return only the most recent match to keep the response deterministic.
-      return matches[matches.length - 1] ?? null
+      
+      const localMatch = matches[matches.length - 1] ?? null
+      
+      return {
+        ...localMatch,
+        globalProfileExists: !!globalProfile,
+        globalProfileId: globalProfile?.id,
+        // Override with global data if exists and local doesn't have it
+        nombre: globalProfile?.nombre || localMatch?.nombre,
+        apellido: globalProfile?.apellido || localMatch?.apellido,
+        fechaNacimiento: globalProfile?.fechaNacimiento || localMatch?.fechaNacimiento,
+        sexo: globalProfile?.sexo || localMatch?.sexo,
+        grupoSanguineo: globalProfile?.grupoSanguineo,
+      }
     }),
 
   register: protectedProcedure

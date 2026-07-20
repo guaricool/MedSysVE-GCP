@@ -191,19 +191,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       name: "Portal Paciente",
       credentials: { email: {}, portalPassword: {} },
       async authorize(raw) {
-        const email = raw?.email ? String(raw.email).toLowerCase().trim() : ""
+        const identifier = raw?.email ? String(raw.email).toLowerCase().trim() : ""
         const portalPassword = raw?.portalPassword ? String(raw.portalPassword) : ""
-        if (!email || !portalPassword) return null
+        if (!identifier || !portalPassword) return null
 
         // Lockout + rate limit for portal login (stricter than doctor login
         // because patient accounts may have weaker passwords).
-        const lockState = await isLocked(email)
+        const lockState = await isLocked(identifier)
         if (lockState.locked) {
           throw new Error("Demasiados intentos. Intente más tarde.")
         }
         const rl = await rateLimit({
           prefix: LIMITERS.portalLogin.prefix,
-          identifier: email,
+          identifier,
           max: LIMITERS.portalLogin.max,
           windowSec: LIMITERS.portalLogin.windowSec,
         })
@@ -211,42 +211,74 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("Demasiados intentos. Intente más tarde.")
         }
 
-        // Look up the patient by `hmacEmail` (a deterministic lowercase HMAC
-        // of the email). This is case-insensitive on purpose: a patient whose
-        // email was stored as "YoguiTech@Gmail.com" must still be able to log
-        // in by typing "yoguitech@gmail.com". Falling back to the plaintext
-        // `email` field covers legacy patients created before the encryption
-        // migration ran (where `hmacEmail` may be NULL).
-        const hmac = hmacIndex(email)
-        const patient =
-          (await db.patient.findFirst({ where: { hmacEmail: hmac } })) ??
-          (await db.patient.findFirst({ where: { email } }))
-        const valid = patient?.portalPasswordHash
-          ? await bcrypt.compare(portalPassword, patient.portalPasswordHash)
-          : (await bcrypt.compare(portalPassword, await getDummyHash()), false)
+        // 1. Check Global PortalUser (New system)
+        let portalUser = await db.portalUser.findFirst({
+          where: { email: identifier },
+          include: { patientProfile: true }
+        })
+        if (!portalUser) {
+          portalUser = await db.portalUser.findFirst({
+            where: { telefono: identifier },
+            include: { patientProfile: true }
+          })
+        }
 
-        if (!patient || !patient.portalPasswordHash || !valid) {
-          await recordFailedLogin(email)
+        let valid = false
+        if (portalUser) {
+          valid = await bcrypt.compare(portalPassword, portalUser.passwordHash)
+          if (!valid) await bcrypt.compare(portalPassword, await getDummyHash()) // Keep timing consistent
+        }
+
+        // 2. Fallback to Legacy Patient table (Old system)
+        let patient = null
+        if (!portalUser) {
+          const hmac = hmacIndex(identifier)
+          patient =
+            (await db.patient.findFirst({ where: { hmacEmail: hmac } })) ??
+            (await db.patient.findFirst({ where: { email: identifier } }))
+          valid = patient?.portalPasswordHash
+            ? await bcrypt.compare(portalPassword, patient.portalPasswordHash)
+            : (await bcrypt.compare(portalPassword, await getDummyHash()), false)
+        }
+
+        if (!valid || (!portalUser && (!patient || !patient.portalPasswordHash))) {
+          await recordFailedLogin(identifier)
           safeLog("warn", "auth.portal_login_failed", {
-            email: email.slice(0, 3) + "***",
+            email: identifier.slice(0, 3) + "***",
           })
           return null
         }
 
-        await clearLockout(email)
+        await clearLockout(identifier)
         safeLog("info", "auth.portal_login_ok", {
-          email: email.slice(0, 3) + "***",
+          email: identifier.slice(0, 3) + "***",
         })
-        return {
-          id: patient.id,
-          email: patient.email ?? email,
-          nombre: patient.nombre,
-          apellido: patient.apellido,
-          role: "PATIENT" as const,
-          workspaceId: "",
-          doctorId: "",
-          patientId: patient.id,
-        } satisfies SessionUser
+
+        if (portalUser && portalUser.patientProfile) {
+          return {
+            id: portalUser.id,
+            email: portalUser.email ?? identifier,
+            nombre: portalUser.patientProfile.nombre,
+            apellido: portalUser.patientProfile.apellido,
+            role: "PATIENT" as const,
+            workspaceId: "",
+            doctorId: "",
+            patientId: portalUser.id,
+          } satisfies SessionUser
+        } else if (patient) {
+          return {
+            id: patient.id,
+            email: patient.email ?? identifier,
+            nombre: patient.nombre,
+            apellido: patient.apellido,
+            role: "PATIENT" as const,
+            workspaceId: "",
+            doctorId: "",
+            patientId: patient.id,
+          } satisfies SessionUser
+        }
+        
+        return null
       },
     }),
   ],

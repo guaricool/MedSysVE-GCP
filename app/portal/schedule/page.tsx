@@ -1,212 +1,162 @@
 "use client"
 
 import { useState } from "react"
-import { useSession } from "next-auth/react"
-import { DayPicker } from "react-day-picker"
-import { es } from "date-fns/locale"
-import { format, addDays, isBefore, startOfDay } from "date-fns"
+import { useSearchParams, useRouter } from "next/navigation"
 import { trpc } from "@/lib/trpc-client"
-import type { SessionUser } from "@/types"
+import { Button } from "@/components/ui/button"
+import { Calendar, Clock, MapPin, User } from "lucide-react"
 
-export default function PortalSchedulePage() {
-  const { data: session, status } = useSession()
-  const isPatient = (session?.user as SessionUser | undefined)?.role === "PATIENT"
-  const { data: workspaces, isLoading: loadingW } = trpc.portal.myWorkspaces.useQuery(
-    undefined,
-    { enabled: isPatient },
+export default function SchedulePage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const workspaceId = searchParams?.get("workspaceId")
+  
+  // Need to pick a date
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split("T")[0] // default to today
   )
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null)
-  const [selected, setSelected] = useState<Date | undefined>()
-  const [hora, setHora] = useState<string | null>(null)
-  const [notas, setNotas] = useState("")
-  const [done, setDone] = useState(false)
+  const [selectedTime, setSelectedTime] = useState<string>("")
+  const [error, setError] = useState("")
 
-  const activeWsId = workspaceId ?? (workspaces?.[0]?.workspaceId ?? null)
-
-  const { data: slots, isFetching: loadingSlots } = trpc.availability.getAvailableSlots.useQuery(
-    { workspaceId: activeWsId!, fecha: selected ? format(selected, "yyyy-MM-dd") : "" },
-    { enabled: !!activeWsId && !!selected },
+  // Queries
+  const { data: availability, isFetching } = trpc.marketplace.getDoctorAvailability.useQuery(
+    { workspaceId: workspaceId || "", date: selectedDate },
+    { enabled: !!workspaceId && !!selectedDate }
   )
 
-  const requestMut = trpc.appointment.requestFromPortal.useMutation({
-    onSuccess: () => setDone(true),
-  })
+  const scheduleMutation = trpc.appointment.requestFromPortal.useMutation()
 
-  const today = startOfDay(new Date())
-  const maxDate = addDays(today, 60)
-
-  if (status === "loading" || (isPatient && loadingW))
-    return <p className="text-sm text-slate-400">Cargando...</p>
-
-  if (!isPatient) {
-    return (
-      <div className="space-y-2">
-        <h2 className="text-base font-semibold text-white">Solicitar cita</h2>
-        <p className="text-sm text-slate-400">
-          Inicie sesión como paciente para solicitar una cita en línea.
-        </p>
-      </div>
-    )
+  if (!workspaceId) {
+    return <div className="text-center text-white mt-8">WorkspaceId no proporcionado.</div>
   }
 
-  if (!workspaces || workspaces.length === 0) {
-    return (
-      <div className="space-y-2">
-        <h2 className="text-base font-semibold text-white">Solicitar cita</h2>
-        <p className="text-sm text-slate-400">
-          No tiene consultorios vinculados. Consulte con su médico para activar el portal.
-        </p>
-      </div>
-    )
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedDate(e.target.value)
+    setSelectedTime("") // Reset time when date changes
+    setError("")
   }
 
-  if (done) {
-    return (
-      <div className="rounded-lg border border-emerald-800 bg-emerald-950 p-6 text-center">
-        <p className="text-lg font-semibold text-emerald-300">Solicitud enviada</p>
-        <p className="mt-1 text-sm text-emerald-400">
-          Su cita ha sido solicitada. El consultorio la confirmará pronto.
-        </p>
-        <button
-          className="mt-4 text-sm text-blue-400 underline"
-          onClick={() => {
-            setDone(false)
-            setSelected(undefined)
-            setHora(null)
-            setNotas("")
-          }}
-        >
-          Solicitar otra cita
-        </button>
-      </div>
-    )
+  const handleSchedule = async () => {
+    if (!selectedTime) {
+      setError("Debes seleccionar una hora")
+      return
+    }
+    setError("")
+
+    try {
+      await scheduleMutation.mutateAsync({
+        workspaceId,
+        fecha: selectedDate,
+        hora: selectedTime,
+      })
+      // Success! 
+      router.push("/portal/schedule/success")
+    } catch (err: any) {
+      setError(err.message || "Error al agendar la cita. Por favor intenta de nuevo.")
+    }
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-base font-semibold text-white">Solicitar cita</h2>
-
-      {/* Workspace picker */}
-      {workspaces.length > 1 && (
-        <div className="space-y-1">
-          <label className="text-xs text-slate-400">Consultorio</label>
-          <select
-            value={activeWsId ?? ""}
-            onChange={(e) => {
-              setWorkspaceId(e.target.value)
-              setSelected(undefined)
-              setHora(null)
-            }}
-            className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-          >
-            {workspaces.map((w: { workspaceId: string; workspaceNombre: string; doctor: { nombre: string; apellido: string; especialidadPrincipal: string } }) => (
-              <option key={w.workspaceId} value={w.workspaceId}>
-                {w.workspaceNombre} — Dr. {w.doctor.nombre} {w.doctor.apellido}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {workspaces.length === 1 && (
-        <div className="rounded-md border border-slate-800 bg-slate-900 px-4 py-3 text-sm">
-          <p className="text-white">
-            Dr. {workspaces[0].doctor.nombre} {workspaces[0].doctor.apellido}
-          </p>
-          <p className="text-slate-400">{workspaces[0].doctor.especialidadPrincipal}</p>
-        </div>
-      )}
-
-      {/* Date picker */}
-      <div>
-        <label className="mb-2 block text-xs text-slate-400">Seleccione una fecha</label>
-        <div className="inline-block rounded-lg border border-slate-800 bg-slate-900 p-3">
-          <DayPicker
-            mode="single"
-            selected={selected}
-            onSelect={(d) => {
-              setSelected(d)
-              setHora(null)
-            }}
-            locale={es}
-            disabled={[{ before: addDays(today, 1) }, { after: maxDate }]}
-            modifiersClassNames={{
-              selected: "bg-blue-600 text-white rounded-md",
-              today: "font-bold text-blue-400",
-              disabled: "opacity-30",
-            }}
-            classNames={{
-              day_button: "w-8 h-8 flex items-center justify-center text-sm text-slate-200 hover:bg-slate-800 rounded-md",
-              month_caption: "text-sm text-slate-300 font-medium mb-2",
-              weekday: "text-xs text-slate-500 w-8 text-center",
-              weeks: "space-y-1",
-            }}
-          />
-        </div>
+    <div className="mx-auto mt-8 max-w-3xl space-y-8">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold text-white">Agendar Cita</h1>
+        <p className="text-slate-400">Selecciona el día y la hora de tu preferencia</p>
       </div>
 
-      {/* Slots */}
-      {selected && (
-        <div>
-          <label className="mb-2 block text-xs text-slate-400">
-            Turnos disponibles — {format(selected, "EEEE d 'de' MMMM", { locale: es })}
-          </label>
-          {loadingSlots ? (
-            <p className="text-sm text-slate-400">Cargando turnos...</p>
-          ) : !slots || slots.length === 0 ? (
-            <p className="text-sm text-slate-400">No hay turnos disponibles para esta fecha.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {slots.map((s: string) => (
-                <button
-                  key={s}
-                  onClick={() => setHora(s)}
-                  className={`rounded-md border px-4 py-2 text-sm font-medium transition ${
-                    hora === s
-                      ? "border-blue-500 bg-blue-600 text-white"
-                      : "border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-500"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        {/* Date Selection Panel */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-6">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-blue-400" /> Fecha
+          </h2>
+          
+          <input 
+            type="date"
+            min={new Date().toISOString().split("T")[0]}
+            value={selectedDate}
+            onChange={handleDateChange}
+            className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-4 py-3"
+          />
 
-      {/* Notes + submit */}
-      {hora && (
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-xs text-slate-400">Motivo (opcional)</label>
-            <textarea
-              rows={2}
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              placeholder="Indique brevemente el motivo de su consulta..."
-              className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
-            />
+          <h2 className="text-xl font-bold text-white flex items-center gap-2 pt-4">
+            <Clock className="w-5 h-5 text-blue-400" /> Horarios Disponibles
+          </h2>
+          
+          <div className="min-h-[150px]">
+            {isFetching ? (
+              <p className="text-slate-400 text-sm">Buscando horarios...</p>
+            ) : availability?.slots && availability.slots.length > 0 ? (
+              <div className="grid grid-cols-3 gap-3">
+                {availability.slots.map((time) => (
+                  <button
+                    key={time}
+                    type="button"
+                    onClick={() => setSelectedTime(time)}
+                    className={`
+                      py-2 px-3 rounded-md text-sm font-medium transition-all duration-200 border
+                      ${selectedTime === time 
+                        ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-900/50" 
+                        : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"}
+                    `}
+                  >
+                    {time}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-slate-800/50 rounded-lg border border-slate-700 border-dashed">
+                <p className="text-slate-400 text-sm">
+                  No hay horarios disponibles para esta fecha.
+                </p>
+              </div>
+            )}
           </div>
-          <button
-            onClick={() =>
-              requestMut.mutate({
-                workspaceId: activeWsId!,
-                fecha: format(selected!, "yyyy-MM-dd"),
-                hora,
-                notas: notas || undefined,
-              })
-            }
-            disabled={requestMut.isPending}
-            className="w-full rounded-md bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-          >
-            {requestMut.isPending ? "Enviando..." : `Solicitar cita — ${format(selected!, "d/MM")} a las ${hora}`}
-          </button>
-          {requestMut.error && (
-            <p className="text-sm text-red-400">{requestMut.error.message}</p>
-          )}
         </div>
-      )}
+
+        {/* Confirmation Panel */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex flex-col justify-between">
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <User className="w-5 h-5 text-blue-400" /> Confirmar Cita
+            </h2>
+            
+            <div className="space-y-4">
+              <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">Fecha seleccionada</p>
+                <p className="text-white text-lg font-medium">
+                  {new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-VE", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+              </div>
+
+              <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">Hora seleccionada</p>
+                {selectedTime ? (
+                  <p className="text-white text-lg font-medium">{selectedTime}</p>
+                ) : (
+                  <p className="text-slate-500 text-sm italic">Ninguna</p>
+                )}
+              </div>
+            </div>
+            
+            {error && <p className="text-red-400 text-sm font-medium">{error}</p>}
+          </div>
+
+          <Button 
+            onClick={handleSchedule} 
+            disabled={!selectedTime || scheduleMutation.isPending}
+            className="w-full mt-8 h-12 text-lg font-medium"
+          >
+            {scheduleMutation.isPending ? "Agendando..." : "Confirmar Cita"}
+          </Button>
+        </div>
+
+      </div>
     </div>
   )
 }
