@@ -1,5 +1,5 @@
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN
-const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN || process.env.WA_ACCESS_TOKEN
+const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.WA_PHONE_NUMBER_ID
 
 /**
  * Helper genérico para enviar mensajes a través de la API oficial de WhatsApp Cloud de Meta.
