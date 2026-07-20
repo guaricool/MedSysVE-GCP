@@ -32,6 +32,7 @@ export default function PortalRegisterPage() {
   const [method, setMethod] = useState<"WHATSAPP" | "EMAIL" | null>(null)
   const [codigo, setCodigo] = useState("")
   const [otp, setOtp] = useState("")
+  const [isVerifying, setIsVerifying] = useState(false)
 
   const registerMutation = trpc.marketplace.registerPortalUser.useMutation()
   const verifyInitMutation = trpc.marketplace.initiateVerification.useMutation()
@@ -98,6 +99,8 @@ export default function PortalRegisterPage() {
 
   async function onVerifySubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (isVerifying) return
+    setIsVerifying(true)
     setError("")
     
     try {
@@ -108,6 +111,7 @@ export default function PortalRegisterPage() {
       // Verification successful, redirect to login
       router.push("/portal/login?verified=true")
     } catch (err: any) {
+      setIsVerifying(false)
       setError(err.message || "Código incorrecto.")
     }
   }
@@ -299,8 +303,8 @@ export default function PortalRegisterPage() {
 
           {error && <p className="text-sm text-red-400 font-medium">{error}</p>}
           
-          <Button type="submit" className="w-full" disabled={verifySubmitMutation.isPending}>
-            {verifySubmitMutation.isPending ? "Verificando..." : "Verificar y Completar Registro"}
+          <Button type="submit" className="w-full" disabled={isVerifying}>
+            {isVerifying ? "Verificando..." : "Verificar y Completar Registro"}
           </Button>
         </form>
       )}

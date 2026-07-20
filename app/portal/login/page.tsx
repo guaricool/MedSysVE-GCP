@@ -24,6 +24,7 @@ export default function PortalLoginPage() {
   const [method, setMethod] = useState<"WHATSAPP" | "EMAIL" | null>(null)
   const [codigo, setCodigo] = useState("")
   const [otp, setOtp] = useState("")
+  const [isVerifying, setIsVerifying] = useState(false)
 
   const checkStatusMutation = trpc.marketplace.checkPortalUserStatus.useMutation()
   const verifyInitMutation = trpc.marketplace.initiateVerification.useMutation()
@@ -82,6 +83,8 @@ export default function PortalLoginPage() {
 
   async function onVerifySubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (isVerifying) return
+    setIsVerifying(true)
     setError("")
     
     try {
@@ -94,10 +97,12 @@ export default function PortalLoginPage() {
       if (res?.error) {
         setError("Verificado exitosamente. Inicie sesión para continuar.")
         setStep(1)
+        setIsVerifying(false)
       } else {
         router.push("/portal")
       }
     } catch (err: any) {
+      setIsVerifying(false)
       setError(err.message || "Código incorrecto.")
     }
   }
@@ -226,8 +231,8 @@ export default function PortalLoginPage() {
 
           {error && <p className="text-sm text-red-400 font-medium">{error}</p>}
           
-          <Button type="submit" className="w-full" disabled={verifySubmitMutation.isPending}>
-            {verifySubmitMutation.isPending ? "Verificando..." : "Verificar y Entrar"}
+          <Button type="submit" className="w-full" disabled={isVerifying}>
+            {isVerifying ? "Verificando..." : "Verificar y Entrar"}
           </Button>
 
           <button 
