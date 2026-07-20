@@ -12,25 +12,17 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
-## Estado actual (2026-07-14)
+## Estado actual (2026-07-20)
 
-- **HEAD:** `9a963d0` en `master` — `feat(safety): drug-allergy interaction check end-to-end`
-- **Cambios recientes (última semana, 2026-07-08 → 2026-07-14):**
-  - `9a963d0` feat(safety): drug-allergy interaction check end-to-end (lib/drug-allergies.ts con 30 familias VE + match exact/synonym/family, UI warning en prescription-form, defense-in-depth en prescription router, banner rojo en PDF, inyeccion de alergias en prompts AI, audit ALLERGY_OVERRIDE)
-  - `34b94e8` chore: remove dead EncounterClient + update stale AGENTS.md note
-  - `5522858` test(reports): 35 unit tests for report sections + buildReportPrompt
-  - `ace1249` feat(reports): per-consulta override modal in informe-form
-  - `3dabd71` feat(reports): /doctor/preferencias-informe UI
-  - `bedcd3a` fix(billing): post-checkout redirect to /workspace + SubscriptionCard reads stripeSubscriptionId
-  - `51d4eac` fix(billing): derive success_url/cancel_url from NEXTAUTH_URL with www. prefix
-  - `f6dec8a` + `6949f2f` feat(observability): wire @sentry/nextjs to self-hosted GlitchTip
-- **Último deploy verificado:** container `hze8mocuh4xqskqwrm3mx50b-...` con image `9a963d0f5fc09a7bd07b1400e3c928742a52ba4f` healthy (running:healthy, last_online_at 2026-07-14 22:24 UTC).
-- **Drug-allergy safety feature (LIVE):** nueva `lib/drug-allergies.ts` con 30+ familias farmacológicas VE (penicilinas, AINEs, cefalosporinas, sulfas, macrólidos, etc.) + 3-level matcher. UI warning al seleccionar med contraindicado (rojo=naranja según severidad). Server defense-in-depth rechaza addItem sin overrideAlerta=true. PDF de receta muestra banner "ALERGIAS DEL PACIENTE" en ambas mitades (farmacia + paciente) + badge "OVR" en items con override. AI inyecta alergias activas en system prompt de encounter-assist y plan-suggestion. Audit `ALLERGY_OVERRIDE` por cada override aceptado. 31 unit tests, `tsc --noEmit` clean, `next build` Compiled successfully in 8.0s.
-- **Backup infrastructure migrada a Google Cloud Storage (2026-07-13, manual ops):** Drive OAuth token venció y Service Accounts de Google Drive no tienen storage quota en cuentas personales (requiere Workspace + Shared Drives, descartado por costo). B2 es la solución permanente: bucket privado `medsysve-backups`, app key con scope solo al bucket, doble encryption (gpg + rclone crypt). **4 retention bugs acumulados en `/opt/medsysve-backup/backup.sh` arreglados** (awk $1↔$2, `((COUNT++))` con set -e, `[[ ]] && action` propagando exit 1, `date -d "$EPOCH seconds ago -N days"` inválido) — los 4 estaban rotos desde el deploy inicial, archivos se acumulaban sin límite. Backup mensual de configs/scripts/cron/rclone.conf con passphrase en 1Password. Drill end-to-end de recovery verificado (20 archivos extraídos, todos los scripts MATCH byte-a-byte).
-- **Stripe LIVE mode deployed:** 9 envs creadas en Cloud Run, webhook endpoint suscrito a 5 eventos. **Smoke test incompleto** — $25 procesado bajo sesión de Dayana, pendiente refund.
-- **Auditorías S8-S11 todas cerradas + deployadas:** AI guardrails (45 tests), Encounter optimistic locking (10 tests), Doctor feature flag override (14 tests), PHI key rotation scripts (6 tests). Score MetaHarness 91.2/100 (A+ en Audit Completion).
-- **`tsc --noEmit`:** clean ✅
-- **`next build`:** Compiled successfully in 8.0s (post-9a963d0)
+- **HEAD:** Current workspace changes (security hardening + portal EHR/verification flow)
+- **Cambios recientes (2026-07-14 → 2026-07-20):**
+  - **Bloqueo y Verificación de Portal de Paciente:** Implementación de bloqueo de login para usuarios no verificados, redirección directa a panel de ingreso de OTP (correo o WhatsApp con link directo a bot +58 424-4967367), y unificación de registros de paciente EHR locales mediante coincidencia de Cédula/Email/Teléfono.
+  - **Antecedentes Médicos en Portal:** Expuesta la edición y consulta de grupo sanguíneo, alergias y antecedentes médicos desde la pantalla de perfil del paciente (`portal-perfil-client.tsx`).
+  - **Mitigación de Credencial en msmtprc:** Removida contraseña hardcodeada de `config/msmtprc`, agregada a `.gitignore` y eliminada de la caché de Git (`git rm --cached`).
+  - **Actualización de Dependencias (SCA):** Actualizado `nodemailer` a `^9.0.3` y nested `postcss` a `^8.5.15` mediante `overrides` en `package.json`, mitigando vulnerabilidades altas y críticas de inyección SMTP y XSS.
+  - **Hardening de GitHub Actions:** Añadido `permissions: contents: read` a `.github/workflows/ci.yml` para mitigar riesgos de elevación de privilegios.
+  - **`tsc --noEmit`:** clean ✅
+  - **`next build`:** Compiled successfully in 9.5s ✅
 
 ## Feature: location-aware system (implementada 2026-06-27)
 

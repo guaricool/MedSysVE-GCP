@@ -69,3 +69,6 @@ content/manual/parte-*.html
 # Test-only JWT minting scripts (hardcoded test user IDs + AUTH_SECRET).
 # Regenerate locally if needed: see docs/SMOKE_TESTS.md (TBD).
 scripts/smoke/mint-jwt-*.mjs
+
+# MSMTP configuration template
+config/msmtprc
