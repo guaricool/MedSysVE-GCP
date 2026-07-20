@@ -851,6 +851,14 @@ export function RegisterForm() {
               Iniciar sesión
             </Link>
           </p>
+          <div className="pt-4 mt-2 border-t border-slate-800 text-center">
+            <p className="text-slate-400 text-sm">
+              ¿Eres paciente?{" "}
+              <Link href="/portal/register" className="text-blue-400 hover:underline">
+                Regístrate en el Portal del Paciente
+              </Link>
+            </p>
+          </div>
         </form>
       </CardContent>
     </Card>
