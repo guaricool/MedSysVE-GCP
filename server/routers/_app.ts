@@ -41,8 +41,10 @@ import { reportPreferencesRouter } from "./report-preferences"
 import { expressOrderRouter } from "./expressOrder"
 import { marketingRouter } from "./marketing"
 import { adminMensajesRouter } from "./admin-mensajes"
+import { marketplaceRouter } from "./marketplace"
 
 export const appRouter = router({
+  marketplace: marketplaceRouter,
   auth: authRouter,
   doctor: doctorRouter,
   workspace: workspaceRouter,
