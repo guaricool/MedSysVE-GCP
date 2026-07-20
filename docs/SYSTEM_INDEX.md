@@ -16,7 +16,7 @@
 | React | React | 19.x |
 | API | tRPC | 11.x |
 | ORM | Prisma | 7.x (con `@prisma/adapter-pg`) |
-| DB | PostgreSQL (Contabo VPS) | 16-alpine |
+| DB | PostgreSQL (Google Cloud Cloud Run) | 16-alpine |
 | Auth | Auth.js | v5 (NextAuth) |
 | Styling | Tailwind CSS | v4 |
 | UI primitives | Radix UI + shadcn/ui + Base UI | latest |
@@ -25,7 +25,7 @@
 | AI | Anthropic SDK | `@anthropic-ai/sdk` (pinned: haiku for OCR, sonnet elsewhere) |
 | Billing | Stripe | latest |
 | Email | Nodemailer + Gmail SMTP | — |
-| Deploy | Docker standalone + Coolify + Traefik | Coolify 4.1.2 |
+| Deploy | Docker standalone + Google Cloud + Traefik | Google Cloud 4.1.2 |
 | Repo | GitHub | `guaricool/MedSysVE` (master) |
 | Knowledge graph | graphify + 3d-force-graph v1 | CDN-loaded, 2117 nodos, 189 comunidades |
 
@@ -162,7 +162,7 @@
 #### Cron (2)
 - `POST /api/cron/appointment-reminders` (diario 8 AM)
 - `POST /api/cron/bcv-update` (cada 6h)
-- ✅ `archive-old-audit-events` (mensual, configurado en Coolify Scheduled Tasks)
+- ✅ `archive-old-audit-events` (mensual, configurado en Google Cloud Scheduled Tasks)
 
 #### PDF (10) — ahora con `?preview=1` para portal
 - `GET /api/pdf/prescription/[id]` — soporta `?preview=1`
@@ -425,14 +425,14 @@ Todos aceptan `omitSello?: boolean` → render sin firma/sello + watermark "VIST
 ### Container (producción)
 - **Container name**: `hze8mocuh4xqskqwrm3mx50b-022320493669`
 - **Image tag**: `hze8mocuh4xqskqwrm3mx50b:b02e015b79254aa23ae4251fab37063dc2e36a6a`
-- **Status**: `Up ~6min, healthy` (Coolify)
+- **Status**: `Up ~6min, healthy` (Google Cloud)
 - **Healthcheck**: GET `/login` → 200 cada 30s
 - **Pre-deploy command**: `npx prisma generate`
 - **Post-startup**: `npx prisma migrate deploy && node server.js`
 - **Domain**: `https://medsysve.com` (apex) + `https://www.medsysve.com` (canonical), Traefik redirect apex→www
 
-### Infrastructure (VPS Contabo `13.140.181.29`)
-- Coolify 4.1.2 (self-hosted)
+### Infrastructure (Google Cloud `Google Cloud Run`)
+- Google Cloud 4.1.2 (self-hosted)
 - PostgreSQL 16-alpine (container `tf03dm49her0vco2lprdqbjm`, healthy)
 - Redis 7-alpine
 - Traefik 3.6 (proxy + Let's Encrypt)
@@ -452,7 +452,7 @@ Todos aceptan `omitSello?: boolean` → render sin firma/sello + watermark "VIST
 - rclone crypt → `gdrive-medsysve-crypt:backups/` (AES-256)
 - Retención: 7 daily + 4 weekly + 12 monthly (GFS)
 - Health check: `bash /opt/medsysve-backup/health-check.sh`
-- Monthly restore drill (Coolify Scheduled Task UUID `bljazmj4u5g3cmvbpqlg5m6i`)
+- Monthly restore drill (Google Cloud Scheduled Task UUID `bljazmj4u5g3cmvbpqlg5m6i`)
 
 ---
 
@@ -516,7 +516,7 @@ Todos aceptan `omitSello?: boolean` → render sin firma/sello + watermark "VIST
 | `.env` | ❌ no existe | todo en `.env.local` |
 | `.env.local` | ✅ gitignored | `DATABASE_URL`, Auth secret, encryption keys, etc. |
 | `.env.stripe.local` | ✅ gitignored | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` |
-| `.env.coolify.local` | ✅ gitignored | `COOLIFY_API_TOKEN`, `COOLIFY_API_BASE_URL`, `COOLIFY_API_APP_UUID_MEDSYSVE` |
+| `.env.Google Cloud.local` | ✅ gitignored | `Google Cloud_API_TOKEN`, `Google Cloud_API_BASE_URL`, `Google Cloud_API_APP_UUID_MEDSYSVE` |
 
 **KEYS críticas (separadas, audit #7 followup)**:
 - `FIELD_ENCRYPTION_KEY` — AES-256-GCM para PHI encryption
@@ -529,7 +529,7 @@ Todos aceptan `omitSello?: boolean` → render sin firma/sello + watermark "VIST
 ## 14. Open follow-ups
 
 1. **Real-time mensajes paciente↔doctor** — polling 3s es interim; SSE/WebSocket con Redis pub/sub pendiente.
-2. **Coolify deploy race condition** — algunos deploys fallan post-build con `No such container`. Workaround: re-trigger con push de commit nuevo (a veces `node.js builder` retiene puerto). Track cada caso en audit backlog.
+2. **Google Cloud deploy race condition** — algunos deploys fallan post-build con `No such container`. Workaround: re-trigger con push de commit nuevo (a veces `node.js builder` retiene puerto). Track cada caso en audit backlog.
 3. **PDF `pdfUrl` column unused** — schema tiene `pdfUrl String?` en Document, Prescription, etc. pero ningún router lo escribe. Portal usa `/api/pdf/<entity>/${id}`. Migración para dropear pendiente.
 4. **Encounter motivo backfill** — 18/18 encounters encrypted en encrypt-backfill. Nuevos encounters deben usar el campo cifrado directamente (validation en zod schema).
 5. **Coverage en app/medical** — EncounterWorkspace, VitalsChart, LabResultsClient ya tienen tests E2E pendientes. Falta decisión sobre framework (Playwright vs Cypress).
@@ -572,7 +572,7 @@ Todos aceptan `omitSello?: boolean` → render sin firma/sello + watermark "VIST
 
   Auxiliares:
   - Redis 7 (catálogo medicamentos + lockout + rate-limit + room for SSE pub/sub)
-  - Coolify 4.1.2 (deploy + cron + scheduled tasks)
+  - Google Cloud 4.1.2 (deploy + cron + scheduled tasks)
   - Stripe (billing webhooks + Customer Portal)
   - Anthropic API (encounter-assist, drug-interactions, dose-suggestion, lab-ocr)
   - Gmail SMTP (transactional email)

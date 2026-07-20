@@ -25,7 +25,7 @@
 | #8-extend | feature flags in AI routes | ✅ Done | `9b81cbc` |
 | #9 | PERMISSIONS matrix + 52 tests | ✅ Done | `9f5f544` + `docs/PERMISSIONS.md` |
 | #10 | AuditEvent retention (5y LOPDP) | ✅ Done | `b67a25e` + `docs/DATA_RETENTION.md` |
-| #11 | Remove stale coolify/docker-compose.yml | ✅ Done | `fca7e1b` |
+| #11 | Remove stale Google Cloud/docker-compose.yml | ✅ Done | `fca7e1b` |
 | **#12** | **Encounter auto-save conflict resolution (audit S9)** | **✅ Done (2026-07-07)** | `e882d0a` (`feat(encounter): audit S9 - optimistic locking`) |
 | **#13** | **AI prompt injection guardrails + output validation (audit S8)** | **✅ Done (2026-07-07)** | `4c7aa5b` (`feat(ai): audit S8 - AI guardrails`) |
 | #14 | Anthropic model pinning | ✅ Done | `02afc08` |
@@ -109,7 +109,7 @@ Próximas iteraciones del score (MetaHarness 90.1 → 91+ estimado) requieren tr
 - `scripts/rotate-field-keys.ts` (worker Node): re-encripta Patient.cedulaCifrada + nombre + apellido + telefono + email + rif + Encounter.motivoCifrado + anamnesisCifrada + planCifrado bajo nueva key. Recomputa los 6 HMAC indexes + motivoHmac bajo nueva HMAC key. NO toca signatureHash (FIELD_SIGN_KEY separada).
 - Idempotency: si una row ya está en formato nuevo (decrypt con NEW funciona), la skipea sin error
 - 6 nuevos tests en `tests/unit/rotate-field-keys.test.ts` (happy path, all 6 columns, paired, no-pair, idempotency, dry-run)
-- `docs/DR-PLAN.md` §5.1 — runbook completo con 8 pasos (generate, backup, stop, dry-run, real, update Coolify, smoke test, retain old keys 30d)
+- `docs/DR-PLAN.md` §5.1 — runbook completo con 8 pasos (generate, backup, stop, dry-run, real, update Google Cloud, smoke test, retain old keys 30d)
 - `AGENTS.md` — sección "Secrets rotation" con tabla de las 3 keys + when-to-rotate + TL;DR commands
 - **Score Security 97 → 98. Score Backup/DR 95 → 97.**
 
@@ -123,3 +123,4 @@ Próximas iteraciones del score (MetaHarness 90.1 → 91+ estimado) requieren tr
 - **2026-07-07 (audit S9)**: #12 marcado como DONE. Optimistic locking en Encounter + 10 tests de regresión. Quedan 2 items pendientes (#4/#15) para S10-S11.
 - **2026-07-07 (audit S10)**: #15 marcado como DONE. DoctorFeatureOverride model + admin router + 14 tests. Queda 1 item pendiente (#4) para S11.
 - **2026-07-07 (audit S11)**: #4 marcado como DONE. scripts/rotate-field-keys.sh + .ts + 6 tests + DR-PLAN.md §5.1 + AGENTS.md. **0 items pendientes.** Backlog cerrado.
+

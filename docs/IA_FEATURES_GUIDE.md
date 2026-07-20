@@ -248,9 +248,9 @@ Para esta auditoría creé en tu workspace:
 - Consulta: "Cefalea + fiebre 3 días" (`demo_enc_maria_001`)
 - Receta: 1 item (Acetaminofen 500mg) (`demo_presc_maria_001`)
 
-**Si querés limpiarla**, corré esto en el VPS:
+**Si querés limpiarla**, corré esto en el Cloud Run:
 ```bash
-ssh root@13.140.181.29
+ssh root@Google Cloud Run
 docker exec -i tf03dm49her0vco2lprdqbjm psql -U medsysve -d medsysve <<'SQL'
 DELETE FROM "PrescriptionItem" WHERE id LIKE 'demo_pi_%';
 DELETE FROM "Prescription" WHERE id LIKE 'demo_presc_%';

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Construir la base completa del sistema: registro de doctores, workspaces, roles de staff, registro y búsqueda de pacientes, dashboards por rol, y deployment en Coolify.
+**Goal:** Construir la base completa del sistema: registro de doctores, workspaces, roles de staff, registro y búsqueda de pacientes, dashboards por rol, y deployment en Google Cloud.
 
 **Architecture:** Monolito modular Next.js 15 con App Router. tRPC para type-safety end-to-end entre cliente y servidor. Auth.js v5 maneja autenticación multi-tenant con contexto de workspace en la sesión. Row-Level Security aplicado via Prisma middleware usando `workspace_id`.
 
@@ -85,7 +85,7 @@ ajmedics/
 │       └── login.spec.ts
 ├── .env.example
 ├── docker-compose.yml                      ← desarrollo local
-└── coolify/
+└── Google Cloud/
     └── docker-compose.yml
 ```
 
@@ -2164,10 +2164,10 @@ git commit -m "feat: patient registration with minor/representative support + re
 
 ---
 
-## Task 9: Configuración Coolify
+## Task 9: Configuración Google Cloud
 
 **Files:**
-- Create: `coolify/docker-compose.yml`
+- Create: `Google Cloud/docker-compose.yml`
 - Create: `Dockerfile`
 - Create: `.dockerignore`
 
@@ -2229,7 +2229,7 @@ const nextConfig: NextConfig = {
 export default nextConfig
 ```
 
-- [ ] **Crear `coolify/docker-compose.yml`**
+- [ ] **Crear `Google Cloud/docker-compose.yml`**
 
 ```yaml
 version: '3.8'
@@ -2290,7 +2290,7 @@ docker run --rm -p 3001:3000 --env-file .env.local ajmedics:latest
 
 ```bash
 git add .
-git commit -m "feat: Dockerfile + Coolify deployment config"
+git commit -m "feat: Dockerfile + Google Cloud deployment config"
 ```
 
 ---
@@ -2419,3 +2419,4 @@ Antes de entregar, verificar que todo funciona end-to-end:
 ---
 
 *Plan Fase 1 — AJMedics. Siguiente: Fase 2 — Núcleo Clínico (consulta, vitales, diagnósticos, medicamentos, receta PDF)*
+

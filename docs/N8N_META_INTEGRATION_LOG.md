@@ -18,7 +18,7 @@
 
 3. **Diagnóstico y Corrección del Enrutamiento del Webhook en n8n:**
    - **El Problema:** Meta marcaba la conexión como "Exitosa", pero los mensajes nunca se mostraban en el lienzo de n8n.
-   - **El Diagnóstico (vía consola del VPS):** Al revisar los logs de n8n, descubrimos el error `Received request for unknown webhook`. Esto ocurría porque en Meta se había registrado la **URL de Producción** (`/webhook/`), pero como el flujo de trabajo en n8n estaba "Inactivo", n8n rechazaba las peticiones por seguridad.
+   - **El Diagnóstico (vía consola del Cloud Run):** Al revisar los logs de n8n, descubrimos el error `Received request for unknown webhook`. Esto ocurría porque en Meta se había registrado la **URL de Producción** (`/webhook/`), pero como el flujo de trabajo en n8n estaba "Inactivo", n8n rechazaba las peticiones por seguridad.
    - **La Solución:** Migramos el endpoint a la **Test URL** (`/webhook-test/`).
 
 4. **Instalación y Preconfiguración del "Facebook Trigger" (vía API):**
@@ -52,3 +52,4 @@
    - Crear una cuenta en OpenAI / Anthropic.
    - Agregar el nodo `Basic LLM Chain` (o un Agente de IA avanzado) en n8n.
    - Agregar el nodo de respuesta (Meta Graph API) para devolver el texto generado al paciente.
+

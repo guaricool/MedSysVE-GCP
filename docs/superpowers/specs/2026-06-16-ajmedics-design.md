@@ -30,7 +30,7 @@ AJMedics es una plataforma SaaS multi-tenant para gestión de historias médicas
 | Archivos | Cloudflare R2 (imágenes, PDFs, estudios de imagen) |
 | Cache | Redis 7 (autocomplete medicamentos, sesiones) |
 | Tasa de cambio | API pública BCV — actualización diaria automática |
-| Deployment | Coolify — servidor propio o VPS (Hetzner/DigitalOcean) |
+| Deployment | Google Cloud — servidor propio o Cloud Run (Hetzner/DigitalOcean) |
 
 ---
 
@@ -411,10 +411,10 @@ Referral {
 
 ---
 
-## 12. Deployment (Coolify)
+## 12. Deployment (Google Cloud)
 
 ```
-Coolify Server
+Google Cloud Server
 ├── Container: AJMedics App (Next.js 15)     → HTTPS público
 ├── Container: PostgreSQL 16                  → backups diarios automáticos
 ├── Container: Redis 7                        → cache + sesiones
@@ -436,7 +436,7 @@ Coolify Server
 
 | Fase | Contenido | Prioridad |
 |------|-----------|-----------|
-| **1 — Fundación** | Auth, registro doctor, workspaces, roles, clínicas (schema + registro básico + afiliación), registro pacientes, dashboard por rol, Coolify base | 🔴 Primera |
+| **1 — Fundación** | Auth, registro doctor, workspaces, roles, clínicas (schema + registro básico + afiliación), registro pacientes, dashboard por rol, Google Cloud base | 🔴 Primera |
 | **2 — Núcleo Clínico** | Consulta médica, vitales, diagnósticos ICD-10, medicamentos 1000 + autocomplete, receta PDF con membrete dinámico | 🔴 Segunda |
 | **3 — Órdenes & Docs** | Lab, imagen, OCR Claude, informe IA con membrete, reposo, referidos con info de clínica | 🟠 Tercera |
 | **4 — Operaciones** | Agenda, facturación USD/Bs + BCV, notificaciones WhatsApp | 🟠 Cuarta |
@@ -458,3 +458,4 @@ Coolify Server
 ---
 
 *Spec generado mediante brainstorming colaborativo. Próximo paso: plan de implementación de Fase 1.*
+

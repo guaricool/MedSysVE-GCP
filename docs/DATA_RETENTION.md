@@ -82,7 +82,7 @@ npx tsx scripts/archive-old-audit-events.ts --retention-years=7
 
 ### Cron recomendado (mensual)
 
-Configurar en Coolify UI → Scheduled Tasks:
+Configurar en Google Cloud UI → Scheduled Tasks:
 
 ```bash
 0 3 1 * * cd /app && npx tsx scripts/archive-old-audit-events.ts >> /var/log/medsysve-archive.log 2>&1
@@ -151,7 +151,7 @@ Ver `docs/DR-PLAN.md` para detalles completos.
 
 | # | Gap | Plan | Status |
 |---|---|---|---|
-| 1 | Cron de archive no configurado en Coolify UI | Configurar manualmente en Coolify (no commiteo config) | ✅ **Done** — Scheduled Task `archive-old-audit-events` creado via Coolify API (UUID `nllwougfbwz0tanqw0ud05x0`, frequency `0 3 1 * *`, próx corrida 2026-08-01 03:00 UTC). Verificado end-to-end con `--dry-run`. |
+| 1 | Cron de archive no configurado en Google Cloud UI | Configurar manualmente en Google Cloud (no commiteo config) | ✅ **Done** — Scheduled Task `archive-old-audit-events` creado via Google Cloud API (UUID `nllwougfbwz0tanqw0ud05x0`, frequency `0 3 1 * *`, próx corrida 2026-08-01 03:00 UTC). Verificado end-to-end con `--dry-run`. |
 | 2 | App code no filtra `archivedAt IS NULL` por default | Pendiente para otra sesión (búsqueda en routers de `prisma.auditEvent.findMany` para agregar filter) | ✅ **Done** — Helpers en `lib/audit.ts`: `listActiveAuditEvents`, `getActiveAuditEvent`, `countActiveAuditEvents`. Todos default a `archivedAt: null`. Para queries de compliance/LOPDP que sí quieren archived rows, pasar `includeArchived: true`. Búsqueda en app code actual: NO hay `prisma.auditEvent.findMany` en routers (audit events solo se escriben, no se leen desde app); los helpers están listos para uso futuro. |
 | 3 | Sin alerta si archive script falla | Configurar monitoreo de `/var/log/medsysve-archive.log` | Pendiente |
 

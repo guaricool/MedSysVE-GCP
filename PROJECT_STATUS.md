@@ -557,3 +557,8 @@ curl -H "Cookie: __Secure-authjs.session-token=<jwt>" \
      -   C o n f i r m e d   M e d S y s V E   s u c c e s s f u l l y   t r a n s i t i o n e d   e n t i r e l y   t o   G o o g l e   C l o u d   R u n   i n s t e a d   o f   C o o l i f y   V P S . 
   
  
+ -   * * A c c e s s   t o   C l o u d   S e r v i c e s   ( G C P   &   G i t H u b ) * * :   
+     -   T h e   l o c a l   a g e n t   e n v i r o n m e n t   h a s   f u l l   a c c e s s   t o   t h e   \ g c l o u d \   C L I .   A g e n t s   c a n   a n d   s h o u l d   r u n   c o m m a n d s   l i k e   \ g c l o u d   r u n   s e r v i c e s   d e s c r i b e   m e d s y s v e \   o r   \ g c l o u d   l o g g i n g   r e a d \   t o   m o n i t o r   d e p l o y m e n t s   a n d   i n s p e c t   b a c k e n d   b e h a v i o r   d i r e c t l y . 
+     -   F u l l   \ g i t \   a c c e s s   i s   c o n f i g u r e d   t o   p u s h / p u l l   f r o m   G i t H u b   ( \ o r i g i n   m a s t e r \ )   e f f o r t l e s s l y . 
+  
+ 

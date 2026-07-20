@@ -2,7 +2,7 @@
 
 > **Última actualización:** 2026-07-02
 > **Owner:** Carlos Arturo Pierluissis Pinto (`cpierluissis@gmail.com`)
-> **VPS:** `vmi3370059.contaboserver.net` (Contabo, `13.140.181.29`)
+> **Cloud Run:** `vmi3370059.Google Cloudserver.net` (Google Cloud, `Google Cloud Run`)
 > **Dominio público:** `https://www.medsysve.com` (Traefik)
 > **Almacenamiento off-site:** Google Drive (cuenta `cpierluissis@gmail.com`)
 
@@ -13,12 +13,12 @@
 | Métrica | Valor actual |
 |---|---|
 | **RPO** (Recovery Point Objective) | **≤ 24 h** — backup diario a las 07:00 UTC |
-| **RTO** (Recovery Time Objective) | **~30 min** — restore.sh automatizado, asumiendo VPS disponible |
+| **RTO** (Recovery Time Objective) | **~30 min** — restore.sh automatizado, asumiendo Cloud Run disponible |
 | **Retención** | **90 días** de dumps en Drive |
 | **Storage off-site** | Google Drive (`MedSysVE-Backups/`), cifrado con rclone crypt layer (AES-256) |
 | **Estado del último backup** | Verificar con `bash /opt/medsysve-backup/health-check.sh` |
 
-**Gap conocido:** single point of failure del VPS Contabo. Si el VPS muere físicamente, hay que provisionar uno nuevo y restaurar (RTO estimado: **2-4 horas** contando provisioning + restore). Pendiente documentar provisioning automatizado.
+**Gap conocido:** single point of failure del Google Cloud. Si el Cloud Run muere físicamente, hay que provisionar uno nuevo y restaurar (RTO estimado: **2-4 horas** contando provisioning + restore). Pendiente documentar provisioning automatizado.
 
 ---
 
@@ -26,7 +26,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ VPS Contabo (13.140.181.29)                                         │
+│ Google Cloud (Google Cloud Run)                                         │
 │                                                                     │
 │  ┌──────────────────┐   dump     ┌──────────────────────────────┐  │
 │  │ Postgres 16      │──────────▶│ /tmp/medsysve-backup-        │  │
@@ -65,7 +65,7 @@
 ### 3.1 Verificar estado del backup (health check)
 
 ```bash
-ssh root@13.140.181.29 "bash /opt/medsysve-backup/health-check.sh"
+ssh root@Google Cloud Run "bash /opt/medsysve-backup/health-check.sh"
 ```
 
 El script valida 7 cosas:
@@ -80,7 +80,7 @@ El script valida 7 cosas:
 ### 3.2 Trigger manual del backup
 
 ```bash
-ssh root@13.140.181.29 "bash /opt/medsysve-backup/backup.sh"
+ssh root@Google Cloud Run "bash /opt/medsysve-backup/backup.sh"
 ```
 
 Output esperado:
@@ -101,25 +101,25 @@ Output esperado:
 ### 3.3 Restore desde backup más reciente
 
 ```bash
-ssh root@13.140.181.29 "bash /opt/medsysve-backup/restore.sh"
+ssh root@Google Cloud Run "bash /opt/medsysve-backup/restore.sh"
 ```
 
 Output esperado: `Restore complete from <DATE>.`
 
 ⚠️ **Esto SOBREESCRIBE la DB actual.** Si necesitas restaurar a un punto específico sin perder lo más reciente, primero haz un dump manual de la DB actual:
 ```bash
-ssh root@13.140.181.29 "docker exec tf03dm49her0vco2lprdqbjm pg_dump -U medsysve medsysve | gzip > /tmp/pre-restore-<DATE>.sql.gz"
+ssh root@Google Cloud Run "docker exec tf03dm49her0vco2lprdqbjm pg_dump -U medsysve medsysve | gzip > /tmp/pre-restore-<DATE>.sql.gz"
 ```
 
 ### 3.4 Restore desde fecha específica
 
 ```bash
-ssh root@13.140.181.29 "bash /opt/medsysve-backup/restore.sh 20260702"
+ssh root@Google Cloud Run "bash /opt/medsysve-backup/restore.sh 20260702"
 ```
 
 Lista de fechas disponibles:
 ```bash
-ssh root@13.140.181.29 "rclone lsf gdrive-medsysve-crypt:backups --files-only"
+ssh root@Google Cloud Run "rclone lsf gdrive-medsysve-crypt:backups --files-only"
 ```
 
 ---
@@ -138,13 +138,13 @@ ssh root@13.140.181.29 "rclone lsf gdrive-medsysve-crypt:backups --files-only"
 
 ```powershell
 # 1. Backup del rclone.conf actual
-ssh -i "C:\Users\cpier\.ssh\id_ed25519_vps" root@13.140.181.29 "cp /root/.config/rclone/rclone.conf /root/.config/rclone-enc/rclone.conf.bak-pre-rotate.$(date -u +%Y%m%dT%H%M%SZ)"
+ssh -i "C:\Users\cpier\.ssh\id_ed25519_Cloud Run" root@Google Cloud Run "cp /root/.config/rclone/rclone.conf /root/.config/rclone-enc/rclone.conf.bak-pre-rotate.$(date -u +%Y%m%dT%H%M%SZ)"
 
-# 2. Arrancar rclone authorize en tmux en el VPS (sobrevive cierre SSH)
+# 2. Arrancar rclone authorize en tmux en el Cloud Run (sobrevive cierre SSH)
 # (subir script /tmp/rclone-auth-portfwd.sh vía SCP, ejecutar, descubrir puerto)
 
 # 3. Crear SSH tunnel hacia el puerto random que eligió rclone
-Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed25519_vps", "-N", "-L", "<PORT>:127.0.0.1:<PORT>", "root@13.140.181.29" -WindowStyle Hidden
+Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed25519_Cloud Run", "-N", "-L", "<PORT>:127.0.0.1:<PORT>", "root@Google Cloud Run" -WindowStyle Hidden
 
 # 4. User abre Chrome en http://127.0.0.1:<PORT>/auth → Google OAuth → Allow
 # 5. rclone imprime JSON en /tmp/rclone-auth.log
@@ -155,19 +155,19 @@ Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed
 
 **Pre-flight check en GCP:** si el OAuth client está en modo "testing", el user debe estar en la lista de **Test users** del OAuth consent screen (Google Cloud Console → APIs & Services → OAuth consent screen → Test users → Add Users). Sin esto, Google devuelve HTTP 403 incluso con client/secret correctos.
 
-### 4.2 💀 VPS muerto físicamente
+### 4.2 💀 Cloud Run muerto físicamente
 
-**Síntoma:** SSH no responde, `http://13.140.181.29:8000/` no carga, dominio no resuelve.
+**Síntoma:** SSH no responde, `http://Google Cloud Run:8000/` no carga, dominio no resuelve.
 
 **Resolución:**
 
-1. **Provisionar VPS nuevo** (Contabo o equivalente). Instalar Docker, Coolify v4.x.
+1. **Provisionar Cloud Run nuevo** (Google Cloud o equivalente). Instalar Docker, Google Cloud v4.x.
 2. **Restaurar secrets vaults:**
-   - El keyfile gocryptfs (`/root/medsysve-keyfile`) está **fuera del VPS** — debe estar en el backup seguro de Carlos (1Password / Bitwarden / impreso en lugar seguro). **Si se perdió, los vaults son irrecuperables.**
+   - El keyfile gocryptfs (`/root/medsysve-keyfile`) está **fuera del Cloud Run** — debe estar en el backup seguro de Carlos (1Password / Bitwarden / impreso en lugar seguro). **Si se perdió, los vaults son irrecuperables.**
    - El backup de Drive no requiere secrets adicionales — los archivos están cifrados client-side.
 3. **Restaurar DB desde Drive:**
    ```bash
-   # En VPS nuevo, montar gocryptfs vault con keyfile
+   # En Cloud Run nuevo, montar gocryptfs vault con keyfile
    /usr/bin/gocryptfs -passfile /root/medsysve-keyfile -allow_other \
      /root/.config/rclone-enc /root/.config/rclone
 
@@ -178,8 +178,8 @@ Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed
    rclone cat gdrive-medsysve-crypt:backups/<MOST_RECENT>.sql.gz | \
      docker exec -i <NEW_PG_CONTAINER> psql -U medsysve -d medsysve
    ```
-4. **Re-deployar app desde repo** (Coolify detecta el cambio o manual).
-5. **Actualizar DNS** si la IP cambió (en Contabo UI → cloud DNS, o en sslip.io es automático).
+4. **Re-deployar app desde repo** (Google Cloud detecta el cambio o manual).
+5. **Actualizar DNS** si la IP cambió (en Google Cloud UI → cloud DNS, o en sslip.io es automático).
 
 **RTO estimado:** 2-4 horas (provisioning + restore manual).
 **RPO:** ≤ 24 h (último backup diario).
@@ -227,11 +227,11 @@ Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed
 | OAuth token rclone | `/root/.config/rclone-enc/rclone.conf` (cifrado) | `/root/.config/rclone/rclone.conf` (decifrado via gocryptfs) | Auto (vault cifrado replicado) |
 | Client ID/Secret Google | (en rclone.conf, mismo vault) | (idem) | Auto |
 | DB password | `/opt/medsysve-backup-secrets-enc/PASSWORDS-NEEDED-TO-RESTORE.txt` (cifrado) | `/opt/medsysve-backup-secrets/PASSWORDS-NEEDED-TO-RESTORE.txt` | Auto (vault cifrado replicado) |
-| Coolify admin password | (no en VPS, está en el panel de Coolify) | (idem) | Manual: reset desde Contabo UI si perdido |
+| Google Cloud admin password | (no en Cloud Run, está en el panel de Google Cloud) | (idem) | Manual: reset desde Google Cloud UI si perdido |
 | Gmail App Password (msmtp) | `/etc/msmtprc` (texto plano, NO en vault) | (idem) | Manual: regenerar en https://myaccount.google.com/apppasswords |
-| `FIELD_ENCRYPTION_KEY` (PHI cipher, AES-256-GCM + HMAC index) | Coolify env vars (DB, cifrado) | Injectado al container en runtime | 1Password + backup manual cifrado |
-| `FIELD_HMAC_KEY` (HMAC index separado de encryption) | Coolify env vars | Injectado al container en runtime | 1Password + backup manual |
-| `FIELD_SIGN_KEY` (encounter signing, separada de encryption, audit #7 follow-up) | Coolify env vars | Injectado al container en runtime | 1Password + backup manual |
+| `FIELD_ENCRYPTION_KEY` (PHI cipher, AES-256-GCM + HMAC index) | Google Cloud env vars (DB, cifrado) | Injectado al container en runtime | 1Password + backup manual cifrado |
+| `FIELD_HMAC_KEY` (HMAC index separado de encryption) | Google Cloud env vars | Injectado al container en runtime | 1Password + backup manual |
+| `FIELD_SIGN_KEY` (encounter signing, separada de encryption, audit #7 follow-up) | Google Cloud env vars | Injectado al container en runtime | 1Password + backup manual |
 
 ### 5.1 Encryption / signing keys — rotación (Audit S11, 2026-07-07)
 
@@ -248,7 +248,7 @@ Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed
 > corre, no puede haber readers concurrentes (key dual-key con versionado es un
 > follow-up: "key versioning").
 
-1. **Generar las nuevas keys** (PowerShell en Windows o bash en el VPS):
+1. **Generar las nuevas keys** (PowerShell en Windows o bash en el Cloud Run):
    ```bash
    NEW_ENC_KEY=$(openssl rand -base64 32)
    NEW_HMAC_KEY=$(openssl rand -base64 32)
@@ -257,19 +257,19 @@ Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed
 
 2. **Backup fresco** (defense-in-depth, audit #18):
    ```bash
-   ssh root@13.140.181.29 "bash /opt/medsysve-backup/backup.sh"
+   ssh root@Google Cloud Run "bash /opt/medsysve-backup/backup.sh"
    ```
    Confirmar que el dump terminó sin errores. Anotar el SHA del backup.
 
 3. **Detener el contenedor de la app** (libera el puerto, previene readers concurrentes):
    ```bash
-   ssh root@13.140.181.29 "docker stop hze8mocuh4xqskqwrm3mx50b-XXX"
+   ssh root@Google Cloud Run "docker stop hze8mocuh4xqskqwrm3mx50b-XXX"
    ```
    (Reemplazar `XXX` con el ID del container que arranca con el prefijo.)
 
 4. **Dry-run primero** — el worker reporta cuántos rows rotaría sin escribir:
    ```bash
-   ssh root@13.140.181.29 "cd /opt/medsysve && \
+   ssh root@Google Cloud Run "cd /opt/medsysve && \
      FIELD_ENCRYPTION_KEY=<old-enc> \
      FIELD_HMAC_KEY=<old-hmac> \
      ROTATE_FIELD_ENCRYPTION_KEY=$NEW_ENC_KEY \
@@ -281,7 +281,7 @@ Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed
 
 5. **Rotación real**:
    ```bash
-   ssh root@13.140.181.29 "cd /opt/medsysve && \
+   ssh root@Google Cloud Run "cd /opt/medsysve && \
      FIELD_ENCRYPTION_KEY=<old-enc> \
      FIELD_HMAC_KEY=<old-hmac> \
      ROTATE_FIELD_ENCRYPTION_KEY=$NEW_ENC_KEY \
@@ -295,7 +295,7 @@ Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed
    - Si una row ya está en formato nuevo (decrypt con NEW funciona), la skipea sin error (idempotency).
    - Termina con `scanned=N rotated=N skipped=0 errors=0` o throw si errors > 0.
 
-6. **Actualizar Coolify** con las nuevas keys:
+6. **Actualizar Google Cloud** con las nuevas keys:
    - UI → application → Environment
    - `FIELD_ENCRYPTION_KEY` = `$NEW_ENC_KEY`
    - `FIELD_HMAC_KEY` = `$NEW_HMAC_KEY`
@@ -311,7 +311,7 @@ Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed
 
 **Procedimiento para rotar `FIELD_SIGN_KEY` (solo, sin tocar las otras dos):**
 1. Generar nuevo base64-32-bytes: `openssl rand -base64 32`
-2. Actualizar valor en Coolify (UI → application → env vars)
+2. Actualizar valor en Google Cloud (UI → application → env vars)
 3. Deploy (trigger webhook)
 4. **Consecuencia**: todas las encounter signatures previas son inválidas. Carlos debe decidir si re-firmar los encounters existentes (requiere acción manual del doctor que firmó) o aceptar que las signatures previas se "desvanecen".
 
@@ -334,7 +334,7 @@ Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed
 bash /opt/medsysve-backup/mount-secrets.sh
 ```
 
-Esto monta automáticamente los 2 vaults si no están ya montados. Después de un reboot del VPS, hay que correr este script (o configurar systemd `medsysve-rclone-crypt.service` para auto-mount).
+Esto monta automáticamente los 2 vaults si no están ya montados. Después de un reboot del Cloud Run, hay que correr este script (o configurar systemd `medsysve-rclone-crypt.service` para auto-mount).
 
 ---
 
@@ -347,7 +347,7 @@ Esto monta automáticamente los 2 vaults si no están ya montados. Después de u
 `ssh -f -N -L ...` **se cuelga** desde PowerShell cuando hay pipes/redirections posteriores. Usar:
 
 ```powershell
-Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed25519_vps", "-N", "-L", "53682:127.0.0.1:53682", "root@13.140.181.29" -WindowStyle Hidden
+Start-Process -FilePath "ssh.exe" -ArgumentList "-i", "C:\Users\cpier\.ssh\id_ed25519_Cloud Run", "-N", "-L", "53682:127.0.0.1:53682", "root@Google Cloud Run" -WindowStyle Hidden
 ```
 
 Verificar que está escuchando:
@@ -366,10 +366,10 @@ Evitar `bash -c '...$(...)...'` inline (escaping infernal). Patrón: escribir a 
 
 ```powershell
 # 1. Write script via Write tool a C:\Users\cpier\AppData\Local\Temp\script.sh
-# 2. SCP al VPS
-scp -i "C:\Users\cpier\.ssh\id_ed25519_vps" "C:\Users\cpier\AppData\Local\Temp\script.sh" root@13.140.181.29:/tmp/script.sh
+# 2. SCP al Cloud Run
+scp -i "C:\Users\cpier\.ssh\id_ed25519_Cloud Run" "C:\Users\cpier\AppData\Local\Temp\script.sh" root@Google Cloud Run:/tmp/script.sh
 # 3. SSH ejecutar
-ssh -i "C:\Users\cpier\.ssh\id_ed25519_vps" root@13.140.181.29 "bash /tmp/script.sh"
+ssh -i "C:\Users\cpier\.ssh\id_ed25519_Cloud Run" root@Google Cloud Run "bash /tmp/script.sh"
 ```
 
 ---
@@ -378,11 +378,11 @@ ssh -i "C:\Users\cpier\.ssh\id_ed25519_vps" root@13.140.181.29 "bash /tmp/script
 
 | # | Gap | Impacto | Plan |
 |---|---|---|---|
-| 1 | **DB password rotation** | Password actual en uso desde Jun 2025, sin rotación documentada | Pendiente para otra sesión — bloquear 30 min, regenerar password en Coolify UI + actualizar secrets vault + reiniciar contenedor Postgres |
-| 2 | **Coolify admin password rotation** | Igual | Regenerar desde Contabo UI / Coolify |
+| 1 | **DB password rotation** | Password actual en uso desde Jun 2025, sin rotación documentada | Pendiente para otra sesión — bloquear 30 min, regenerar password en Google Cloud UI + actualizar secrets vault + reiniciar contenedor Postgres |
+| 2 | **Google Cloud admin password rotation** | Igual | Regenerar desde Google Cloud UI / Google Cloud |
 | 3 | **OAuth production mode** | OAuth client en modo "testing", refresh_token puede expirar cada ~6 meses. Workaround: agregar test user en GCP | Pendiente: aplicar a "production" en GCP (1-2 semanas de Google review) |
-| 4 | **Documentar provisioning automatizado de VPS nuevo** | Si VPS muere, restore es manual (~2-4h RTO) | Pendiente: Terraform / Ansible script para provisionar VPS + Coolify + restore automatizado |
-| 5 | **Test de restore automatizado** | El restore.sh nunca se ha ejecutado en producción real (solo smoke tests manuales) | ✅ **Done (audit #18, 2026-07-06)** — `scripts/backups/restore-test.sh` corre mensual via Coolify Scheduled Task UUID `bljazmj4u5g3cmvbpqlg5m6i`, freq `0 4 1 * *`. Verifica rowcounts de Doctor/Patient/Encounter/AuditEvent + `_prisma_migrations` en temp DB. |
+| 4 | **Documentar provisioning automatizado de Cloud Run nuevo** | Si Cloud Run muere, restore es manual (~2-4h RTO) | Pendiente: Terraform / Ansible script para provisionar Cloud Run + Google Cloud + restore automatizado |
+| 5 | **Test de restore automatizado** | El restore.sh nunca se ha ejecutado en producción real (solo smoke tests manuales) | ✅ **Done (audit #18, 2026-07-06)** — `scripts/backups/restore-test.sh` corre mensual via Google Cloud Scheduled Task UUID `bljazmj4u5g3cmvbpqlg5m6i`, freq `0 4 1 * *`. Verifica rowcounts de Doctor/Patient/Encounter/AuditEvent + `_prisma_migrations` en temp DB. |
 | 6 | **Off-site backup adicional** | Single point of failure en Google (cuenta personal) | Pendiente: considerar 2do destino (Backblaze B2 / AWS S3) |
 
 ---
@@ -400,10 +400,10 @@ ssh -i "C:\Users\cpier\.ssh\id_ed25519_vps" root@13.140.181.29 "bash /tmp/script
 | Hash verify local==remote | ✅ | ✅ (heredado) |
 | Weekly digest | ✅ | ✅ (heredado) |
 | `DRY_RUN=1` flag | ❌ | ✅ (skip upload + retention) |
-| Restore drill mensual | ❌ | ✅ (`scripts/backups/restore-test.sh`, Coolify scheduled task) |
+| Restore drill mensual | ❌ | ✅ (`scripts/backups/restore-test.sh`, Google Cloud scheduled task) |
 | Acceptance de formato legacy durante migración | ❌ | ✅ (regex matches both) |
 
-### Scripts activos en VPS
+### Scripts activos en Cloud Run
 
 - `/opt/medsysve-backup/backup.sh` — v2 (promovido 2026-07-06)
 - `/opt/medsysve-backup/backup.sh.legacy` — versión vieja (preservada como referencia)
@@ -414,7 +414,7 @@ ssh -i "C:\Users\cpier\.ssh\id_ed25519_vps" root@13.140.181.29 "bash /tmp/script
 | Job | Schedule | Mecanismo | Comando |
 |---|---|---|---|
 | Daily backup | `0 7 * * *` (07:00 UTC = 03:00 VE) | `/etc/cron.d/medsysve-backup` (legacy) | `/opt/medsysve-backup/backup.sh` |
-| Monthly restore drill | `0 4 1 * *` (1° del mes @ 04:00 UTC) | Coolify Scheduled Task UUID `bljazmj4u5g3cmvbpqlg5m6i` | `bash /opt/medsysve-backup/restore-test.sh` |
+| Monthly restore drill | `0 4 1 * *` (1° del mes @ 04:00 UTC) | Google Cloud Scheduled Task UUID `bljazmj4u5g3cmvbpqlg5m6i` | `bash /opt/medsysve-backup/restore-test.sh` |
 
 ### Variables de entorno relevantes
 
@@ -435,6 +435,6 @@ ssh -i "C:\Users\cpier\.ssh\id_ed25519_vps" root@13.140.181.29 "bash /tmp/script
 | Rol | Persona | Contacto |
 |---|---|---|
 | Owner + dev | Carlos Arturo Pierluissis Pinto | `cpierluissis@gmail.com` |
-| VPS provider (Contabo) | Support | https://my.contabo.com |
+| Cloud Run provider (Google Cloud) | Support | https://my.Google Cloud.com |
 | Google Cloud (OAuth) | n/a | https://console.cloud.google.com/ |
 | Dominio DNS | (auto via sslip.io si IP cambia) | n/a |

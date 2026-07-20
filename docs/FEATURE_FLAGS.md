@@ -7,7 +7,7 @@
 
 ## TL;DR
 
-Configurás flags en una sola env var JSON (`FEATURE_FLAGS`). Cambiás el valor en Coolify UI, redeploy, y los cambios aplican sin tocar código.
+Configurás flags en una sola env var JSON (`FEATURE_FLAGS`). Cambiás el valor en Google Cloud UI, redeploy, y los cambios aplican sin tocar código.
 
 ```json
 {
@@ -31,7 +31,7 @@ Configurás flags en una sola env var JSON (`FEATURE_FLAGS`). Cambiás el valor 
 ## 1. Cómo se carga
 
 ```
-.env (Coolify):
+.env (Google Cloud):
 FEATURE_FLAGS={"ai":{"enabled":true,"rolloutPercent":100}}
 
 app startup:
@@ -40,7 +40,7 @@ app startup:
   missing env → use defaults
 ```
 
-**Importante**: el módulo nunca tira excepción por malformed JSON. Si Coolify tiene un typo en la env var, la app sigue funcionando con defaults + warning en logs.
+**Importante**: el módulo nunca tira excepción por malformed JSON. Si Google Cloud tiene un typo en la env var, la app sigue funcionando con defaults + warning en logs.
 
 ---
 
@@ -136,9 +136,9 @@ Total: 30 tests, ~180ms.
 
 | # | Gap | Plan |
 |---|---|---|
-| 1 | Admin endpoint para toggle (sin redeploy) | Out of scope — usar Coolify UI por ahora |
+| 1 | Admin endpoint para toggle (sin redeploy) | Out of scope — usar Google Cloud UI por ahora |
 | 2 | Per-doctor override (algunos doctores siempre tienen AI off) | Out of scope — usar experimental flags |
-| 3 | Audit de cambios de flags | Out of scope — cambios van via Coolify git history |
+| 3 | Audit de cambios de flags | Out of scope — cambios van via Google Cloud git history |
 | 4 | Hot reload sin redeploy | Out of scope — redeploy es rápido (5-7 min) |
 
 ---

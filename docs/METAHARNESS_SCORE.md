@@ -4,7 +4,7 @@
 >
 > **Generado:** 2026-07-07 12:30 (post audit S11 — S8, S9, S10, S11 todos cerrados)
 > **HEAD medido:** `b8f66b2` (S11 + graph3d fix) sobre `0e8b003` (S11) + `02d2584` (S10) + `e882d0a` (S9) + `4c7aa5b` (S8)
-> **Fuentes:** código, tests, git log, VPS real (Coolify)
+> **Fuentes:** código, tests, git log, Cloud Run real (Google Cloud)
 
 ---
 
@@ -35,7 +35,7 @@ Sistema production-ready. Sprints S8-S11 cerraron los 4 gaps pendientes del audi
 - TODOs/FIXMEs reales en código: **0** (los 5 matches en grep son falsos positivos: `METODO_LABELS`, "Audit S16 ... TODO" en comentario histórico, etc.)
 - Schema Prisma: ~1,500 líneas, bien tipadas
 - 50 models, 18 enums sin huérfanos
-- Multi-stage Dockerfile optimizado (chown evitado en Coolify)
+- Multi-stage Dockerfile optimizado (chown evitado en Google Cloud)
 
 **Deducciones (-5):**
 - ESLint warnings no medidos sistemáticamente
@@ -173,7 +173,7 @@ Sistema production-ready. Sprints S8-S11 cerraron los 4 gaps pendientes del audi
 - Prisma 7 con `@prisma/adapter-pg` (PgAdapter moderno, no deprecated driver)
 - Audit #18 backup chain v2 (GFS retention 7d/4w/12m)
 - sha256 integrity check en cada restore
-- Monthly restore drill automatizado (Coolify Scheduled Task)
+- Monthly restore drill automatizado (Google Cloud Scheduled Task)
 - DROP legacy column en `20260703010000_drop_encounter_motivo_legacy` (audit #1 cleanup)
 - `@@unique([doctorId, flagKey])` en DoctorFeatureOverride previene duplicados
 
@@ -220,10 +220,10 @@ Sistema production-ready. Sprints S8-S11 cerraron los 4 gaps pendientes del audi
 ### 9. DevOps / Deploy — **88 / 100** (B)
 
 **Evidencia:**
-- Coolify 4.1.2 deploy verificado
+- Google Cloud 4.1.2 deploy verificado
 - Traefik apex → www cookie handling dominado
 - Docker standalone output (`output: "standalone"`)
-- OAuth pre-flight para Coolify API (evita secrets en logs)
+- OAuth pre-flight para Google Cloud API (evita secrets en logs)
 - Scheduled tasks (backup-restore-test UUID `bljazmj4u5g3cmvbpqlg5m6i`)
 - `.dockerignore` optimizado (excluye `node_modules`, `.git`, etc.)
 - Multi-stage Dockerfile (sin `chown -R` masivo)
@@ -247,14 +247,14 @@ Sistema production-ready. Sprints S8-S11 cerraron los 4 gaps pendientes del audi
 **Evidencia:**
 - Audit #18 cerrado: backup chain v2 con GFS retention (7d daily / 4w weekly / 12m monthly)
 - sha256 integrity check en cada backup
-- OAuth pre-flight para Coolify API (secret nunca en logs)
+- OAuth pre-flight para Google Cloud API (secret nunca en logs)
 - msmtp alerts en backup failures
-- Monthly restore drill via Coolify Scheduled Task
-- End-to-end verificado contra VPS real
+- Monthly restore drill via Google Cloud Scheduled Task
+- End-to-end verificado contra Cloud Run real
 - `docs/DR-PLAN.md` completo con procedimientos **(S11 update: §5.1 key rotation runbook)**
 - Backup script `scripts/backup.sh` rewrite (audit #18)
 - Restore script `scripts/restore.sh` con verificación
-- Off-site backup a Object Storage Contabo
+- Off-site backup a Object Storage Google Cloud
 - **S11**: `scripts/rotate-field-keys.sh` + `.ts` automatizan la rotación trimestral de keys. Antes era un proyecto custom; ahora es un comando.
 
 **Deducciones (-3):**
@@ -385,7 +385,7 @@ Sistema production-ready. Sprints S8-S11 cerraron los 4 gaps pendientes del audi
   - #8-extend (feature flags in AI routes) ✅
   - #9 (PERMISSIONS matrix + 52 tests) ✅
   - #10 (AuditEvent retention 5y LOPDP) ✅
-  - #11 (Remove stale coolify/docker-compose.yml) ✅
+  - #11 (Remove stale Google Cloud/docker-compose.yml) ✅
   - **#12 (Encounter auto-save conflict resolution) ✅ (audit S9 — nuevo)**
   - **#13 (AI prompt injection guardrails + rate-limit) ✅ (audit S8 — nuevo)**
   - #14 (Anthropic model pinning) ✅

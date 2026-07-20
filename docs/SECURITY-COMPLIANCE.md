@@ -126,7 +126,7 @@ Sancionada en 2022, vigente desde mayo 2023. Aplicable a todo tratamiento de dat
 
 ### 3.4 Backup automatizado cifrado
 - **PostgreSQL:** `pg_dump` diario cifrado con AES-256, retenido 30 días
-- **Ubicación:** `/data/backups/` en VPS + replicación off-site (R2 / S3)
+- **Ubicación:** `/data/backups/` en Cloud Run + replicación off-site (R2 / S3)
 - **Restore drill:** mensual, validar RTO < 1h, RPO < 24h
 - **Inmutabilidad:** bucket WORM-enabled
 

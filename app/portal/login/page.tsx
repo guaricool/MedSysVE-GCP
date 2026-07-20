@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Button } from "@/components/ui/button"
@@ -50,6 +51,12 @@ export default function PortalLoginPage() {
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Entrando..." : "Entrar"}
       </Button>
+      
+      <div className="text-center pt-2 border-t border-slate-800 mt-4">
+        <Link href="/portal/register" className="text-sm text-blue-400 hover:text-blue-300 hover:underline transition-colors">
+          ¿No tienes cuenta? Regístrate aquí
+        </Link>
+      </div>
     </form>
   )
 }
