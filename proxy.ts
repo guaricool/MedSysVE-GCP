@@ -44,7 +44,8 @@ const globalIpBuckets = new Map<string, IpBucket>();
 
 const IP_LIMITS: Record<string, { max: number; windowMs: number; failClosed: boolean }> = {
   // Auth endpoints — strict.
-  "/api/auth/": { max: 30, windowMs: 60_000, failClosed: true },           // 30 / min per IP
+  "/api/auth/callback/credentials": { max: 10, windowMs: 60_000, failClosed: true }, // 10 / min per IP for login attempts
+  "/api/auth/": { max: 300, windowMs: 60_000, failClosed: true },           // 300 / min per IP for general auth (session checks)
   "/api/admin/seed-medications": { max: 2, windowMs: 3_600_000, failClosed: true }, // 2 / hour per IP
   // tRPC — generous for normal app use, blocks scraping.
   "/api/trpc/": { max: 600, windowMs: 600_000, failClosed: false },         // 600 / 10 min
