@@ -430,6 +430,9 @@ model PatientRegistration {
   obGynoProfile        ObGynoProfile?
   obPrenatalControls   ObPrenatalControl[]
   gynoScreenings       GynoScreening[]
+  neuroScales          NeuroScaleRecord[]
+  neuroDermatomes      NeuroDermatomeMap[]
+  neuroSeizures        NeuroSeizureLog[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -532,6 +535,9 @@ model Encounter {
   pediaDoseRecords        PediaDoseRecord[]
   obPrenatalControls      ObPrenatalControl[]
   gynoScreenings          GynoScreening[]
+  neuroScales             NeuroScaleRecord[]
+  neuroDermatomes         NeuroDermatomeMap[]
+  neuroSeizures           NeuroSeizureLog[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2098,6 +2104,83 @@ model GynoScreening {
   mamografiaFecha     DateTime?
   ecoPelvicoHallazgos String?   @db.Text
   observaciones       String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// NEUROLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model NeuroScaleRecord {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  glasgowScore  Int? // 3 a 15 pts
+  glasgowOcular Int? // 1-4
+  glasgowVerbal Int? // 1-5
+  glasgowMotor  Int? // 1-6
+  nihssScore    Int? // 0 a 42 pts
+  nihssCategory String? // Leve (1-4), Moderado (5-15), Moderado-Grave (16-20), Grave (21-42)
+  edssScore     Float? // 0.0 a 10.0 (Esclerosis Múltiple)
+  observaciones String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model NeuroDermatomeMap {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  nivelDermatoma       String // Ej: C5, C6, L4, L5, S1
+  lado                 String // IZQUIERDO | DERECHO | BILATERAL
+  sensibilidadTactil   String // NORMAL | HIPOESTESIA | ANESTESIA | HIPERESTESIA
+  sensibilidadDolorosa String // NORMAL | HIPOALGESIA | ANALGESIA
+  propiocepcion        String? // NORMAL | ALTERADA
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model NeuroSeizureLog {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  tipoCrisis        String // Focal Consciente, Focal Impar, Generalizada Tónico-Clónica, Ausencia
+  frecuenciaMensual Int // Crisis por mes
+  duracionMinutos   Float? // Duración en minutos
+  desencadenantes   String? // Privación de sueño, Estrés, Fotorestimulación
+  auraDesc          String? // Descripción del aura previa
+  estadoPostictal   String? // Confusión, Somnolencia, Parálisis de Todd
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
