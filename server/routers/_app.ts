@@ -56,8 +56,10 @@ import { anesthesiaRouter } from "./anesthesia"
 import { surgeryRouter } from "./surgery"
 import { infectoRouter } from "./infecto"
 import { internalRouter } from "./internal"
+import { pneumoRouter } from "./pneumo"
 
 export const appRouter = router({
+  pneumo: pneumoRouter,
   internal: internalRouter,
   infecto: infectoRouter,
   surgery: surgeryRouter,

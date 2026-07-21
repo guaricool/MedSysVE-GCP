@@ -457,6 +457,9 @@ model PatientRegistration {
   internalCharlsons       InternalCharlsonIndex[]
   internalScores          InternalClinicalScores[]
   internalPolypharmacies  InternalPolypharmacyAlert[]
+  pneumoSpirometries      PneumoSpirometry[]
+  pneumoGinaGolds         PneumoGinaGold[]
+  pneumoDyspneas          PneumoDyspneaCat[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -586,6 +589,9 @@ model Encounter {
   internalCharlsons       InternalCharlsonIndex[]
   internalScores          InternalClinicalScores[]
   internalPolypharmacies  InternalPolypharmacyAlert[]
+  pneumoSpirometries      PneumoSpirometry[]
+  pneumoGinaGolds         PneumoGinaGold[]
+  pneumoDyspneaCats       PneumoDyspneaCat[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2822,6 +2828,78 @@ model InternalPolypharmacyAlert {
   criteriosBeersAplicables      String? @db.Text
   criteriosStoppStartAplicables String? @db.Text
   planDesprescripcion           String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// NEUMONOLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model PneumoSpirometry {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  vef1PreLiters                    Float // VEF1 Pre-BD en L
+  cvfPreLiters                     Float // CVF Pre-BD en L
+  vef1CvfRatioPercent              Float // VEF1/CVF %
+  vef1PostLiters                   Float? // VEF1 Post-BD en L
+  respuestaBroncodilatadoraMl      Float? // ΔVEF1 en mL
+  respuestaBroncodilatadoraPercent Float? // ΔVEF1 %
+  interpretacionEspirometrica      String // Obstructivo, Restrictivo, Normal
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model PneumoGinaGold {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  clasificacionGinaAsma    String? // Paso 1 al 5
+  goldGradeEpoc            String? // GOLD 1-4
+  goldGroupEpoc            String? // Grupo A, B, E
+  exacerabacionesUltimoAno Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model PneumoDyspneaCat {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  mmrcDyspneaGrade   Int // 0 a 4
+  catScoreTotal      Int // 0 a 40 pts
+  pao2Fio2KirbyIndex Float? // PaO2/FiO2
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
