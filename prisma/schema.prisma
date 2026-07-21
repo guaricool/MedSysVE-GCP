@@ -484,6 +484,9 @@ model PatientRegistration {
   famMedGenograms         FamMedGenogram[]
   famMedApgarScores       FamMedApgarScore[]
   famMedFamilyLifeCycles  FamMedFamilyLifeCycle[]
+  plasticBodyMappings     PlasticBodyMapping[]
+  plasticImplants         PlasticBreastImplant[]
+  plasticScars            PlasticScarAssessment[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -640,6 +643,9 @@ model Encounter {
   famMedGenograms         FamMedGenogram[]
   famMedApgars            FamMedApgarScore[]
   famMedLifeCycles        FamMedFamilyLifeCycle[]
+  plasticBodyMappings     PlasticBodyMapping[]
+  plasticImplants         PlasticBreastImplant[]
+  plasticScars            PlasticScarAssessment[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -3549,6 +3555,82 @@ model FamMedFamilyLifeCycle {
   duvallStage        String // Etapa I a VIII de Duvall
   normativeCrises    String?
   nonNormativeCrises String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// CIRUGÍA PLÁSTICA Y RECONSTRUCTIVA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model PlasticBodyMapping {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  procedureTypes  String // Abdominoplastia, Liposucción, Mamoplastia, Rinoplastia
+  targetAreasJson String? @db.Text
+  estimatedLipoCc Int?
+  graftVolumeCc   Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model PlasticBreastImplant {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  side           String // Izquierdo, Derecho, Bilateral
+  brand          String // Motiva, Mentor, Allergan, Polytech
+  volumeCc       Int // cc
+  profile        String // Alto, Extra Alto, Moderado
+  placementPlane String // Submuscular, Subglandular, Dual Plane
+  incisionSite   String // Inframamaria, Periareolar, Axilar
+  lotNumber      String?
+  serialNumber   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model PlasticScarAssessment {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  vancouverVssScore Int // 0 a 13 (Vancouver Scar Scale)
+  pigmentation      String // Normal, Hipopigmentada, Hiperpigmentada
+  vascularity       String // Normal, Rosada, Roja, Púrpura
+  pliability        String // Normal, Flexible, Firme, Adherida
+  heightMm          Float // mm
+  scarType          String // Normotrófica, Atrófica, Hipertrófica, Queloide
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
