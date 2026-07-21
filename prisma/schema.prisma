@@ -490,6 +490,9 @@ model PatientRegistration {
   hemaSmears              HemaPeripheralSmear[]
   hemaSickleModules       HemaSickleCellModule[]
   hemaTransfusions        HemaTransfusionRecord[]
+  allergyPrickTests       AllergyPrickTest[]
+  allergyImmunotherapies  AllergyImmunotherapy[]
+  allergyIgPanels         AllergyImmunoglobulinPanel[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -652,6 +655,9 @@ model Encounter {
   hemaSmears              HemaPeripheralSmear[]
   hemaSickleModules       HemaSickleCellModule[]
   hemaTransfusions        HemaTransfusionRecord[]
+  allergyPrickTests       AllergyPrickTest[]
+  allergyImmunotherapies  AllergyImmunotherapy[]
+  allergyIgPanels         AllergyImmunoglobulinPanel[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -3711,6 +3717,85 @@ model HemaTransfusionRecord {
   bloodGroupRh     String // ABO y Rh
   crossmatchResult String // Compatible, Incompatible, Coombs
   adverseReaction  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// ALERGOLOGÍA E INMUNOLOGÍA CLÍNICA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model AllergyPrickTest {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  histamineControlMm     Float // Histamina (Control +)
+  salineControlMm        Float // Salino (Control -)
+  dustMitesJson          String? @db.Text // D.pteronyssinus, D.farinae, Blomia
+  moldsFungiJson         String? @db.Text // Alternaria, Aspergillus
+  epitheliaAnimalJson    String? @db.Text // Gato, Perro
+  pollensFoodsJson       String? @db.Text // Pólenes, Alimentos
+  positiveReactionsCount Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model AllergyImmunotherapy {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  therapyRoute      String // SLIT Sublingual, SCIT Subcutánea
+  allergenicExtract String // Extracto alergénico
+  phase             String // Inicio, Mantenimiento
+  vialConcentration String // Dilución / Vial
+  doseAmount        String // ml o gotas
+  localReactionMm   Float?
+  systemicReaction  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model AllergyImmunoglobulinPanel {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  totalIgEKuiL              Float? // IgE Total (KUI/L)
+  totalIgGMgDl              Float? // IgG (mg/dL)
+  totalIgAMgDl              Float? // IgA (mg/dL)
+  totalIgMMgDl              Float? // IgM (mg/dL)
+  c3ComplementMgDl          Float? // C3 (mg/dL)
+  c4ComplementMgDl          Float? // C4 (mg/dL)
+  immunodeficiencyDiagnosis String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
