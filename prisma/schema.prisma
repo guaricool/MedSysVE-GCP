@@ -487,6 +487,9 @@ model PatientRegistration {
   plasticBodyMappings     PlasticBodyMapping[]
   plasticImplants         PlasticBreastImplant[]
   plasticScars            PlasticScarAssessment[]
+  hemaSmears              HemaPeripheralSmear[]
+  hemaSickleModules       HemaSickleCellModule[]
+  hemaTransfusions        HemaTransfusionRecord[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -646,6 +649,9 @@ model Encounter {
   plasticBodyMappings     PlasticBodyMapping[]
   plasticImplants         PlasticBreastImplant[]
   plasticScars            PlasticScarAssessment[]
+  hemaSmears              HemaPeripheralSmear[]
+  hemaSickleModules       HemaSickleCellModule[]
+  hemaTransfusions        HemaTransfusionRecord[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -3631,6 +3637,80 @@ model PlasticScarAssessment {
   pliability        String // Normal, Flexible, Firme, Adherida
   heightMm          Float // mm
   scarType          String // Normotrófica, Atrófica, Hipertrófica, Queloide
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// HEMATOLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model HemaPeripheralSmear {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  redSeriesFindings      String // Drepanocitos, Esquizocitos, Hipocromía
+  whiteSeriesFindings    String // Leucocitosis, Blastos %, Neutrofilia
+  plateletSeriesFindings String // Trombocitopenia, Agregados
+  blastPercentage        Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model HemaSickleCellModule {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  hbSPercent               Float // HbS %
+  hbAPercent               Float // HbA %
+  hbFPercent               Float // HbF %
+  reticulocytePercent      Float? // Reticulocitos %
+  vasoocclusiveCrisisYear  Int     @default(0)
+  hydroxyureaDoseMgDay     Float?
+  transfusionProgramActive Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model HemaTransfusionRecord {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  componentType    String // Concentrado Globular, Plaquetas, PFC, Crioprecipitado
+  unitsCount       Int     @default(1)
+  bloodGroupRh     String // ABO y Rh
+  crossmatchResult String // Compatible, Incompatible, Coombs
+  adverseReaction  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

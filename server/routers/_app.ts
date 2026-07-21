@@ -66,8 +66,10 @@ import { emergRouter } from "./emerg"
 import { geriRouter } from "./geri"
 import { fammedRouter } from "./fammed"
 import { plasticRouter } from "./plastic"
+import { hemaRouter } from "./hema"
 
 export const appRouter = router({
+  hema: hemaRouter,
   plastic: plasticRouter,
   fammed: fammedRouter,
   geri: geriRouter,
