@@ -493,6 +493,9 @@ model PatientRegistration {
   allergyPrickTests       AllergyPrickTest[]
   allergyImmunotherapies  AllergyImmunotherapy[]
   allergyIgPanels         AllergyImmunoglobulinPanel[]
+  physiatryMuscles        PhysiatryMuscleGonio[]
+  physiatryAshworths      PhysiatryAshworthScale[]
+  physiatryPrescriptions  PhysiatryPrescriptionPlan[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -658,6 +661,9 @@ model Encounter {
   allergyPrickTests       AllergyPrickTest[]
   allergyImmunotherapies  AllergyImmunotherapy[]
   allergyIgPanels         AllergyImmunoglobulinPanel[]
+  physiatryMuscles        PhysiatryMuscleGonio[]
+  physiatryAshworths      PhysiatryAshworthScale[]
+  physiatryPrescriptions  PhysiatryPrescriptionPlan[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -3796,6 +3802,78 @@ model AllergyImmunoglobulinPanel {
   c3ComplementMgDl          Float? // C3 (mg/dL)
   c4ComplementMgDl          Float? // C4 (mg/dL)
   immunodeficiencyDiagnosis String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// MEDICINA FÍSICA Y REHABILITACIÓN (FISIATRO) - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model PhysiatryMuscleGonio {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  muscleGroup         String // Deltoides, Cuádriceps, Gastrocnemios
+  danielsScore        Int // 0 a 5 (Escala de Daniels MMT)
+  flexionRomDegrees   Float? // °
+  extensionRomDegrees Float? // °
+  rotationRomDegrees  Float? // °
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model PhysiatryAshworthScale {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  bodySegment     String // Miembro Superior Izquierdo, Miembro Inferior
+  ashworthScore   String // 0, 1, 1+, 2, 3, 4 (Ashworth Modificada)
+  clonusPresent   Boolean @default(false)
+  posturalPattern String? // Patrón flexor, extensor
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model PhysiatryPrescriptionPlan {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  modalitiesJson     String? @db.Text // TENS, EMS, US, Láser, Cinesiterapia
+  sessionDurationMin Int     @default(45)
+  sessionsPerWeek    Int     @default(3)
+  totalWeeks         Int     @default(4)
+  physiotherapyGoals String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

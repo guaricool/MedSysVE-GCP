@@ -68,8 +68,10 @@ import { fammedRouter } from "./fammed"
 import { plasticRouter } from "./plastic"
 import { hemaRouter } from "./hema"
 import { allergyRouter } from "./allergy"
+import { physiatryRouter } from "./physiatry"
 
 export const appRouter = router({
+  physiatry: physiatryRouter,
   allergy: allergyRouter,
   hema: hemaRouter,
   plastic: plasticRouter,
