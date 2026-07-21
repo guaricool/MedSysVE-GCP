@@ -394,16 +394,16 @@ model Patient {
 }
 
 model PatientRegistration {
-  id                   String                @id @default(cuid())
+  id                   String                      @id @default(cuid())
   idDisplay            String
   patientId            String
-  patient              Patient               @relation(fields: [patientId], references: [id])
+  patient              Patient                     @relation(fields: [patientId], references: [id])
   workspaceId          String
-  workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace            Workspace                   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   notasInternas        String?
   antecedentes         Json?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
   encounters           Encounter[]
   documents            Document[]
   appointments         Appointment[]
@@ -424,6 +424,9 @@ model PatientRegistration {
   cardioEkgs           CardioEkg[]
   cardioEchos          CardioEcho[]
   cardioRiskScores     CardioRiskScore[]
+  pediaGrowthPoints    PediaGrowthPoint[]
+  pediaMilestones      PediaDevelopmentMilestone[]
+  pediaDoseRecords     PediaDoseRecord[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -521,6 +524,9 @@ model Encounter {
   cardioEkgs              CardioEkg[]
   cardioEchos             CardioEcho[]
   cardioRiskScores        CardioRiskScore[]
+  pediaGrowthPoints       PediaGrowthPoint[]
+  pediaMilestones         PediaDevelopmentMilestone[]
+  pediaDoseRecords        PediaDoseRecord[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -1925,6 +1931,89 @@ model TraumaRehabProtocol {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// PEDIATRÍA Y PUERICULTURA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model PediaGrowthPoint {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  edadMeses           Int // Edad en meses al momento del control
+  pesoKg              Float // Peso en kg
+  tallaCm             Float // Talla / Longitud en cm
+  perimetroCefalicoCm Float? // Perímetro Cefálico en cm
+  imc                 Float? // IMC calculado kg/m2
+  percentilPeso       String? // Ej: P50, P85, >P97
+  percentilTalla      String? // Ej: P50, P15
+  percentilPC         String? // Ej: P50
+  zScorePesoEdad      Float?
+  zScoreTallaEdad     Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model PediaDevelopmentMilestone {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  edadRango          String // Ej: 2 meses, 6 meses, 12 meses, 24 meses
+  motorGruesoStatus  String  @default("VERDE") // VERDE | AMARILLO | ROJO
+  motorGruesoDetalle String?
+  motorFinoStatus    String  @default("VERDE")
+  motorFinoDetalle   String?
+  lenguajeStatus     String  @default("VERDE")
+  lenguajeDetalle    String?
+  socialStatus       String  @default("VERDE")
+  socialDetalle      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model PediaDoseRecord {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  medicamentoNombre String // Amoxicilina, Acetaminofén, Ibuprofeno
+  pesoUsadoKg       Float // Peso usado en el cálculo
+  dosisMgKgDia      Float // Dosis mg/kg/día
+  concentracion     String // Ej: 250 mg / 5 mL
+  dosisCalculadaMl  Float // mL por toma
+  frecuenciaHoras   Int // Ej: cada 8 horas
+  duracionDias      Int // Ej: 7 días
+
+  createdAt DateTime @default(now())
 
   encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
   patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
