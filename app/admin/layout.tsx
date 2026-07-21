@@ -39,6 +39,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <nav className="ml-auto flex gap-4 text-sm flex-wrap">
             <Link href="/admin" className="text-slate-300 hover:text-white transition-colors">Dashboard</Link>
             <Link href="/admin/doctors" className="text-slate-300 hover:text-white transition-colors">Doctores</Link>
+            <Link href="/admin/sandbox" className="text-amber-400 hover:text-amber-300 transition-colors font-medium">🔬 Sandbox Especialidades</Link>
             <Link href="/admin/compliance" className="text-slate-300 hover:text-white transition-colors">Cumplimiento</Link>
             <Link href="/admin/branding" className="text-slate-300 hover:text-white transition-colors">Branding</Link>
             <Link href="/admin/marketing" className="text-slate-300 hover:text-white transition-colors">Marketing</Link>
