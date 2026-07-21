@@ -62,6 +62,29 @@ export const encounterRouter = router({
   get: doctorProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      if (input.id === "sandbox-demo") {
+        return {
+          id: "sandbox-demo",
+          workspaceId: ctx.session.workspaceId ?? "sandbox",
+          patientRegistrationId: "sandbox-demo-pat",
+          doctorId: ctx.session.doctorId ?? "sandbox-doc",
+          status: "DRAFT",
+          motivo: "Consulta médica de control y evaluación de especialidad",
+          historiaClinica: "Paciente acude a consulta presentando cuadro sintomático característico para evaluación especializada.",
+          examenFisico: null,
+          plan: "Plan de tratamiento y seguimiento médico.",
+          datosEspecialidad: {},
+          diagnoses: [],
+          prescriptions: [],
+          labOrders: [],
+          imagingOrders: [],
+          documents: [],
+          scales: null,
+          version: 1,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as any
+      }
       const enc = await ctx.db.encounter.findFirst({
         where: { id: input.id, workspaceId: ctx.session.workspaceId },
         include: {
@@ -151,6 +174,9 @@ export const encounterRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (input.id === "sandbox-demo") {
+        return { id: "sandbox-demo", version: (input.version ?? 1) + 1 } as any
+      }
       const enc = await ctx.db.encounter.findFirst({
         where: { id: input.id, workspaceId: ctx.session.workspaceId },
       })

@@ -39,7 +39,7 @@ export default async function EncounterPage({
 
   const nombre = `${reg.patient.nombre} ${reg.patient.apellido}`
   const edad = differenceInYears(new Date(), new Date(reg.patient.fechaNacimiento))
-  const medsCount = enc.prescriptions.flatMap((p) => p.items).length
+  const medsCount = enc.prescriptions.flatMap((p: any) => p.items).length
   const vitales = enc.vitales as Vitales | null
   const { plan, recomendaciones } = splitPlan(enc.plan)
 

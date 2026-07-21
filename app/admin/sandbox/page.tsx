@@ -113,10 +113,10 @@ export default function AdminSandboxPage() {
           <select
             value={selectedSpecialty}
             onChange={(e) => setSelectedSpecialty(e.target.value)}
-            className="w-full bg-slate-850 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/50"
           >
             {SPECIALTIES.map((spec) => (
-              <option key={spec.id} value={spec.id}>
+              <option key={spec.id} value={spec.id} className="bg-slate-900 text-white font-medium py-1">
                 {spec.name} ({spec.category})
               </option>
             ))}
@@ -132,10 +132,10 @@ export default function AdminSandboxPage() {
           <select
             value={selectedPatientId}
             onChange={(e) => setSelectedPatientId(e.target.value)}
-            className="w-full bg-slate-850 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           >
             {DEMO_PATIENTS.map((p) => (
-              <option key={p.id} value={p.id}>
+              <option key={p.id} value={p.id} className="bg-slate-900 text-white font-medium py-1">
                 {p.label}
               </option>
             ))}

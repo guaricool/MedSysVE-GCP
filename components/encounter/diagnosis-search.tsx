@@ -74,7 +74,7 @@ export function DiagnosisSearch({ encounterId, disabled }: Props) {
   return (
     <div className="space-y-3">
       <ul className="space-y-1.5">
-        {enc?.diagnoses.map((d) => (
+        {enc?.diagnoses.map((d: any) => (
           <li
             key={d.id}
             className="flex items-center justify-between rounded border border-slate-700 bg-slate-800/50 px-3 py-2 text-sm"
