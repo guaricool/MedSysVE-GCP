@@ -394,45 +394,48 @@ model Patient {
 }
 
 model PatientRegistration {
-  id                   String                      @id @default(cuid())
-  idDisplay            String
-  patientId            String
-  patient              Patient                     @relation(fields: [patientId], references: [id])
-  workspaceId          String
-  workspace            Workspace                   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  notasInternas        String?
-  antecedentes         Json?
-  createdAt            DateTime                    @default(now())
-  updatedAt            DateTime                    @updatedAt
-  encounters           Encounter[]
-  documents            Document[]
-  appointments         Appointment[]
-  invoices             Invoice[]
-  labResults           LabResult[]
-  mensajes             Mensaje[]
-  alergias             Alergia[]
-  tags                 PatientTag[]
-  vaccines             Vaccine[]
-  waitingEntries       WaitingEntry[]
-  tasks                Task[]
-  insurances           PatientInsurance[]
-  consents             PatientConsent[]
-  orlAudiometries      OrlAudiometry[]
-  orlEndoscopies       OrlEndoscopyReport[]
-  traumaImplantes      TraumaImplante[]
-  traumaRehabProtocols TraumaRehabProtocol[]
-  cardioEkgs           CardioEkg[]
-  cardioEchos          CardioEcho[]
-  cardioRiskScores     CardioRiskScore[]
-  pediaGrowthPoints    PediaGrowthPoint[]
-  pediaMilestones      PediaDevelopmentMilestone[]
-  pediaDoseRecords     PediaDoseRecord[]
-  obGynoProfile        ObGynoProfile?
-  obPrenatalControls   ObPrenatalControl[]
-  gynoScreenings       GynoScreening[]
-  neuroScales          NeuroScaleRecord[]
-  neuroDermatomes      NeuroDermatomeMap[]
-  neuroSeizures        NeuroSeizureLog[]
+  id                    String                      @id @default(cuid())
+  idDisplay             String
+  patientId             String
+  patient               Patient                     @relation(fields: [patientId], references: [id])
+  workspaceId           String
+  workspace             Workspace                   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  notasInternas         String?
+  antecedentes          Json?
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  encounters            Encounter[]
+  documents             Document[]
+  appointments          Appointment[]
+  invoices              Invoice[]
+  labResults            LabResult[]
+  mensajes              Mensaje[]
+  alergias              Alergia[]
+  tags                  PatientTag[]
+  vaccines              Vaccine[]
+  waitingEntries        WaitingEntry[]
+  tasks                 Task[]
+  insurances            PatientInsurance[]
+  consents              PatientConsent[]
+  orlAudiometries       OrlAudiometry[]
+  orlEndoscopies        OrlEndoscopyReport[]
+  traumaImplantes       TraumaImplante[]
+  traumaRehabProtocols  TraumaRehabProtocol[]
+  cardioEkgs            CardioEkg[]
+  cardioEchos           CardioEcho[]
+  cardioRiskScores      CardioRiskScore[]
+  pediaGrowthPoints     PediaGrowthPoint[]
+  pediaMilestones       PediaDevelopmentMilestone[]
+  pediaDoseRecords      PediaDoseRecord[]
+  obGynoProfile         ObGynoProfile?
+  obPrenatalControls    ObPrenatalControl[]
+  gynoScreenings        GynoScreening[]
+  neuroScales           NeuroScaleRecord[]
+  neuroDermatomes       NeuroDermatomeMap[]
+  neuroSeizures         NeuroSeizureLog[]
+  endoGlycemicLogs      EndoGlycemicLog[]
+  endoInsulinTitrations EndoInsulinTitration[]
+  endoThyroidNodules    EndoThyroidNodule[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -538,6 +541,9 @@ model Encounter {
   neuroScales             NeuroScaleRecord[]
   neuroDermatomes         NeuroDermatomeMap[]
   neuroSeizures           NeuroSeizureLog[]
+  endoGlycemicLogs        EndoGlycemicLog[]
+  endoInsulinTitrations   EndoInsulinTitration[]
+  endoThyroidNodules      EndoThyroidNodule[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2181,6 +2187,86 @@ model NeuroSeizureLog {
   desencadenantes   String? // Privación de sueño, Estrés, Fotorestimulación
   auraDesc          String? // Descripción del aura previa
   estadoPostictal   String? // Confusión, Somnolencia, Parálisis de Todd
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// ENDOCRINOLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model EndoGlycemicLog {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  hba1cPorcentaje          Float? // Ej: 7.2 %
+  hba1cFecha               DateTime?
+  glucemiaAyunasMgDl       Int? // Ej: 110 mg/dL
+  glucemiaPostprandialMgDl Int? // Ej: 145 mg/dL
+  promedioCapilarMgDl      Int?
+  observaciones            String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model EndoInsulinTitration {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  pesoKg              Float // Peso en kg
+  dosisTotalDiariaU   Float // UI totales por día
+  dosisBasalU         Float // Dosis basal (Glargina/Degludec UI)
+  dosisBolusDesayunoU Float // Dosis ultrarrápida Desayuno
+  dosisBolusAlmuerzoU Float // Dosis ultrarrápida Almuerzo
+  dosisBolusCenaU     Float // Dosis ultrarrápida Cena
+  ratioCarbohidratos  Int? // g de Carbohidratos por 1 UI
+  factorSensibilidad  Int? // mg/dL que reduce 1 UI
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model EndoThyroidNodule {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  localizacion         String // Lóbulo Izquierdo, Lóbulo Derecho, Istmo
+  diametroMayorMm      Float // Diámetro en mm
+  composicion          String // Quístico, Espongiforme, Mixto, Sólido
+  ecogenicidad         String // Anecoico, Hiperecoico, Isoecoico, Hipoecoico
+  margenes             String // Lisos, Mal definidos, Lobulados, Irregulares
+  focosEcogenicos      String // Ninguno, Macrocalcificaciones, Punteados
+  tiRadsCategory       String // TI-RADS 1 al 5
+  bafnBethesdaCategory String? // Bethesda Tiroideo I al VI (PAAF)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
