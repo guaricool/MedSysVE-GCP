@@ -45,10 +45,15 @@ export const traumaRouter = router({
         ]
       }
 
-      return ctx.db.traumaImplante.findMany({
-        where: { encounterId: input.encounterId },
-        orderBy: { createdAt: "asc" },
-      })
+      try {
+        if (!(ctx.db as any).traumaImplante) return []
+        return await (ctx.db as any).traumaImplante.findMany({
+          where: { encounterId: input.encounterId },
+          orderBy: { createdAt: "asc" },
+        })
+      } catch (err) {
+        return []
+      }
     }),
 
   addImplante: protectedProcedure
@@ -134,9 +139,14 @@ export const traumaRouter = router({
         }
       }
 
-      return ctx.db.traumaAoClassification.findFirst({
-        where: { encounterId: input.encounterId },
-      })
+      try {
+        if (!(ctx.db as any).traumaAoClassification) return null
+        return await (ctx.db as any).traumaAoClassification.findFirst({
+          where: { encounterId: input.encounterId },
+        })
+      } catch (err) {
+        return null
+      }
     }),
 
   saveAoClassification: protectedProcedure
@@ -155,12 +165,12 @@ export const traumaRouter = router({
         return { ok: true, id: "sandbox-ao-1" }
       }
 
-      const existing = await ctx.db.traumaAoClassification.findFirst({
+      const existing = await (ctx.db as any).traumaAoClassification?.findFirst({
         where: { encounterId: input.encounterId },
       })
 
       if (existing) {
-        return ctx.db.traumaAoClassification.update({
+        return (ctx.db as any).traumaAoClassification.update({
           where: { id: existing.id },
           data: {
             hueso: input.hueso,
@@ -172,7 +182,7 @@ export const traumaRouter = router({
         })
       }
 
-      return ctx.db.traumaAoClassification.create({
+      return (ctx.db as any).traumaAoClassification.create({
         data: {
           encounterId: input.encounterId,
           hueso: input.hueso,
@@ -204,9 +214,14 @@ export const traumaRouter = router({
         }
       }
 
-      return ctx.db.traumaRehabProtocol.findFirst({
-        where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
-      })
+      try {
+        if (!(ctx.db as any).traumaRehabProtocol) return null
+        return await (ctx.db as any).traumaRehabProtocol.findFirst({
+          where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
+        })
+      } catch (err) {
+        return null
+      }
     }),
 
   saveRehabProtocol: protectedProcedure

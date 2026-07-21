@@ -3963,3 +3963,69 @@ model DicomImage {
 
   @@index([seriesId])
 }
+
+// ---------------------------------------------------------------------------
+// Traumatología & Ortopedia Models
+// ---------------------------------------------------------------------------
+
+model TraumaImplante {
+  id                    String              @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+  tipoMaterial          String
+  marca                 String
+  modelo                String?
+  lote                  String
+  material              String?
+  zonaAnatomica         String
+  cantidad              Int                 @default(1)
+  observaciones         String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  encounter             Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration   PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model TraumaAoClassification {
+  id              String    @id @default(cuid())
+  encounterId     String
+  hueso           String
+  segmento        String
+  codigoAO        String
+  descripcion     String
+  mecanismoLesion String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  encounter       Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+}
+
+model TraumaRehabProtocol {
+  id                    String              @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+  nivelCarga            String
+  usoOrtesis            String?
+  faseRehab             String
+  ejerciciosPermitidos  String?
+  contraindicaciones    String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  encounter             Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration   PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
