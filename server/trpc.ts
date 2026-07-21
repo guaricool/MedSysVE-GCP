@@ -90,10 +90,8 @@ export const protectedProcedure = publicProcedure.use(async ({ ctx, path, next }
     const maxRequests = 300
 
     try {
-      const [[_countResult], [count]] = await redis.pipeline()
-        .incr(key)
-        .expire(key, windowSec, "NX")
-        .exec() as any[]
+      const pipelineRes = (await redis.pipeline().incr(key).expire(key, windowSec, "NX").exec()) as any[]
+      const count = Number(pipelineRes?.[0] ?? 0)
 
       if (count > maxRequests) {
         // Log critical security anomaly
