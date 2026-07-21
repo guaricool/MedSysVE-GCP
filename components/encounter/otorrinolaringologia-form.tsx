@@ -13,7 +13,12 @@ import {
   Stethoscope,
   Volume2,
   FileText,
-  ShieldAlert,
+  MapPin,
+  Camera,
+  Trash2,
+  Plus,
+  BarChart3,
+  Layers,
 } from "lucide-react";
 
 interface Props {
@@ -21,6 +26,9 @@ interface Props {
   disabled?: boolean;
   initialData?: any;
 }
+
+const FRECUENCIAS_AIRE = ["125", "250", "500", "1000", "2000", "4000", "8000"];
+const FRECUENCIAS_OSEA = ["250", "500", "1000", "2000", "4000"];
 
 const SINTOMAS_OTOLOGICOS = [
   "Otalgia Derecha",
@@ -72,10 +80,29 @@ const PROCEDIMIENTOS_ORL = [
 ];
 
 export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = {} }: Props) {
-  const [activeTab, setActiveTab] = useState<"OTOLOGIA" | "RINOLOGIA" | "LARINGOLOGIA" | "PROCEDIMIENTOS">("OTOLOGIA");
+  const [activeTab, setActiveTab] = useState<"OTOLOGIA" | "AUDIOMETRIA" | "RINOLOGIA" | "LARINGOLOGIA" | "DIAGRAMA" | "ENDOSCOPIA" | "PROCEDIMIENTOS">("OTOLOGIA");
   const [saved, setSaved] = useState(false);
   const { setDirty } = useUnsaved();
 
+  // tRPC queries & mutations
+  const { data: dbAudio, refetch: refetchAudio } = (trpc.orl.getAudiometry.useQuery as any)({ encounterId });
+  const { data: dbEndo, refetch: refetchEndo } = (trpc.orl.getEndoscopyReport.useQuery as any)({ encounterId });
+  const { data: dbPins = [], refetch: refetchPins } = (trpc.orl.listDiagramPins.useQuery as any)({ encounterId });
+
+  const saveAudiometryMut = (trpc.orl.saveAudiometry.useMutation as any)({
+    onSuccess: () => refetchAudio(),
+  });
+  const saveEndoscopyMut = (trpc.orl.saveEndoscopyReport.useMutation as any)({
+    onSuccess: () => refetchEndo(),
+  });
+  const addPinMut = (trpc.orl.addDiagramPin.useMutation as any)({
+    onSuccess: () => refetchPins(),
+  });
+  const deletePinMut = (trpc.orl.deleteDiagramPin.useMutation as any)({
+    onSuccess: () => refetchPins(),
+  });
+
+  // Local State
   const [data, setData] = useState({
     // Otología
     sintomasOtologicos: initialData.sintomasOtologicos || [],
@@ -107,6 +134,61 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
     observacionesORL: initialData.observacionesORL || "",
   });
 
+  // Audiometría State
+  const [airOd, setAirOd] = useState<Record<string, number>>({ "125": 10, "250": 15, "500": 20, "1000": 20, "2000": 25, "4000": 30, "8000": 35 });
+  const [airOi, setAirOi] = useState<Record<string, number>>({ "125": 15, "250": 20, "500": 25, "1000": 30, "2000": 35, "4000": 45, "8000": 50 });
+  const [boneOd, setBoneOd] = useState<Record<string, number>>({ "250": 10, "500": 15, "1000": 15, "2000": 20, "4000": 25 });
+  const [boneOi, setBoneOi] = useState<Record<string, number>>({ "250": 15, "500": 20, "1000": 25, "2000": 30, "4000": 40 });
+  const [logoOd, setLogoOd] = useState<number>(95);
+  const [logoOi, setLogoOi] = useState<number>(85);
+  const [srtcOd, setSrtcOd] = useState<number>(20);
+  const [srtcOi, setSrtcOi] = useState<number>(30);
+  const [tympOd, setTympOd] = useState<string>("Tipo A (Normal)");
+  const [tympOi, setTympOi] = useState<string>("Tipo C (Disfunción Tubárica)");
+
+  // Endoscopia State
+  const [tipoEndo, setTipoEndo] = useState("Nasofibrolaringoscopia Flexible");
+  const [endoFosas, setEndoFosas] = useState("Tabique centrado, cornetes inferiores hipertróficos grado II con mucosa pálida.");
+  const [endoRino, setEndoRino] = useState("Rodetes tubarios permeables, fosa de Rosenmüller libre de lesiones.");
+  const [endoLaringe, setEndoLaringe] = useState("Epiglotis en omega, aritenoides sin edema.");
+  const [endoCuerdas, setEndoCuerdas] = useState("Movilidad bilateral conservada. Nódulo pequeño en tercio anterior de cuerda vocal derecha.");
+  const [endoConclusion, setEndoConclusion] = useState("Discreta disfonía funcional por nódulo vocal temprano en cuerda vocal derecha.");
+  const [endoImages, setEndoImages] = useState<string[]>([]);
+  const [newImgUrl, setNewImgUrl] = useState("");
+
+  // Pin State
+  const [pinRegion, setPinRegion] = useState("OIDO_IZQUIERDO");
+  const [pinTitulo, setPinTitulo] = useState("");
+  const [pinHallazgo, setPinHallazgo] = useState("");
+  const [pinGravedad, setPinGravedad] = useState<"NORMAL" | "LEVE" | "MODERADO" | "SEVERO">("LEVE");
+
+  useEffect(() => {
+    if (dbAudio) {
+      if (dbAudio.airOd) setAirOd(dbAudio.airOd);
+      if (dbAudio.airOi) setAirOi(dbAudio.airOi);
+      if (dbAudio.boneOd) setBoneOd(dbAudio.boneOd);
+      if (dbAudio.boneOi) setBoneOi(dbAudio.boneOi);
+      if (dbAudio.logoaudioOd !== undefined) setLogoOd(dbAudio.logoaudioOd);
+      if (dbAudio.logoaudioOi !== undefined) setLogoOi(dbAudio.logoaudioOi);
+      if (dbAudio.srtcOd !== undefined) setSrtcOd(dbAudio.srtcOd);
+      if (dbAudio.srtcOi !== undefined) setSrtcOi(dbAudio.srtcOi);
+      if (dbAudio.tympanogramOd) setTympOd(dbAudio.tympanogramOd);
+      if (dbAudio.tympanogramOi) setTympOi(dbAudio.tympanogramOi);
+    }
+  }, [dbAudio]);
+
+  useEffect(() => {
+    if (dbEndo) {
+      if (dbEndo.tipoProcedimiento) setTipoEndo(dbEndo.tipoProcedimiento);
+      if (dbEndo.hallazgosFosasNasales) setEndoFosas(dbEndo.hallazgosFosasNasales);
+      if (dbEndo.hallazgosRinofaringe) setEndoRino(dbEndo.hallazgosRinofaringe);
+      if (dbEndo.hallazgosLaringe) setEndoLaringe(dbEndo.hallazgosLaringe);
+      if (dbEndo.hallazgosCuerdasVocales) setEndoCuerdas(dbEndo.hallazgosCuerdasVocales);
+      if (dbEndo.conclusion) setEndoConclusion(dbEndo.conclusion);
+      if (dbEndo.imagenesUrl) setEndoImages(dbEndo.imagenesUrl);
+    }
+  }, [dbEndo]);
+
   const isDirty = useMemo(() => {
     return JSON.stringify(data) !== JSON.stringify(initialData);
   }, [data, initialData]);
@@ -131,6 +213,57 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
     });
   }
 
+  const handleSaveAudiometry = () => {
+    saveAudiometryMut.mutate({
+      encounterId,
+      patientRegistrationId: "sandbox-demo-pat",
+      airOd,
+      airOi,
+      boneOd,
+      boneOi,
+      logoaudioOd: logoOd,
+      logoaudioOi: logoOi,
+      srtcOd,
+      srtcOi,
+      tympanogramOd: tympOd,
+      tympanogramOi: tympOi,
+    });
+  };
+
+  const handleSaveEndoscopy = () => {
+    saveEndoscopyMut.mutate({
+      encounterId,
+      patientRegistrationId: "sandbox-demo-pat",
+      tipoProcedimiento: tipoEndo,
+      hallazgosFosasNasales: endoFosas,
+      hallazgosRinofaringe: endoRino,
+      hallazgosLaringe: endoLaringe,
+      hallazgosCuerdasVocales: endoCuerdas,
+      imagenesUrl: endoImages,
+      conclusion: endoConclusion,
+    });
+  };
+
+  const handleDiagramClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!pinTitulo || !pinHallazgo) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const xPct = Number((((e.clientX - rect.left) / rect.width) * 100).toFixed(1));
+    const yPct = Number((((e.clientY - rect.top) / rect.height) * 100).toFixed(1));
+
+    addPinMut.mutate({
+      encounterId,
+      region: pinRegion,
+      xPct,
+      yPct,
+      titulo: pinTitulo,
+      hallazgo: pinHallazgo,
+      gravedad: pinGravedad,
+    });
+
+    setPinTitulo("");
+    setPinHallazgo("");
+  };
+
   const toggleArrayItem = (key: "sintomasOtologicos" | "sintomasRinologicos" | "sintomasLaringologicos" | "procedimientosRealizados", item: string) => {
     setData((prev) => {
       const arr = prev[key] as string[];
@@ -152,7 +285,7 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
           </div>
           <div>
             <h3 className="font-bold text-base text-white">Evaluación de Otorrinolaringología (ORL)</h3>
-            <p className="text-xs text-slate-400">Otología, Rinología, Laringología y Procedimientos Especializados</p>
+            <p className="text-xs text-slate-400">Otología, Audiometría, Rinología, Laringología, Diagrama Trilocalizado e Informes Endoscópicos</p>
           </div>
         </div>
 
@@ -187,6 +320,17 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
         </button>
 
         <button
+          onClick={() => setActiveTab("AUDIOMETRIA")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "AUDIOMETRIA"
+              ? "bg-amber-500 text-slate-950 shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <BarChart3 className="w-3.5 h-3.5" /> Audiometría & Timpanometría
+        </button>
+
+        <button
           onClick={() => setActiveTab("RINOLOGIA")}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
             activeTab === "RINOLOGIA"
@@ -209,6 +353,28 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
         </button>
 
         <button
+          onClick={() => setActiveTab("DIAGRAMA")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "DIAGRAMA"
+              ? "bg-amber-500 text-slate-950 shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <MapPin className="w-3.5 h-3.5" /> Diagrama Trilocalizado ({dbPins.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab("ENDOSCOPIA")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "ENDOSCOPIA"
+              ? "bg-amber-500 text-slate-950 shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <Camera className="w-3.5 h-3.5" /> Reporte Endoscópico
+        </button>
+
+        <button
           onClick={() => setActiveTab("PROCEDIMIENTOS")}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
             activeTab === "PROCEDIMIENTOS"
@@ -223,7 +389,6 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
       {/* Tab 1: Otología */}
       {activeTab === "OTOLOGIA" && (
         <div className="space-y-5 pt-2">
-          {/* Symptoms chips */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
               <Volume2 className="w-3.5 h-3.5" /> Sintomatología Otológica
@@ -249,7 +414,6 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
             </div>
           </div>
 
-          {/* Otoscopia Bilateral */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="bg-slate-950/60 border border-slate-800 p-3.5 rounded-lg space-y-2">
               <label className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
@@ -262,18 +426,6 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
                 className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
                 placeholder="Conducto Auditivo Externo (CAE), Membrana Timpánica, Triángulo luminoso..."
               />
-              <div className="flex flex-wrap gap-1">
-                {["Íntegra", "Abombada", "Retraída", "Perforada", "Cerumen Impactado"].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setData({ ...data, otoscopiaOD: `${data.otoscopiaOD}, ${preset}` })}
-                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700"
-                  >
-                    + {preset}
-                  </button>
-                ))}
-              </div>
             </div>
 
             <div className="bg-slate-950/60 border border-slate-800 p-3.5 rounded-lg space-y-2">
@@ -287,120 +439,191 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
                 className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
                 placeholder="Conducto Auditivo Externo (CAE), Membrana Timpánica, Triángulo luminoso..."
               />
-              <div className="flex flex-wrap gap-1">
-                {["Íntegra", "Abombada", "Retraída", "Perforada", "Cerumen Impactado"].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setData({ ...data, otoscopiaOI: `${data.otoscopiaOI}, ${preset}` })}
-                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700"
-                  >
-                    + {preset}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Acumetría & Audiometría Sintética */}
-          <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-lg space-y-4">
-            <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-amber-400" /> Acumetría por Diapasón & Timpanometría
-            </h4>
-
-            <div className="grid md:grid-cols-3 gap-3 text-xs">
-              <div className="space-y-1">
-                <label className="text-slate-400 font-medium">Test de Weber (512 Hz)</label>
-                <select
-                  value={data.weberTest}
-                  onChange={(e) => setData({ ...data, weberTest: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5"
-                >
-                  <option value="Centrado">Centrado (Sin lateralización)</option>
-                  <option value="Lateralizado a OD">Lateralizado a OD</option>
-                  <option value="Lateralizado a OI">Lateralizado a OI</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-slate-400 font-medium">Test de Rinne OD</label>
-                <select
-                  value={data.rinneOD}
-                  onChange={(e) => setData({ ...data, rinneOD: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5"
-                >
-                  <option value="Positivo (+)">Positivo (+) (Normal / Neurosensorial)</option>
-                  <option value="Negativo (-)">Negativo (-) (Conductiva)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-slate-400 font-medium">Test de Rinne OI</label>
-                <select
-                  value={data.rinneOI}
-                  onChange={(e) => setData({ ...data, rinneOI: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5"
-                >
-                  <option value="Positivo (+)">Positivo (+) (Normal / Neurosensorial)</option>
-                  <option value="Negativo (-)">Negativo (-) (Conductiva)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-slate-400 font-medium">Hipoacusia OD</label>
-                <select
-                  value={data.hipoacusiaTipoOD}
-                  onChange={(e) => setData({ ...data, hipoacusiaTipoOD: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5"
-                >
-                  <option value="Normal">Normal</option>
-                  <option value="Conductiva Leve">Conductiva Leve</option>
-                  <option value="Conductiva Moderada">Conductiva Moderada</option>
-                  <option value="Neurosensorial Leve">Neurosensorial Leve</option>
-                  <option value="Neurosensorial Severa">Neurosensorial Severa</option>
-                  <option value="Mixta">Mixta</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-slate-400 font-medium">Hipoacusia OI</label>
-                <select
-                  value={data.hipoacusiaTipoOI}
-                  onChange={(e) => setData({ ...data, hipoacusiaTipoOI: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5"
-                >
-                  <option value="Normal">Normal</option>
-                  <option value="Conductiva Leve">Conductiva Leve</option>
-                  <option value="Conductiva Moderada">Conductiva Moderada</option>
-                  <option value="Neurosensorial Leve">Neurosensorial Leve</option>
-                  <option value="Neurosensorial Severa">Neurosensorial Severa</option>
-                  <option value="Mixta">Mixta</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-slate-400 font-medium">Timpanometría</label>
-                <select
-                  value={data.timpanometria}
-                  onChange={(e) => setData({ ...data, timpanometria: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5"
-                >
-                  <option value="Tipo A (Normal)">Tipo A (Compliance Normal)</option>
-                  <option value="Tipo B (Efusio/Líquido)">Tipo B (Curva Plana / Efusión)</option>
-                  <option value="Tipo C (Disfunción Tubárica)">Tipo C (Presión Negativa / Trompa)</option>
-                  <option value="Tipo As (Rigidez)">Tipo As (Otoesclerosis / Otosclerosis)</option>
-                  <option value="Tipo Ad (Hipermóvil)">Tipo Ad (Disyunción de cadena)</option>
-                </select>
-              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Tab 2: Rinología */}
+      {/* Tab 2: Audiometría Tonal & Timpanometría Graph/Grid */}
+      {activeTab === "AUDIOMETRIA" && (
+        <div className="space-y-6 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+              <BarChart3 className="w-4 h-4" /> Audiometría Tonal (Vía Aérea / Vía Ósea en dB HL)
+            </h4>
+            <Button
+              size="sm"
+              onClick={handleSaveAudiometry}
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold text-xs"
+            >
+              Guardar Audiometría
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Oído Derecho (OD - Rojo) */}
+            <div className="bg-slate-950/80 border border-red-500/30 p-4 rounded-xl space-y-3">
+              <h5 className="text-xs font-bold text-red-400 flex items-center gap-1.5">
+                🔴 Oído Derecho (OD) — Umbrales Audición
+              </h5>
+
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-semibold text-slate-300">Vía Aérea (125Hz a 8000Hz - dB):</span>
+                <div className="grid grid-cols-7 gap-1">
+                  {FRECUENCIAS_AIRE.map((freq) => (
+                    <div key={freq} className="text-center">
+                      <span className="text-[10px] text-slate-400">{freq}Hz</span>
+                      <input
+                        type="number"
+                        value={airOd[freq] ?? 0}
+                        onChange={(e) => setAirOd({ ...airOd, [freq]: Number(e.target.value) })}
+                        className="w-full bg-slate-900 border border-red-500/40 text-red-300 text-center rounded text-xs py-1 font-bold"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                <span className="text-[11px] font-semibold text-slate-300">Vía Ósea (250Hz a 4000Hz - dB):</span>
+                <div className="grid grid-cols-5 gap-1">
+                  {FRECUENCIAS_OSEA.map((freq) => (
+                    <div key={freq} className="text-center">
+                      <span className="text-[10px] text-slate-400">{freq}Hz</span>
+                      <input
+                        type="number"
+                        value={boneOd[freq] ?? 0}
+                        onChange={(e) => setBoneOd({ ...boneOd, [freq]: Number(e.target.value) })}
+                        className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-center rounded text-xs py-1"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
+                <div>
+                  <span className="text-slate-400">Logoaudiometría (%):</span>
+                  <input
+                    type="number"
+                    value={logoOd}
+                    onChange={(e) => setLogoOd(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs mt-1"
+                  />
+                </div>
+                <div>
+                  <span className="text-slate-400">SRT (dB):</span>
+                  <input
+                    type="number"
+                    value={srtcOd}
+                    onChange={(e) => setSrtcOd(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Oído Izquierdo (OI - Azul) */}
+            <div className="bg-slate-950/80 border border-blue-500/30 p-4 rounded-xl space-y-3">
+              <h5 className="text-xs font-bold text-blue-400 flex items-center gap-1.5">
+                🔵 Oído Izquierdo (OI) — Umbrales Audición
+              </h5>
+
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-semibold text-slate-300">Vía Aérea (125Hz a 8000Hz - dB):</span>
+                <div className="grid grid-cols-7 gap-1">
+                  {FRECUENCIAS_AIRE.map((freq) => (
+                    <div key={freq} className="text-center">
+                      <span className="text-[10px] text-slate-400">{freq}Hz</span>
+                      <input
+                        type="number"
+                        value={airOi[freq] ?? 0}
+                        onChange={(e) => setAirOi({ ...airOi, [freq]: Number(e.target.value) })}
+                        className="w-full bg-slate-900 border border-blue-500/40 text-blue-300 text-center rounded text-xs py-1 font-bold"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                <span className="text-[11px] font-semibold text-slate-300">Vía Ósea (250Hz a 4000Hz - dB):</span>
+                <div className="grid grid-cols-5 gap-1">
+                  {FRECUENCIAS_OSEA.map((freq) => (
+                    <div key={freq} className="text-center">
+                      <span className="text-[10px] text-slate-400">{freq}Hz</span>
+                      <input
+                        type="number"
+                        value={boneOi[freq] ?? 0}
+                        onChange={(e) => setBoneOi({ ...boneOi, [freq]: Number(e.target.value) })}
+                        className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-center rounded text-xs py-1"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
+                <div>
+                  <span className="text-slate-400">Logoaudiometría (%):</span>
+                  <input
+                    type="number"
+                    value={logoOi}
+                    onChange={(e) => setLogoOi(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs mt-1"
+                  />
+                </div>
+                <div>
+                  <span className="text-slate-400">SRT (dB):</span>
+                  <input
+                    type="number"
+                    value={srtcOi}
+                    onChange={(e) => setSrtcOi(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Timpanometría Curves */}
+          <div className="grid md:grid-cols-2 gap-4 text-xs bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Timpanograma Oído Derecho (OD)</label>
+              <select
+                value={tympOd}
+                onChange={(e) => setTympOd(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2"
+              >
+                <option value="Tipo A (Normal)">Tipo A (Normal - Picó centrado en 0 daPa)</option>
+                <option value="Tipo B (Plana / Efusión)">Tipo B (Plana - Efusión en oído medio)</option>
+                <option value="Tipo C (Presión Negativa)">Tipo C (Presión negativa / Disfunción trompa)</option>
+                <option value="Tipo As (Baja Amplitud)">Tipo As (Baja amplitud / Otoesclerosis)</option>
+                <option value="Tipo Ad (Disyunción)">Tipo Ad (Disyunción de cadena de huesecillos)</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Timpanograma Oído Izquierdo (OI)</label>
+              <select
+                value={tympOi}
+                onChange={(e) => setTympOi(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2"
+              >
+                <option value="Tipo A (Normal)">Tipo A (Normal - Picó centrado en 0 daPa)</option>
+                <option value="Tipo B (Plana / Efusión)">Tipo B (Plana - Efusión en oído medio)</option>
+                <option value="Tipo C (Presión Negativa)">Tipo C (Presión negativa / Disfunción trompa)</option>
+                <option value="Tipo As (Baja Amplitud)">Tipo As (Baja amplitud / Otoesclerosis)</option>
+                <option value="Tipo Ad (Disyunción)">Tipo Ad (Disyunción de cadena de huesecillos)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Rinología */}
       {activeTab === "RINOLOGIA" && (
         <div className="space-y-5 pt-2">
-          {/* Symptoms chips */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
               <Wind className="w-3.5 h-3.5" /> Sintomatología Rinológica
@@ -425,81 +648,12 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
               })}
             </div>
           </div>
-
-          {/* Rinoscopia & Endoscopia Nasal */}
-          <div className="grid md:grid-cols-2 gap-4 text-xs">
-            <div className="bg-slate-950/60 border border-slate-800 p-3.5 rounded-lg space-y-2">
-              <label className="font-semibold text-blue-400 uppercase tracking-wider">
-                Tabique Nasal (Septum)
-              </label>
-              <select
-                value={data.tabiqueNasal}
-                onChange={(e) => setData({ ...data, tabiqueNasal: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2"
-              >
-                <option value="Centrado">Centrado sin espolones</option>
-                <option value="Desviación Izquierda">Desviación Septal Izquierda</option>
-                <option value="Desviación Derecha">Desviación Septal Derecha</option>
-                <option value="Desviación en S">Desviación Septal en "S" (Bilateral)</option>
-                <option value="Espolón Septal">Espolón Septal relevante</option>
-                <option value="Perforación Septal">Perforación Septal</option>
-              </select>
-            </div>
-
-            <div className="bg-slate-950/60 border border-slate-800 p-3.5 rounded-lg space-y-2">
-              <label className="font-semibold text-blue-400 uppercase tracking-wider">
-                Estado de Cornetes Nasales
-              </label>
-              <select
-                value={data.cornetes}
-                onChange={(e) => setData({ ...data, cornetes: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2"
-              >
-                <option value="Tróficos y normocoloreados">Tróficos y normocoloreados</option>
-                <option value="Hipertróficos Moderados">Hipertróficos Moderados</option>
-                <option value="Hipertrofia Severa / Oclusivos">Hipertrofia Severa / Oclusivos</option>
-                <option value="Pálidos y Edematosos (Rinitis Alérgica)">Pálidos y Edematosos (Rinitis Alérgica)</option>
-                <option value="Violáceos / Congestivos">Violáceos / Congestivos</option>
-              </select>
-            </div>
-
-            <div className="bg-slate-950/60 border border-slate-800 p-3.5 rounded-lg space-y-2">
-              <label className="font-semibold text-blue-400 uppercase tracking-wider">
-                Secreción Nasal / Meatos
-              </label>
-              <select
-                value={data.secrecionNasal}
-                onChange={(e) => setData({ ...data, secrecionNasal: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2"
-              >
-                <option value="Ausente">Ausente / Fosas secas</option>
-                <option value="Hialina Anterior">Hialina Anterior</option>
-                <option value="Mucopurulenta en Meato Medio">Mucopurulenta en Meato Medio (Sinusitis)</option>
-                <option value="Hemática / Costrosa">Hemática / Costrosa</option>
-                <option value="Descarga Posterior">Descarga Posterior Frecuente</option>
-              </select>
-            </div>
-
-            <div className="bg-slate-950/60 border border-slate-800 p-3.5 rounded-lg space-y-2">
-              <label className="font-semibold text-blue-400 uppercase tracking-wider">
-                Pólipos o Masas Sinusales
-              </label>
-              <input
-                type="text"
-                value={data.poliposMasas}
-                onChange={(e) => setData({ ...data, poliposMasas: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2"
-                placeholder="Sin pólipos / Pólipo Grado II Meato Medio..."
-              />
-            </div>
-          </div>
         </div>
       )}
 
-      {/* Tab 3: Laringología & Vía Aérea */}
+      {/* Tab 4: Laringología */}
       {activeTab === "LARINGOLOGIA" && (
         <div className="space-y-5 pt-2">
-          {/* Symptoms chips */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
               <Mic className="w-3.5 h-3.5" /> Sintomatología Laringológica & Faringe
@@ -524,78 +678,228 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
               })}
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Escalas & Exploración Orofaringea */}
-          <div className="grid md:grid-cols-2 gap-4 text-xs">
-            <div className="bg-slate-950/60 border border-slate-800 p-3.5 rounded-lg space-y-2">
-              <label className="font-semibold text-amber-400 uppercase tracking-wider">
-                Grado Amigdalino (Clasificación de Brodsky)
-              </label>
+      {/* Tab 5: Diagrama Trilocalizado Interactivo con Pins */}
+      {activeTab === "DIAGRAMA" && (
+        <div className="space-y-4 pt-2">
+          <div className="border-b border-slate-800 pb-3">
+            <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+              <MapPin className="w-4 h-4" /> Mapa Anatómico Trilocalizado (Oídos, Nariz, Laringe)
+            </h4>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Haz clic sobre cualquier región del esquema anatómico para colocar un pin interactivo de hallazgo clínico.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-3 bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs">
+            <div>
+              <label className="text-slate-400">Región del Pin:</label>
               <select
-                value={data.brodskyAmigdalas}
-                onChange={(e) => setData({ ...data, brodskyAmigdalas: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2"
+                value={pinRegion}
+                onChange={(e) => setPinRegion(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1.5 mt-1"
               >
-                <option value="Grado 0 (Amigdalectomizado)">Grado 0 (Amigdalectomizado)</option>
-                <option value="Grado I (< 25%)">{"Grado I (< 25% del pilar amigdalino)"}</option>
-                <option value="Grado II (25-50%)">Grado II (25% a 50% de la orofaringe)</option>
-                <option value="Grado III (50-75%)">Grado III (50% a 75% de la orofaringe)</option>
-                <option value="Grado IV (> 75%)">{"Grado IV (> 75% / Amígdalas besándose)"}</option>
+                <option value="OIDO_DERECHO">Oído Derecho (OD)</option>
+                <option value="OIDO_IZQUIERDO">Oído Izquierdo (OI)</option>
+                <option value="NARIZ_TABIQUE">Nariz / Septum Nasal</option>
+                <option value="NARIZ_CORNETES">Cornetes Nasales</option>
+                <option value="LARI_CUERDAS">Cuerdas Vocales / Laringe</option>
+                <option value="FARINGE">Orofaringe / Amígdalas</option>
               </select>
             </div>
 
-            <div className="bg-slate-950/60 border border-slate-800 p-3.5 rounded-lg space-y-2">
-              <label className="font-semibold text-amber-400 uppercase tracking-wider">
-                Escala de Mallampati (Vía Aérea / Roncopatía)
-              </label>
-              <select
-                value={data.mallampatiScore}
-                onChange={(e) => setData({ ...data, mallampatiScore: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2"
-              >
-                <option value="Clase I">Clase I (Visibilidad total de paladar blando, úvula, pilares)</option>
-                <option value="Clase II">Clase II (Visibilidad de paladar blando, úvula y fauces)</option>
-                <option value="Clase III">Clase III (Visibilidad de paladar blando y base de úvula)</option>
-                <option value="Clase IV">Clase IV (Solo paladar duro visible)</option>
-              </select>
-            </div>
-
-            <div className="bg-slate-950/60 border border-slate-800 p-3.5 rounded-lg space-y-2">
-              <label className="font-semibold text-blue-400 uppercase tracking-wider">
-                Pared Faríngea Posterior
-              </label>
+            <div>
+              <label className="text-slate-400">Título del Hallazgo:</label>
               <input
                 type="text"
-                value={data.paredFaringea}
-                onChange={(e) => setData({ ...data, paredFaringea: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2"
-                placeholder="Normocoloreada / Granulosa (Faringitis Crónica) / Exudado..."
+                value={pinTitulo}
+                onChange={(e) => setPinTitulo(e.target.value)}
+                placeholder="Ej: Perforación Timpánica Central"
+                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1.5 mt-1"
               />
             </div>
 
-            <div className="bg-slate-950/60 border border-slate-800 p-3.5 rounded-lg space-y-2">
-              <label className="font-semibold text-blue-400 uppercase tracking-wider">
-                Nasofibrolaringoscopia / Cuerdas Vocales
-              </label>
+            <div>
+              <label className="text-slate-400">Descripción / Gravedad:</label>
+              <div className="flex gap-2 mt-1">
+                <input
+                  type="text"
+                  value={pinHallazgo}
+                  onChange={(e) => setPinHallazgo(e.target.value)}
+                  placeholder="Detalle clínico..."
+                  className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1.5"
+                />
+                <select
+                  value={pinGravedad}
+                  onChange={(e: any) => setPinGravedad(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 text-white rounded px-2"
+                >
+                  <option value="LEVE">Leve</option>
+                  <option value="MODERADO">Mod.</option>
+                  <option value="SEVERO">Sev.</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Canvas Canvas */}
+          <div
+            onClick={handleDiagramClick}
+            className="relative w-full h-[320px] bg-slate-950 border border-slate-800 rounded-xl overflow-hidden cursor-crosshair flex items-center justify-center shadow-inner"
+          >
+            {/* Visual Scheme Background Representation */}
+            <div className="absolute inset-0 grid grid-cols-3 divide-x divide-slate-800/80 pointer-events-none opacity-40">
+              <div className="flex flex-col items-center justify-center p-4 text-center">
+                <Ear className="w-16 h-16 text-amber-500 mb-2" />
+                <span className="text-xs font-bold text-amber-400 uppercase">Esquema Otológico</span>
+                <span className="text-[10px] text-slate-400">OD & OI (Conducto / Timpánico)</span>
+              </div>
+              <div className="flex flex-col items-center justify-center p-4 text-center">
+                <Wind className="w-16 h-16 text-blue-500 mb-2" />
+                <span className="text-xs font-bold text-blue-400 uppercase">Esquema Rinológico</span>
+                <span className="text-[10px] text-slate-400">Septum / Cornetes / Meatos</span>
+              </div>
+              <div className="flex flex-col items-center justify-center p-4 text-center">
+                <Mic className="w-16 h-16 text-purple-500 mb-2" />
+                <span className="text-xs font-bold text-purple-400 uppercase">Esquema Laringofaríngeo</span>
+                <span className="text-[10px] text-slate-400">Cuerdas Vocales / Glotis / Amígdalas</span>
+              </div>
+            </div>
+
+            {/* Rendered Pins */}
+            {dbPins.map((pin: any) => (
+              <div
+                key={pin.id}
+                style={{ left: `${pin.xPct}%`, top: `${pin.yPct}%` }}
+                className="absolute -translate-x-1/2 -translate-y-1/2 group z-10"
+              >
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shadow-lg cursor-pointer transition-transform hover:scale-125 ${
+                    pin.gravedad === "SEVERO"
+                      ? "bg-red-500 text-white border-2 border-white animate-pulse"
+                      : pin.gravedad === "MODERADO"
+                      ? "bg-amber-500 text-slate-950 border-2 border-white"
+                      : "bg-emerald-500 text-slate-950 border-2 border-white"
+                  }`}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                </div>
+
+                {/* Popover Tooltip */}
+                <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-900 border border-slate-700 p-2 rounded shadow-2xl text-[11px] z-20 pointer-events-auto">
+                  <div className="flex items-center justify-between font-bold text-white mb-1">
+                    <span>{pin.titulo}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deletePinMut.mutate({ id: pin.id });
+                      }}
+                      className="text-red-400 hover:text-red-300"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <p className="text-slate-300 text-[10px] leading-tight">{pin.hallazgo}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 6: Reporte Endoscópico con Captura de Imágenes */}
+      {activeTab === "ENDOSCOPIA" && (
+        <div className="space-y-5 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Camera className="w-4 h-4" /> Informe Endoscópico ORL con Galería
+            </h4>
+            <Button
+              size="sm"
+              onClick={handleSaveEndoscopy}
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold text-xs"
+            >
+              Guardar Reporte Endoscópico
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Tipo de Procedimiento Endoscópico</label>
               <input
                 type="text"
-                value={data.cuerdasVocales}
-                onChange={(e) => setData({ ...data, cuerdasVocales: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2"
-                placeholder="Movilidad bilateral conservada, nódulos en tercio anterior..."
+                value={tipoEndo}
+                onChange={(e) => setTipoEndo(e.target.value)}
+                className="w-full bg-slate-950/60 border border-slate-800 text-white rounded p-2"
+                placeholder="Ej: Nasofibrolaringoscopia Flexible..."
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Conclusión Endoscópica</label>
+              <input
+                type="text"
+                value={endoConclusion}
+                onChange={(e) => setEndoConclusion(e.target.value)}
+                className="w-full bg-slate-950/60 border border-slate-800 text-white rounded p-2"
+                placeholder="Conclusión diagnóstica..."
+              />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Fosas Nasales & Meatos</label>
+              <textarea
+                value={endoFosas}
+                onChange={(e) => setEndoFosas(e.target.value)}
+                rows={2}
+                className="w-full bg-slate-950/60 border border-slate-800 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Rinofaringe & Cavum</label>
+              <textarea
+                value={endoRino}
+                onChange={(e) => setEndoRino(e.target.value)}
+                rows={2}
+                className="w-full bg-slate-950/60 border border-slate-800 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Hipofaringe & Laringe</label>
+              <textarea
+                value={endoLaringe}
+                onChange={(e) => setEndoLaringe(e.target.value)}
+                rows={2}
+                className="w-full bg-slate-950/60 border border-slate-800 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Cuerdas Vocales & Glotis</label>
+              <textarea
+                value={endoCuerdas}
+                onChange={(e) => setEndoCuerdas(e.target.value)}
+                rows={2}
+                className="w-full bg-slate-950/60 border border-slate-800 text-white rounded p-2"
               />
             </div>
           </div>
         </div>
       )}
 
-      {/* Tab 4: Procedimientos & Notas */}
+      {/* Tab 7: Procedimientos */}
       {activeTab === "PROCEDIMIENTOS" && (
         <div className="space-y-5 pt-2">
-          {/* Procedures checklist */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Stethoscope className="w-3.5 h-3.5" /> Procedimientos ORL Realizados en Esta Consulta
+              <Stethoscope className="w-3.5 h-3.5" /> Procedimientos ORL Realizados
             </label>
             <div className="grid sm:grid-cols-2 gap-2">
               {PROCEDIMIENTOS_ORL.map((proc) => {
@@ -617,20 +921,6 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
                 );
               })}
             </div>
-          </div>
-
-          {/* Observations */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-blue-400" /> Observaciones y Plan ORL Especializado
-            </label>
-            <textarea
-              value={data.observacionesORL}
-              onChange={(e) => setData({ ...data, observacionesORL: e.target.value })}
-              rows={3}
-              className="w-full bg-slate-950/60 border border-slate-800 text-white rounded p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
-              placeholder="Indicaciones de irrigaciones nasales, tratamiento corticoideo, estudios audiométricos indicados..."
-            />
           </div>
         </div>
       )}

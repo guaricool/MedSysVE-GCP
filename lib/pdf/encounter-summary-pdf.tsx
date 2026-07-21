@@ -178,6 +178,11 @@ const SPECIALTY_PDF_LABELS: Record<string, string> = {
   // Dermatología
   fitzpatrick: "Fototipo Fitzpatrick", glogau: "Escala Glogau", lesionMorfologia: "Morfología de lesión",
   lesionDistribucion: "Distribución de lesión", lesionColor: "Coloración de lesión", notasDermatologia: "Notas dermatológicas",
+  // Otorrinolaringología
+  otoscopiaOD: "Otoscopia OD", otoscopiaOI: "Otoscopia OI", weberTest: "Test de Weber", rinneOD: "Rinne OD", rinneOI: "Rinne OI",
+  tabiqueNasal: "Tabique Nasal", cornetes: "Cornetes Nasales", brodskyAmigdalas: "Grado Amigdalino (Brodsky)", mallampatiScore: "Mallampati",
+  sintomasOtologicos: "Síntomas Otológicos", sintomasRinologicos: "Síntomas Rinológicos", sintomasLaringologicos: "Síntomas Laringológicos",
+  procedimientosRealizados: "Procedimientos ORL", observacionesORL: "Observaciones ORL",
 }
 
 const SPECIALTY_SIGNATURES_PDF: { name: string; keys: string[] }[] = [
@@ -195,6 +200,7 @@ const SPECIALTY_SIGNATURES_PDF: { name: string; keys: string[] }[] = [
   { name: "Obstetricia", keys: ["fpp", "semanasGestacion", "alturaUterina"] },
   { name: "Neumología", keys: ["fev1FvcRatio", "mmrcDyspnea", "auscultacionPulmonar"] },
   { name: "Oncología", keys: ["t", "n", "m", "estadio", "esquemaQuimio"] },
+  { name: "Otorrinolaringología", keys: ["otoscopiaOD", "otoscopiaOI", "weberTest", "tabiqueNasal"] },
 ]
 
 function getSpecialtyRows(datos: Record<string, unknown> | null | undefined): { label: string; value: string }[] {

@@ -42,8 +42,10 @@ import { expressOrderRouter } from "./expressOrder"
 import { marketingRouter } from "./marketing"
 import { adminMensajesRouter } from "./admin-mensajes"
 import { marketplaceRouter } from "./marketplace"
+import { orlRouter } from "./orl"
 
 export const appRouter = router({
+  orl: orlRouter,
   marketplace: marketplaceRouter,
   auth: authRouter,
   doctor: doctorRouter,

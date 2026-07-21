@@ -394,29 +394,31 @@ model Patient {
 }
 
 model PatientRegistration {
-  id             String             @id @default(cuid())
-  idDisplay      String
-  patientId      String
-  patient        Patient            @relation(fields: [patientId], references: [id])
-  workspaceId    String
-  workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  notasInternas  String?
-  antecedentes   Json?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  encounters     Encounter[]
-  documents      Document[]
-  appointments   Appointment[]
-  invoices       Invoice[]
-  labResults     LabResult[]
-  mensajes       Mensaje[]
-  alergias       Alergia[]
-  tags           PatientTag[]
-  vaccines       Vaccine[]
-  waitingEntries WaitingEntry[]
-  tasks          Task[]
-  insurances     PatientInsurance[]
-  consents       PatientConsent[]
+  id              String               @id @default(cuid())
+  idDisplay       String
+  patientId       String
+  patient         Patient              @relation(fields: [patientId], references: [id])
+  workspaceId     String
+  workspace       Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  notasInternas   String?
+  antecedentes    Json?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  encounters      Encounter[]
+  documents       Document[]
+  appointments    Appointment[]
+  invoices        Invoice[]
+  labResults      LabResult[]
+  mensajes        Mensaje[]
+  alergias        Alergia[]
+  tags            PatientTag[]
+  vaccines        Vaccine[]
+  waitingEntries  WaitingEntry[]
+  tasks           Task[]
+  insurances      PatientInsurance[]
+  consents        PatientConsent[]
+  orlAudiometries OrlAudiometry[]
+  orlEndoscopies  OrlEndoscopyReport[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -496,15 +498,18 @@ model Encounter {
   patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
   appointment         Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
 
-  diagnoses     Diagnosis[]
-  prescriptions Prescription[]
-  labOrders     LabOrder[]
-  imagingOrders ImagingOrder[]
-  documents     Document[]
-  invoices      Invoice[]
-  labResults    LabResult[]
-  consents      PatientConsent[]
-  scales        EncounterScale[]
+  diagnoses       Diagnosis[]
+  prescriptions   Prescription[]
+  labOrders       LabOrder[]
+  imagingOrders   ImagingOrder[]
+  documents       Document[]
+  invoices        Invoice[]
+  labResults      LabResult[]
+  consents        PatientConsent[]
+  scales          EncounterScale[]
+  orlAudiometries OrlAudiometry[]
+  orlEndoscopies  OrlEndoscopyReport[]
+  orlPins         OrlDiagramPin[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -1660,9 +1665,9 @@ model GlobalPatientProfile {
   grupoSanguineo       String?
 
   // Opcionales para importación (Global EHR)
-  alergias     Json     @default("[]")
-  vacunas      Json     @default("[]")
-  seguros      Json     @default("[]")
+  alergias     Json    @default("[]")
+  vacunas      Json    @default("[]")
+  seguros      Json    @default("[]")
   antecedentes String?
 
   createdAt DateTime @default(now())
@@ -1677,7 +1682,87 @@ model VerificationIntent {
   expiresAt        DateTime
   portalUserId     String?
   portalUser       PortalUser?        @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
-  registrationData String?            // JSON string containing registration details if user is not created yet
+  registrationData String? // JSON string containing registration details if user is not created yet
 
   createdAt DateTime @default(now())
+}
+
+// ============================================================================
+// OTORRINOLARINGOLOGÍA (ORL) - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model OrlAudiometry {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  /// Frecuencias (125, 250, 500, 1000, 2000, 4000, 8000 Hz) Vía Aérea en dB
+  airOd Json @default("{}")
+  airOi Json @default("{}")
+
+  /// Frecuencias (250, 500, 1000, 2000, 4000 Hz) Vía Ósea en dB
+  boneOd Json @default("{}")
+  boneOi Json @default("{}")
+
+  /// Logoaudiometría (% discriminación) y Timpanometría
+  logoaudioOd   Int?
+  logoaudioOi   Int?
+  srtcOd        Int?
+  srtcOi        Int?
+  tympanogramOd String?
+  tympanogramOi String?
+  observaciones String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model OrlEndoscopyReport {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  tipoProcedimiento       String
+  hallazgosFosasNasales   String?  @db.Text
+  hallazgosRinofaringe    String?  @db.Text
+  hallazgosLaringe        String?  @db.Text
+  hallazgosCuerdasVocales String?  @db.Text
+  imagenesUrl             String[] @default([])
+  conclusion              String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model OrlDiagramPin {
+  id          String  @id @default(cuid())
+  encounterId String
+  region      String
+  xPct        Float
+  yPct        Float
+  titulo      String
+  hallazgo    String  @db.Text
+  gravedad    String? @default("LEVE")
+
+  createdAt DateTime @default(now())
+
+  encounter Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
 }
