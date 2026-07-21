@@ -43,8 +43,10 @@ import { marketingRouter } from "./marketing"
 import { adminMensajesRouter } from "./admin-mensajes"
 import { marketplaceRouter } from "./marketplace"
 import { orlRouter } from "./orl"
+import { traumaRouter } from "./trauma"
 
 export const appRouter = router({
+  trauma: traumaRouter,
   orl: orlRouter,
   marketplace: marketplaceRouter,
   auth: authRouter,

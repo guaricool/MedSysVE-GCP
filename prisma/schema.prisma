@@ -394,31 +394,33 @@ model Patient {
 }
 
 model PatientRegistration {
-  id              String               @id @default(cuid())
-  idDisplay       String
-  patientId       String
-  patient         Patient              @relation(fields: [patientId], references: [id])
-  workspaceId     String
-  workspace       Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  notasInternas   String?
-  antecedentes    Json?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  encounters      Encounter[]
-  documents       Document[]
-  appointments    Appointment[]
-  invoices        Invoice[]
-  labResults      LabResult[]
-  mensajes        Mensaje[]
-  alergias        Alergia[]
-  tags            PatientTag[]
-  vaccines        Vaccine[]
-  waitingEntries  WaitingEntry[]
-  tasks           Task[]
-  insurances      PatientInsurance[]
-  consents        PatientConsent[]
-  orlAudiometries OrlAudiometry[]
-  orlEndoscopies  OrlEndoscopyReport[]
+  id                   String                @id @default(cuid())
+  idDisplay            String
+  patientId            String
+  patient              Patient               @relation(fields: [patientId], references: [id])
+  workspaceId          String
+  workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  notasInternas        String?
+  antecedentes         Json?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  encounters           Encounter[]
+  documents            Document[]
+  appointments         Appointment[]
+  invoices             Invoice[]
+  labResults           LabResult[]
+  mensajes             Mensaje[]
+  alergias             Alergia[]
+  tags                 PatientTag[]
+  vaccines             Vaccine[]
+  waitingEntries       WaitingEntry[]
+  tasks                Task[]
+  insurances           PatientInsurance[]
+  consents             PatientConsent[]
+  orlAudiometries      OrlAudiometry[]
+  orlEndoscopies       OrlEndoscopyReport[]
+  traumaImplantes      TraumaImplante[]
+  traumaRehabProtocols TraumaRehabProtocol[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -498,18 +500,21 @@ model Encounter {
   patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
   appointment         Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
 
-  diagnoses       Diagnosis[]
-  prescriptions   Prescription[]
-  labOrders       LabOrder[]
-  imagingOrders   ImagingOrder[]
-  documents       Document[]
-  invoices        Invoice[]
-  labResults      LabResult[]
-  consents        PatientConsent[]
-  scales          EncounterScale[]
-  orlAudiometries OrlAudiometry[]
-  orlEndoscopies  OrlEndoscopyReport[]
-  orlPins         OrlDiagramPin[]
+  diagnoses               Diagnosis[]
+  prescriptions           Prescription[]
+  labOrders               LabOrder[]
+  imagingOrders           ImagingOrder[]
+  documents               Document[]
+  invoices                Invoice[]
+  labResults              LabResult[]
+  consents                PatientConsent[]
+  scales                  EncounterScale[]
+  orlAudiometries         OrlAudiometry[]
+  orlEndoscopies          OrlEndoscopyReport[]
+  orlPins                 OrlDiagramPin[]
+  traumaImplantes         TraumaImplante[]
+  traumaAoClassifications TraumaAoClassification[]
+  traumaRehabProtocols    TraumaRehabProtocol[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -1765,4 +1770,74 @@ model OrlDiagramPin {
   encounter Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
 
   @@index([encounterId])
+}
+
+// ============================================================================
+// TRAUMATOLOGÍA Y ORTOPEDIA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model TraumaImplante {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  tipoMaterial  String // Placa Bloqueada, Tornillo Cortical, Clavo Intramedular, Prótesis Hip/Knee
+  marca         String // Synthes, Stryker, Zimmer, Arthrex, etc.
+  modelo        String?
+  lote          String // Número de lote / serie para trazabilidad
+  material      String? // Titanio, Acero 316L, PEEK
+  zonaAnatomica String // Ej: Fémur Distal Derecho, Tibia Proximal Izquierda
+  cantidad      Int     @default(1)
+  observaciones String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model TraumaAoClassification {
+  id          String @id @default(cuid())
+  encounterId String
+
+  hueso           String // Húmero [1], Cúbito/Radio [2], Fémur [3], Tibia/Peroné [4]
+  segmento        String // Proximal [1], Diafisario [2], Distal [3]
+  codigoAO        String // Ej: 32-A1, 12-C3, 33-C2
+  descripcion     String
+  mecanismoLesion String?
+
+  createdAt DateTime @default(now())
+
+  encounter Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+}
+
+model TraumaRehabProtocol {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  nivelCarga           String // CARGA_NULA | CARGA_PARCIAL_25 | CARGA_PARCIAL_50 | CARGA_TOTAL | SEGUN_TOLERANCIA
+  usoOrtesis           String? // Bota Walker, Inmovilizador, Rodillera Mecánica, Muletas
+  faseRehab            String // Fase I (Protección), Fase II (Movilización), Fase III (Fortalecimiento)
+  ejerciciosPermitidos String? @db.Text
+  contraindicaciones   String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
 }
