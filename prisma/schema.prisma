@@ -394,16 +394,16 @@ model Patient {
 }
 
 model PatientRegistration {
-  id                      String                       @id @default(cuid())
+  id                      String                         @id @default(cuid())
   idDisplay               String
   patientId               String
-  patient                 Patient                      @relation(fields: [patientId], references: [id])
+  patient                 Patient                        @relation(fields: [patientId], references: [id])
   workspaceId             String
-  workspace               Workspace                    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace               Workspace                      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   notasInternas           String?
   antecedentes            Json?
-  createdAt               DateTime                     @default(now())
-  updatedAt               DateTime                     @updatedAt
+  createdAt               DateTime                       @default(now())
+  updatedAt               DateTime                       @updatedAt
   encounters              Encounter[]
   documents               Document[]
   appointments            Appointment[]
@@ -466,6 +466,9 @@ model PatientRegistration {
   uroIpssScores           UroIpssScore[]
   uroPsas                 UroPsaCalculator[]
   uroFlowmetries          UroUroflowmetry[]
+  ophthoRefractions       OphthoRefractionVisualAcuity[]
+  ophthoGlaucomas         OphthoGlaucomaRetinopathy[]
+  ophthoFindings          OphthoEyeFindings[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -604,6 +607,9 @@ model Encounter {
   uroIpssScores           UroIpssScore[]
   uroPsas                 UroPsaCalculator[]
   uroFlowmetries          UroUroflowmetry[]
+  ophthoRefractions       OphthoRefractionVisualAcuity[]
+  ophthoGlaucomas         OphthoGlaucomaRetinopathy[]
+  ophthoFindings          OphthoEyeFindings[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -3060,6 +3066,89 @@ model UroUroflowmetry {
   volumenEmitidoMl       Float // mL
   residuoPostMiccionalMl Float // mL (RPM)
   interpretacionUroflujo String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// OFTALMOLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model OphthoRefractionVisualAcuity {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  avOdSinCorrecion  String? // 20/20, 20/40, etc.
+  avOiSinCorrecion  String?
+  esferaOd          Float? // -15.00 a +15.00
+  cilindroOd        Float?
+  ejeOd             Int? // 0 a 180
+  adicionOd         Float?
+  avOdConCorreccion String?
+  esferaOi          Float?
+  cilindroOi        Float?
+  ejeOi             Int?
+  adicionOi         Float?
+  avOiConCorreccion String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model OphthoGlaucomaRetinopathy {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  pioOdMmHg               Float? // Presión Intraocular OD
+  pioOiMmHg               Float? // Presión Intraocular OI
+  tratamientoHipotensor   String?
+  retinopatiaDiabetica    String? // RDNP Leve/Mod/Sev, RDP
+  retinopatiaHipertensiva String? // Grado I a IV
+  excavacionPapilarOd     Float? // 0.1 a 0.9
+  excavacionPapilarOi     Float? // 0.1 a 0.9
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model OphthoEyeFindings {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  segmentoAnteriorOd  String? @db.Text
+  segmentoAnteriorOi  String? @db.Text
+  segmentoPosteriorOd String? @db.Text
+  segmentoPosteriorOi String? @db.Text
+  hallazgosDiagramaOd String? @db.Text
+  hallazgosDiagramaOi String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
