@@ -210,9 +210,10 @@ export function NeumonologiaForm({ encounterId, disabled, initialData = {}, pati
             <Button
               size="sm"
               onClick={handleSaveSpir}
-              className="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-xs"
+              disabled={saveSpirMut.isPending}
+              className="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-xs disabled:opacity-50"
             >
-              Guardar Espirometría
+              {saveSpirMut.isPending ? "Guardando..." : "Guardar Espirometría"}
             </Button>
           </div>
 

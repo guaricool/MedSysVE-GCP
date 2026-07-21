@@ -360,9 +360,10 @@ export function CardiologiaForm({ encounterId, disabled, initialData = {}, patie
             <Button
               size="sm"
               onClick={handleSaveEkg}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs"
+              disabled={saveEkgMut.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs disabled:opacity-50"
             >
-              Guardar EKG
+              {saveEkgMut.isPending ? "Guardando..." : "Guardar EKG"}
             </Button>
           </div>
 

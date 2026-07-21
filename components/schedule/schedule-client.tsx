@@ -49,7 +49,10 @@ export function ScheduleClient() {
     onSuccess: () => { refetchExceptions(); setNewBlockDate(""); setNewBlockMotivo("") }
   })
   const deleteException = (trpc.availability as any).deleteException.useMutation({
-    onSuccess: () => refetchExceptions()
+    onSuccess: () => refetchExceptions(),
+    onError: (err: any) => {
+      alert("Error al eliminar la excepción de horario: " + (err?.message || "Intente nuevamente."))
+    }
   })
 
   const current: SlotState[] =
@@ -203,7 +206,18 @@ export function ScheduleClient() {
                   {new Date(ex.fecha).toLocaleDateString("es-VE", { dateStyle: "long", timeZone: 'America/Caracas' })}
                   {ex.motivo && <span className="ml-2 text-slate-500">· {ex.motivo}</span>}
                 </span>
-                <button onClick={() => deleteException.mutate({ id: ex.id })} className="text-slate-500 hover:text-red-400 ml-2">×</button>
+                <button 
+                  onClick={() => {
+                    if (window.confirm("¿Confirma eliminar esta fecha bloqueada?")) {
+                      deleteException.mutate({ id: ex.id })
+                    }
+                  }} 
+                  disabled={deleteException.isPending}
+                  className="text-slate-500 hover:text-red-400 ml-2 disabled:opacity-50"
+                  title="Eliminar excepción"
+                >
+                  ×
+                </button>
               </li>
             ))}
           </ul>

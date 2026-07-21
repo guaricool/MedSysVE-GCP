@@ -316,7 +316,11 @@ export function ReferralsClient() {
                   </button>
                   <button
                     disabled={isBusy}
-                    onClick={() => reject.mutate({ documentId: r.id })}
+                    onClick={() => {
+                      if (window.confirm("¿Confirma rechazar esta remisión médica de paciente?")) {
+                        reject.mutate({ documentId: r.id })
+                      }
+                    }}
                     className="flex items-center gap-1.5 rounded border border-red-800 bg-red-900/30 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-900/50 disabled:opacity-50"
                   >
                     <XCircle size={13} />
