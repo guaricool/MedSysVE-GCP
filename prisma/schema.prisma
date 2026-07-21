@@ -454,6 +454,9 @@ model PatientRegistration {
   infectoAntibiograms     InfectoAntibiogram[]
   infectoRenalAdjustments InfectoRenalAdjustment[]
   infectoControls         InfectoInfectionControl[]
+  internalCharlsons       InternalCharlsonIndex[]
+  internalScores          InternalClinicalScores[]
+  internalPolypharmacies  InternalPolypharmacyAlert[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -580,6 +583,9 @@ model Encounter {
   infectoAntibiograms     InfectoAntibiogram[]
   infectoRenalAdjustments InfectoRenalAdjustment[]
   infectoControls         InfectoInfectionControl[]
+  internalCharlsons       InternalCharlsonIndex[]
+  internalScores          InternalClinicalScores[]
+  internalPolypharmacies  InternalPolypharmacyAlert[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2746,6 +2752,76 @@ model InfectoInfectionControl {
   germenMultidrogorresistenteMdr String? // MRSA, KPC, VRE, Acinetobacter XDR
   notificadoEpidemiologia        Boolean @default(false)
   observacionesControlInfeccion  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// MEDICINA INTERNA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model InternalCharlsonIndex {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  charlsonTotalScore             Int // Suma de puntos por comorbilidad
+  estimated10YearSurvivalPercent Float // Survival %
+  comorbilidadesJson             Json // Array de comorbilidades seleccionadas
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model InternalClinicalScores {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  fourTScoreHit        Int? // 0 a 8 pts (HIT)
+  fourTHitRiskCategory String? // Bajo, Intermedio, Alto
+  childPughScore       Int? // 5 a 15 pts (Child-Pugh)
+  childPughClass       String? // Clase A, B, C
+  meldScore            Float? // Score MELD
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model InternalPolypharmacyAlert {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  conteoMedicamentosActivos     Int
+  criteriosBeersAplicables      String? @db.Text
+  criteriosStoppStartAplicables String? @db.Text
+  planDesprescripcion           String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

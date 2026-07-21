@@ -1,404 +1,417 @@
-"use client"
+"use client";
 
-import { useState, useMemo, useEffect } from "react"
-import { trpc } from "@/lib/trpc-client"
-import { Activity, CheckCircle, ShieldAlert } from "lucide-react"
-import { useUnsaved } from "@/components/providers/unsaved-changes-provider"
+import { useState, useMemo, useEffect } from "react";
+import { trpc } from "@/lib/trpc-client";
+import { useUnsaved } from "@/components/providers/unsaved-changes-provider";
+import { Button } from "@/components/ui/button";
+import {
+  Activity,
+  Calculator,
+  ShieldAlert,
+  AlertTriangle,
+  Pill,
+  HeartPulse,
+  Award,
+  CheckCircle2,
+} from "lucide-react";
 
 interface Props {
-  encounterId: string
-  disabled?: boolean
-  initialData?: {
-    wellsAnswers?: Record<string, boolean>
-    charlsonAnswers?: Record<string, boolean>
-    edadDecada?: number
-    creatinina?: number
-    pacienteEdad?: number
-    pacienteSexo?: string
-    tfgeCalculada?: number
-  }
+  encounterId: string;
+  patientRegistrationId?: string;
+  patientRegId?: string;
+  disabled?: boolean;
+  initialData?: any;
 }
-
-const WELLS_CRITERIA = [
-  { key: "cancer", label: "Cáncer activo (tratamiento en los últimos 6 meses o paliativo)", pts: 1 },
-  { key: "paralisis", label: "Parálisis, paresia o inmovilización reciente con escayola de miembro inferior", pts: 1 },
-  { key: "encamamiento", label: "Encamamiento reciente >3 días o cirugía mayor en las últimas 12 semanas", pts: 1 },
-  { key: "dolorPunto", label: "Dolor localizado a lo largo del trayecto venoso profundo", pts: 1 },
-  { key: "tumefaccionPierna", label: "Tumefacción de toda la pierna", pts: 1 },
-  { key: "tumefaccionPantorrilla", label: "Aumento del perímetro de la pantorrilla >3 cm respecto a la otra", pts: 1 },
-  { key: "edema", label: "Edema con fóvea (mayor en la pierna sintomática)", pts: 1 },
-  { key: "venasColaterales", label: "Presencia de venas colaterales superficiales (no varicosas)", pts: 1 },
-  { key: "diagnosticoAlternativo", label: "Diagnóstico alternativo tanto o más probable que la TVP", pts: -2 },
-]
 
 const CHARLSON_ITEMS = [
   { key: "infarto", label: "Infarto agudo de miocardio previo", pts: 1 },
   { key: "insuficienciaCardiaca", label: "Insuficiencia cardíaca congestiva", pts: 1 },
   { key: "arteriopatia", label: "Enfermedad arterial periférica", pts: 1 },
-  { key: "cerebrovascular", label: "Enfermedad cerebrovascular o hemi/paraplejia", pts: 1 },
-  { key: "demencia", label: "Demencia", pts: 1 },
+  { key: "cerebrovascular", label: "Enfermedad cerebrovascular / ACV", pts: 1 },
+  { key: "demencia", label: "Demencia / Deterioro cognitivo", pts: 1 },
   { key: "pulmonarCronica", label: "Enfermedad pulmonar crónica (EPOC/Asma)", pts: 1 },
-  { key: "conectivopatia", label: "Conectivopatía / Enfermedad reumatológica", pts: 1 },
+  { key: "conectivopatia", label: "Conectivopatía / Artritis reumatoide", pts: 1 },
   { key: "ulcera", label: "Enfermedad ulcerosa péptica", pts: 1 },
   { key: "hepatopatiaLeve", label: "Hepatopatía leve", pts: 1 },
   { key: "diabetesSinOrgano", label: "Diabetes sin daño de órgano blanco", pts: 1 },
   { key: "diabetesConOrgano", label: "Diabetes con daño de órgano blanco", pts: 2 },
   { key: "nefropatia", label: "Enfermedad renal moderada o severa", pts: 2 },
-  { key: "leucemia", label: "Leucemia o Linfoma", pts: 2 },
   { key: "tumorSolido", label: "Tumor sólido sin metástasis", pts: 2 },
+  { key: "leucemia", label: "Leucemia o Linfoma", pts: 2 },
   { key: "hepatopatiaModerada", label: "Hepatopatía moderada o severa (Cirrosis)", pts: 3 },
   { key: "tumorMetastasis", label: "Tumor sólido metastásico", pts: 6 },
   { key: "sida", label: "SIDA / VIH sintomático", pts: 6 },
-]
+];
 
-export function MedicinaInternaForm({ encounterId, disabled, initialData = {} }: Props) {
-  const [wellsAnswers, setWellsAnswers] = useState<Record<string, boolean>>(() => {
-    if (initialData.wellsAnswers) return initialData.wellsAnswers
-    const initial: Record<string, boolean> = {}
-    WELLS_CRITERIA.forEach((item) => {
-      initial[item.key] = false
-    })
-    return initial
-  })
+export function MedicinaInternaForm({ encounterId, disabled, initialData = {}, patientRegistrationId, patientRegId }: Props) {
+  const effectivePatId = patientRegistrationId || patientRegId || "sandbox-demo-pat";
+  const [activeTab, setActiveTab] = useState<"CHARLSON" | "SCORES" | "POLIFARMACIA">("CHARLSON");
+  const [saved, setSaved] = useState(false);
+  const { setDirty } = useUnsaved();
 
-  const [charlsonAnswers, setCharlsonAnswers] = useState<Record<string, boolean>>(() => {
-    if (initialData.charlsonAnswers) return initialData.charlsonAnswers
-    const initial: Record<string, boolean> = {}
-    CHARLSON_ITEMS.forEach((item) => {
-      initial[item.key] = false
-    })
-    return initial
-  })
+  // tRPC Queries & Mutations
+  const { data: dbCci, refetch: refetchCci } = (trpc.internal.getCharlsonIndex.useQuery as any)({ encounterId });
+  const { data: dbScores, refetch: refetchScores } = (trpc.internal.getClinicalScores.useQuery as any)({ encounterId });
+  const { data: dbPoly, refetch: refetchPoly } = (trpc.internal.getPolypharmacyAlert.useQuery as any)({ encounterId });
 
-  const [edadDecada, setEdadDecada] = useState<number>(initialData.edadDecada || 0)
+  const saveCciMut = (trpc.internal.saveCharlsonIndex.useMutation as any)({ onSuccess: () => refetchCci() });
+  const saveScoresMut = (trpc.internal.saveClinicalScores.useMutation as any)({ onSuccess: () => refetchScores() });
+  const savePolyMut = (trpc.internal.savePolypharmacyAlert.useMutation as any)({ onSuccess: () => refetchPoly() });
 
-  // GFR parameters
-  const [creatinina, setCreatinina] = useState<string>(initialData.creatinina?.toString() || "")
-  const [pacienteEdad, setPacienteEdad] = useState<string>(initialData.pacienteEdad?.toString() || "60")
-  const [pacienteSexo, setPacienteSexo] = useState(initialData.pacienteSexo || "Femenino")
+  // Charlson State
+  const [selectedCharlson, setSelectedCharlson] = useState<Record<string, boolean>>({
+    diabetesSinOrgano: true,
+    nefropatia: true,
+    infarto: true,
+  });
 
-  const [saved, setSaved] = useState(false)
+  // Scores State
+  const [fourTScore, setFourTScore] = useState(2);
+  const [fourTRisk, setFourTRisk] = useState("Probabilidad Baja de HIT (<= 3 pts)");
+  const [childPughScore, setChildPughScore] = useState(6);
+  const [childPughClass, setChildPughClass] = useState("Clase A (Cirrosis Compensada)");
+  const [meldScore, setMeldScore] = useState(11.2);
 
-  const { setDirty } = useUnsaved()
-
-  const isDirty = useMemo(() => {
-    const initialWells = initialData.wellsAnswers || {}
-    const initialCharlson = initialData.charlsonAnswers || {}
-    
-    // Ensure all keys are checked, or simplify with JSON.stringify if order is guaranteed, 
-    // but since we initialize them with all keys, JSON.stringify should be safe.
-    
-    return (
-      JSON.stringify(wellsAnswers) !== JSON.stringify(initialWells) ||
-      JSON.stringify(charlsonAnswers) !== JSON.stringify(initialCharlson) ||
-      edadDecada !== (initialData.edadDecada || 0) ||
-      creatinina !== (initialData.creatinina?.toString() || "") ||
-      pacienteEdad !== (initialData.pacienteEdad?.toString() || "60") ||
-      pacienteSexo !== (initialData.pacienteSexo || "Femenino")
-    )
-  }, [
-    wellsAnswers, charlsonAnswers, edadDecada, creatinina, pacienteEdad, pacienteSexo, initialData
-  ])
+  // Polypharmacy State
+  const [numFármacos, setNumFarmacos] = useState(7);
+  const [beers, setBeers] = useState("Uso de Benzodiazepina de vida media larga en adulto mayor (Riesgo de caídas).");
+  const [stoppStart, setStoppStart] = useState("STOPP: AINE prolongado con ClCr < 50. START: Iniciar Estatina en prevención secundaria.");
+  const [planDesprescripcion, setPlanDesprescripcion] = useState("Descontinuar alprazolam progresivamente. Sustituir AINE por paracetamol.");
 
   useEffect(() => {
-    setDirty("medicinaInterna", isDirty)
-  }, [isDirty, setDirty])
-
-  const utils = trpc.useUtils()
-  const save = (trpc.encounter.update as any).useMutation({
-    onSuccess: () => {
-      utils.invalidate()
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    },
-  })
-
-  // Calculate Wells Score
-  const wellsSum = WELLS_CRITERIA.reduce((acc, item) => {
-    return acc + (wellsAnswers[item.key] ? item.pts : 0)
-  }, 0)
-
-  let wellsProbabilidad = "Baja probabilidad (<5%)"
-  if (wellsSum >= 1 && wellsSum <= 2) wellsProbabilidad = "Probabilidad moderada (17%)"
-  if (wellsSum >= 3) wellsProbabilidad = "Alta probabilidad (17% a 53% - Requiere Eco Doppler)"
-
-  // Calculate Charlson
-  const charlsonComorbilidades = CHARLSON_ITEMS.reduce((acc, item) => {
-    return acc + (charlsonAnswers[item.key] ? item.pts : 0)
-  }, 0)
-  const charlsonTotal = charlsonComorbilidades + edadDecada
-  const survivalProb = parseFloat((Math.pow(0.983, Math.exp(charlsonTotal * 0.9)) * 100).toFixed(1))
-
-  // Calculate GFR (CKD-EPI 2021)
-  const scr = Number(creatinina)
-  const ageVal = Number(pacienteEdad)
-  let gfr = 0
-  let gfrStage = "Sin calcular"
-
-  if (scr > 0 && ageVal > 0) {
-    const isFemale = pacienteSexo === "Femenino"
-    const kappa = isFemale ? 0.7 : 0.9
-    const alpha = isFemale ? -0.241 : -0.302
-    const sexFactor = isFemale ? 1.012 : 1.0
-
-    const minRatio = Math.min(scr / kappa, 1)
-    const maxRatio = Math.max(scr / kappa, 1)
-
-    gfr = 142 * Math.pow(minRatio, alpha) * Math.pow(maxRatio, -1.200) * Math.pow(0.9938, ageVal) * sexFactor
-    gfr = parseFloat(gfr.toFixed(1))
-
-    if (gfr >= 90) gfrStage = "Estadio G1 (Normal o elevado)"
-    else if (gfr >= 60) gfrStage = "Estadio G2 (Ligeramente disminuido)"
-    else if (gfr >= 45) gfrStage = "Estadio G3a (Disminución ligera a moderada)"
-    else if (gfr >= 30) gfrStage = "Estadio G3b (Disminución moderada a grave)"
-    else if (gfr >= 15) gfrStage = "Estadio G4 (Disminución grave)"
-    else gfrStage = "Estadio G5 (Fallo renal / Uremia)"
-  }
-
-  function handleSave() {
-    const payload = {
-      wellsAnswers,
-      charlsonAnswers,
-      edadDecada,
-      creatinina: creatinina ? Number(creatinina) : undefined,
-      pacienteEdad: pacienteEdad ? Number(pacienteEdad) : undefined,
-      pacienteSexo,
-      tfgeCalculada: gfr > 0 ? gfr : undefined,
+    if (dbCci && Array.isArray(dbCci.comorbilidadesJson)) {
+      const map: Record<string, boolean> = {};
+      dbCci.comorbilidadesJson.forEach((c: any) => {
+        const item = CHARLSON_ITEMS.find((it) => it.label === c.nombre);
+        if (item) map[item.key] = true;
+      });
+      setSelectedCharlson(map);
     }
+  }, [dbCci]);
 
-    save.mutate({
-      id: encounterId,
-      datosEspecialidad: payload,
-    })
-  }
+  useEffect(() => {
+    if (dbScores) {
+      if (dbScores.fourTScoreHit !== null) setFourTScore(dbScores.fourTScoreHit);
+      if (dbScores.fourTHitRiskCategory) setFourTRisk(dbScores.fourTHitRiskCategory);
+      if (dbScores.childPughScore !== null) setChildPughScore(dbScores.childPughScore);
+      if (dbScores.childPughClass) setChildPughClass(dbScores.childPughClass);
+      if (dbScores.meldScore !== null) setMeldScore(dbScores.meldScore);
+    }
+  }, [dbScores]);
 
-  const toggleWells = (key: string) => {
-    if (disabled) return
-    setWellsAnswers((prev) => ({ ...prev, [key]: !prev[key] }))
-  }
+  useEffect(() => {
+    if (dbPoly) {
+      setNumFarmacos(dbPoly.conteoMedicamentosActivos);
+      if (dbPoly.criteriosBeersAplicables) setBeers(dbPoly.criteriosBeersAplicables);
+      if (dbPoly.criteriosStoppStartAplicables) setStoppStart(dbPoly.criteriosStoppStartAplicables);
+      if (dbPoly.planDesprescripcion) setPlanDesprescripcion(dbPoly.planDesprescripcion);
+    }
+  }, [dbPoly]);
 
-  const toggleCharlson = (key: string) => {
-    if (disabled) return
-    setCharlsonAnswers((prev) => ({ ...prev, [key]: !prev[key] }))
-  }
+  const charlsonTotalScore = useMemo(() => {
+    let pts = 0;
+    CHARLSON_ITEMS.forEach((it) => {
+      if (selectedCharlson[it.key]) pts += it.pts;
+    });
+    return pts;
+  }, [selectedCharlson]);
 
-  const [activeTab, setActiveTab] = useState<"WELLS" | "CHARLSON" | "RENAL">("WELLS")
+  const survival10Years = useMemo(() => {
+    // Estimación matemática estándar de Charlson survival: 0.983^(e^(CCI * 0.9))
+    const s = Math.pow(0.983, Math.exp(charlsonTotalScore * 0.9)) * 100;
+    return Math.max(1, Math.min(99, Math.round(s * 10) / 10));
+  }, [charlsonTotalScore]);
+
+  const handleToggleCharlson = (key: string) => {
+    setSelectedCharlson((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSaveCharlson = () => {
+    const list = CHARLSON_ITEMS.filter((it) => selectedCharlson[it.key]).map((it) => ({
+      nombre: it.label,
+      pts: it.pts,
+    }));
+    saveCciMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      charlsonTotalScore,
+      estimated10YearSurvivalPercent: survival10Years,
+      comorbilidadesJson: list,
+    });
+  };
+
+  const handleSaveScores = () => {
+    saveScoresMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      fourTScoreHit: fourTScore,
+      fourTHitRiskCategory: fourTRisk,
+      childPughScore,
+      childPughClass,
+      meldScore,
+    });
+  };
+
+  const handleSavePoly = () => {
+    savePolyMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      conteoMedicamentosActivos: numFármacos,
+      criteriosBeersAplicables: beers,
+      criteriosStoppStartAplicables: stoppStart,
+      planDesprescripcion,
+    });
+  };
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 space-y-4">
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold text-white mr-auto">
-          <ShieldAlert className="h-4 w-4 text-indigo-400" />
-          Valoración de Medicina Interna y Comorbilidades
-        </h3>
-        
-        {/* Navigation Tabs */}
+    <div className="space-y-4 bg-slate-900 border border-slate-800 p-5 rounded-xl text-slate-100 shadow-md">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 bg-sky-500/10 border border-sky-500/30 rounded-lg text-sky-400">
+            <HeartPulse className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-white">Medicina Interna & Evaluación Multiorgánica</h3>
+            <p className="text-xs text-slate-400">Índice Charlson (CCI), HIT 4T / Child-Pugh / MELD & Polifarmacia (Beers / STOPP-START)</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Sub-Tabs */}
+      <div className="flex flex-wrap items-center gap-2 bg-slate-950/70 p-1.5 rounded-lg border border-slate-800">
         <button
-          type="button"
-          onClick={() => setActiveTab("WELLS")}
-          className={`rounded px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === "WELLS" ? "bg-indigo-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
-          }`}
-        >
-          Criterios de Wells
-        </button>
-        <button
-          type="button"
           onClick={() => setActiveTab("CHARLSON")}
-          className={`rounded px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === "CHARLSON" ? "bg-indigo-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "CHARLSON"
+              ? "bg-sky-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
           }`}
         >
-          Índice de Charlson
+          <Award className="w-3.5 h-3.5" /> Índice Charlson (CCI)
         </button>
+
         <button
-          type="button"
-          onClick={() => setActiveTab("RENAL")}
-          className={`rounded px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === "RENAL" ? "bg-indigo-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
+          onClick={() => setActiveTab("SCORES")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "SCORES"
+              ? "bg-sky-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
           }`}
         >
-          Función Renal
+          <Calculator className="w-3.5 h-3.5" /> Scores 4T HIT / Child-Pugh / MELD
+        </button>
+
+        <button
+          onClick={() => setActiveTab("POLIFARMACIA")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "POLIFARMACIA"
+              ? "bg-sky-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <Pill className="w-3.5 h-3.5" /> Polifarmacia & Desprescripción
         </button>
       </div>
 
-      {activeTab === "WELLS" && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
-              Criterios de Wells (Probabilidad de TVP)
-            </h4>
-            <div className="text-right shrink-0">
-              <span className="text-xs font-bold text-indigo-400">Puntaje: {wellsSum}</span>
-              <span className="text-[10px] text-slate-400 block">{wellsProbabilidad}</span>
-            </div>
-          </div>
-
-          <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-1">
-            {WELLS_CRITERIA.map((item) => {
-              const active = wellsAnswers[item.key]
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => toggleWells(item.key)}
-                  className={`w-full flex items-center justify-between rounded p-2 text-xs border transition-colors text-left ${
-                    active
-                      ? "bg-indigo-900/30 border-indigo-750 text-indigo-300 font-semibold"
-                      : "border-slate-800 bg-slate-900/50 text-slate-400 hover:text-white"
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  <span className="text-[10px] font-semibold text-slate-500 shrink-0 ml-2">
-                    {item.pts > 0 ? `+${item.pts}` : item.pts} pt{Math.abs(item.pts) > 1 ? "s" : ""}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
+      {/* Tab 1: Índice de Charlson (CCI) */}
       {activeTab === "CHARLSON" && (
-        <div className="space-y-3">
-          {/* Middle: Charlson Comorbidity Index */}
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
-              Índice de Comorbilidad de Charlson (CCI)
-            </h4>
-            <div className="text-right shrink-0">
-              <span className="text-xs font-bold text-indigo-400">Total: {charlsonTotal}</span>
-              <span className="text-[10px] text-slate-400 block">Supervivencia a 10 años: {survivalProb}%</span>
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Award className="w-4 h-4" /> Índice de Comorbilidad de Charlson (CCI)
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Predicción de mortalidad a 10 años en pacientes con múltiples patologías de base.</p>
             </div>
+            <Button
+              size="sm"
+              onClick={handleSaveCharlson}
+              className="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs"
+            >
+              Guardar Charlson CCI
+            </Button>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 text-xs">
-            <label className="flex items-center justify-between text-slate-400 border-b border-slate-800 pb-1.5">
-              <span>Puntaje por Edad</span>
-              <select
-                disabled={disabled}
-                value={edadDecada}
-                onChange={(e) => setEdadDecada(Number(e.target.value))}
-                className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-white w-32"
-              >
-                <option value={0}>&lt;50 años (0 pts)</option>
-                <option value={1}>50-59 años (1 pt)</option>
-                <option value={2}>60-69 años (2 pts)</option>
-                <option value={3}>70-79 años (3 pts)</option>
-                <option value={4}>&gt;=80 años (4 pts)</option>
-              </select>
-            </label>
+          <div className="grid md:grid-cols-3 gap-4 text-xs">
+            {/* Checklist of Charlson */}
+            <div className="md:col-span-2 bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2 max-h-72 overflow-y-auto">
+              <span className="font-bold text-slate-200 block mb-1">Seleccionar Comorbilidades Activas:</span>
+              <div className="grid sm:grid-cols-2 gap-2">
+                {CHARLSON_ITEMS.map((it) => (
+                  <label key={it.key} className="flex items-center gap-2 p-1.5 rounded hover:bg-slate-900 border border-slate-850 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!selectedCharlson[it.key]}
+                      onChange={() => handleToggleCharlson(it.key)}
+                      className="w-3.5 h-3.5 accent-sky-500 rounded"
+                    />
+                    <span className="text-[11px] text-slate-300">{it.label} <strong className="text-sky-400">({it.pts} pt)</strong></span>
+                  </label>
+                ))}
+              </div>
+            </div>
 
-            <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
-              {CHARLSON_ITEMS.map((item) => {
-                const active = charlsonAnswers[item.key]
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => toggleCharlson(item.key)}
-                    className={`w-full flex items-center justify-between rounded p-2 text-[11px] border transition-colors text-left ${
-                      active
-                        ? "bg-indigo-900/30 border-indigo-750 text-indigo-300 font-semibold"
-                        : "border-slate-800 bg-slate-900/50 text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                    <span className="text-[10px] font-semibold text-slate-500 shrink-0 ml-2">
-                      +{item.pts} pt{item.pts > 1 ? "s" : ""}
-                    </span>
-                  </button>
-                )
-              })}
+            {/* Score Output */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4 flex flex-col justify-center text-center">
+              <div>
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Charlson CCI Total:</span>
+                <p className="text-3xl font-extrabold text-sky-400 mt-1">{charlsonTotalScore} Puntos</p>
+              </div>
+
+              <div className="border-t border-slate-800 pt-3">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Supervivencia Estimada a 10 años:</span>
+                <p className="text-2xl font-extrabold text-emerald-400 mt-1">{survival10Years}%</p>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {activeTab === "RENAL" && (
-        <div className="rounded-lg border border-slate-800 bg-slate-800/20 p-3 space-y-3">
-          {/* Right: GFR Calculator (CKD-EPI 2021) */}
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
-              Calculadora de Función Renal (CKD-EPI)
-            </h4>
-            {gfr > 0 && (
-              <div className="text-right shrink-0">
-                <span className="text-xs font-bold text-indigo-400">TFGe: {gfr}</span>
-                <span className="text-[9px] text-slate-500 block">mL/min/1.73m²</span>
-              </div>
-            )}
+      {/* Tab 2: Scores Internísticos */}
+      {activeTab === "SCORES" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Calculator className="w-4 h-4" /> Calculadoras Clínicas (4T HIT, Child-Pugh & MELD)
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Trombocitopenia por Heparina & Severidad de Hepatopatía Crónica.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleSaveScores}
+              className="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs"
+            >
+              Guardar Scores
+            </Button>
           </div>
 
-          <div className="space-y-2 text-xs">
-            <label className="block text-slate-400">
-              Creatinina Sérica
-              <div className="relative mt-1">
+          <div className="grid md:grid-cols-2 gap-4 text-xs">
+            <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-3">
+              <span className="font-bold text-sky-300 block border-b border-slate-800 pb-1">Score 4T (Trombocitopenia Inducida por Heparina HIT):</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Puntuación 4T (0 - 8 pts):</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="8"
+                    value={fourTScore}
+                    onChange={(e) => setFourTScore(Number(e.target.value))}
+                    className="w-20 bg-slate-900 border border-slate-700 text-white text-center font-bold rounded p-1"
+                  />
+                </div>
                 <input
-                  type="number"
-                  step="0.01"
-                  disabled={disabled}
-                  placeholder="1.0"
-                  value={creatinina}
-                  onChange={(e) => setCreatinina(e.target.value)}
-                  className="block w-full rounded border border-slate-700 bg-slate-800 pl-3 pr-12 py-1 text-white"
+                  type="text"
+                  value={fourTRisk}
+                  onChange={(e) => setFourTRisk(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1.5 text-xs font-semibold"
                 />
-                <span className="absolute right-2.5 top-1.5 text-[9px] text-slate-500 font-semibold">mg/dL</span>
               </div>
-            </label>
+            </div>
 
-            <label className="block text-slate-400">
-              Edad del Paciente
+            <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-3">
+              <span className="font-bold text-sky-300 block border-b border-slate-800 pb-1">Escala Child-Pugh & Score MELD (Cirrosis):</span>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-slate-400 text-[10px]">Child-Pugh (5-15):</span>
+                    <input
+                      type="number"
+                      min="5"
+                      max="15"
+                      value={childPughScore}
+                      onChange={(e) => setChildPughScore(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-700 text-white text-center font-bold rounded p-1 mt-0.5"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px]">Score MELD:</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={meldScore}
+                      onChange={(e) => setMeldScore(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-700 text-white text-center font-bold rounded p-1 mt-0.5"
+                    />
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  value={childPughClass}
+                  onChange={(e) => setChildPughClass(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1.5 text-xs font-semibold"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Polifarmacia & Desprescripción */}
+      {activeTab === "POLIFARMACIA" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Pill className="w-4 h-4" /> Polifarmacia & Criterios Beers / STOPP-START
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Monitoreo de interacciones, fármacos inapropiados y desprescripción segura.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleSavePoly}
+              className="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs"
+            >
+              Guardar Polifarmacia
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Número Total de Fármacos Activos Prescritos</label>
               <input
                 type="number"
-                disabled={disabled}
-                placeholder="60"
-                value={pacienteEdad}
-                onChange={(e) => setPacienteEdad(e.target.value)}
-                className="mt-1 block w-full rounded border border-slate-700 bg-slate-800 px-2 py-1 text-white"
+                min="0"
+                value={numFármacos}
+                onChange={(e) => setNumFarmacos(Number(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-700 text-white font-bold rounded p-2"
               />
-            </label>
+            </div>
 
-            <label className="block text-slate-400">
-              Sexo Biológico
-              <select
-                disabled={disabled}
-                value={pacienteSexo}
-                onChange={(e) => setPacienteSexo(e.target.value)}
-                className="mt-1 block w-full rounded border border-slate-700 bg-slate-800 px-2 py-1 text-white"
-              >
-                <option value="Femenino">Femenino</option>
-                <option value="Masculino">Masculino</option>
-              </select>
-            </label>
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Alertas de Criterios de Beers (Fármacos Inapropiados)</label>
+              <input
+                type="text"
+                value={beers}
+                onChange={(e) => setBeers(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-amber-300 font-semibold rounded p-2"
+              />
+            </div>
 
-            {gfr > 0 && (
-              <div className="border-t border-slate-800 pt-2 text-[10px] font-semibold text-slate-300">
-                Estadificación: <span className="text-indigo-400">{gfrStage}</span>
-              </div>
-            )}
+            <div className="md:col-span-2 space-y-1">
+              <label className="font-semibold text-slate-300">Criterios STOPP / START Aplicables</label>
+              <textarea
+                value={stoppStart}
+                onChange={(e) => setStoppStart(e.target.value)}
+                rows={2}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="md:col-span-2 space-y-1">
+              <label className="font-semibold text-slate-300">Plan Específico de Desprescripción Progresiva</label>
+              <textarea
+                value={planDesprescripcion}
+                onChange={(e) => setPlanDesprescripcion(e.target.value)}
+                rows={2}
+                className="w-full bg-slate-950 border border-slate-700 text-emerald-300 rounded p-2"
+              />
+            </div>
           </div>
-        </div>
-      )}
-
-      {!disabled && (
-        <div className="flex items-center gap-3 border-t border-slate-800 pt-3">
-          <button
-            onClick={handleSave}
-            disabled={save.isPending}
-            className="rounded bg-indigo-700 px-4 py-1.5 text-xs text-white hover:bg-indigo-600 disabled:opacity-50 font-semibold"
-          >
-            {save.isPending ? "Guardando..." : "Guardar Medicina Interna"}
-          </button>
-          {saved && (
-            <p className="flex items-center gap-1 text-xs text-emerald-400">
-              <CheckCircle className="h-3.5 w-3.5" /> Guardado.
-            </p>
-          )}
         </div>
       )}
     </div>
-  )
+  );
 }
