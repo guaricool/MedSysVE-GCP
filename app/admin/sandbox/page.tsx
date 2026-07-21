@@ -16,6 +16,15 @@ import {
   Microscope,
   Zap,
   Ear,
+  Eye,
+  Crosshair,
+  AlertOctagon,
+  Users,
+  Scissors,
+  Droplet,
+  Leaf,
+  Dumbbell,
+  FileSpreadsheet,
 } from "lucide-react";
 import { EncounterWorkspace } from "@/components/encounter/encounter-workspace";
 
@@ -37,6 +46,16 @@ const SPECIALTIES = [
   { id: "Neumonología", name: "Neumonología", icon: Activity, category: "Clínica" },
   { id: "Oncología", name: "Oncología Médica", icon: Sparkles, category: "Oncológica" },
   { id: "Urología", name: "Urología", icon: Activity, category: "Quirúrgica" },
+  { id: "Oftalmología", name: "Oftalmología (Clínica / Quirúrgica)", icon: Eye, category: "Especializada" },
+  { id: "Reumatología", name: "Reumatología", icon: Bone, category: "Clínica" },
+  { id: "Nefrología", name: "Nefrología", icon: Stethoscope, category: "Clínica" },
+  { id: "Emergencias", name: "Medicina de Emergencia / Urgencias", icon: AlertOctagon, category: "Crítica" },
+  { id: "Geriatría", name: "Geriatría (Valoración VGI)", icon: Users, category: "Clínica" },
+  { id: "Medicina Familiar", name: "Medicina Familiar (Genograma & APGAR)", icon: Users, category: "Atención Primaria" },
+  { id: "Cirugía Plástica", name: "Cirugía Plástica y Reconstructiva", icon: Scissors, category: "Estética / Quirúrgica" },
+  { id: "Hematología", name: "Hematología (Frotis & Transfusional)", icon: Droplet, category: "Clínica" },
+  { id: "Alergología", name: "Alergología e Inmunología (Prick Test)", icon: Leaf, category: "Clínica" },
+  { id: "Fisiatría", name: "Medicina Física y Rehabilitación (Fisiatría)", icon: Dumbbell, category: "Rehabilitación" },
 ];
 
 const DEMO_PATIENTS = [
@@ -92,14 +111,14 @@ export default function AdminSandboxPage() {
               Exclusivo Super Admin · cpierluissis@gmail.com
             </span>
             <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-medium px-2 py-0.5 rounded-full">
-              Consulta Completa en Tiempo Real
+              Consulta Completa en Tiempo Real (27 Especialidades)
             </span>
           </div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            🔬 Sandbox de Especialidades — Vista Completa de Consulta
+            🔬 Sandbox de Especialidades — Pruebas de Interfaz y Módulos Clínicos
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Muestra el espacio de trabajo de consulta médica 100% completo (Encabezado SOAP, Módulos, Plantillas, Ficha de Especialidad, Vademécum, Signos Vitales y Firma).
+            Muestra el espacio de trabajo de consulta médica 100% completo (SOAP, Ficha de Especialidad, Visor DICOM PACS, Vademécum, Signos Vitales y Firma).
           </p>
         </div>
       </div>
@@ -110,7 +129,7 @@ export default function AdminSandboxPage() {
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
             <Stethoscope className="w-3.5 h-3.5 text-amber-400" />
-            1. Ver Consulta Como Especialidad ({SPECIALTIES.length})
+            1. Seleccionar Especialidad Médica ({SPECIALTIES.length} Disponibles)
           </label>
           <select
             value={selectedSpecialty}
@@ -129,7 +148,7 @@ export default function AdminSandboxPage() {
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
             <User className="text-blue-400 w-3.5 h-3.5" />
-            2. Paciente de Consulta
+            2. Paciente de Consulta Demo
           </label>
           <select
             value={selectedPatientId}
@@ -155,7 +174,7 @@ export default function AdminSandboxPage() {
         </div>
         <span className="text-emerald-400 font-medium flex items-center gap-1">
           <CheckCircle2 className="w-3.5 h-3.5" />
-          Ficha de Especialidad Integrada en Consulta
+          Ficha & Visor DICOM PACS Creados e Integrados
         </span>
       </div>
 
@@ -171,8 +190,8 @@ export default function AdminSandboxPage() {
           patientAlergias={patient.alergias}
           patientCronicos={patient.cronicos}
           overrideSpecialty={selectedSpecialty}
-          initialMotivo="Consulta médica de control y evaluación de especialidad"
-          initialHistoriaClinica="Paciente acude a consulta presentando cuadro sintomático característico para evaluación especializada."
+          initialMotivo={`Consulta de evaluación en ${specialtyObj.name}`}
+          initialHistoriaClinica="Paciente acude a consulta para evaluación especializada y seguimiento clínico de evoluciones."
         />
       </div>
     </div>

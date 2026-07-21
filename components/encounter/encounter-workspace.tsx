@@ -40,6 +40,16 @@ import { TraumatologiaForm } from "./traumatologia-form"
 import { PsiquiatriaForm } from "./psiquiatria-form"
 import { InfectologiaForm } from "./infectologia-form"
 import { OtorrinolaringologiaForm } from "./otorrinolaringologia-form"
+import { OftalmologiaForm } from "./oftalmologia-form"
+import { ReumatologiaForm } from "./reumatologia-form"
+import { NefrologiaForm } from "./nefrologia-form"
+import { EmergenciasForm } from "./emergencias-form"
+import { GeriatriaForm } from "./geriatria-form"
+import { MedicinaFamiliarForm } from "./medicina-familiar-form"
+import { CirugiaPlasticaForm } from "./cirugia-plastica-form"
+import { HematologiaForm } from "./hematologia-form"
+import { AlergologiaForm } from "./alergologia-form"
+import { FisiatriaForm } from "./fisiatria-form"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import type { Vitales } from "@/lib/clinical/vitals-alerts"
 
@@ -93,6 +103,16 @@ type SectionId =
   | "psiquiatria"
   | "infectologia"
   | "otorrinolaringologia"
+  | "oftalmologia"
+  | "reumatologia"
+  | "nefrologia"
+  | "emergencias"
+  | "geriatria"
+  | "medicina-familiar"
+  | "cirugia-plastica"
+  | "hematologia"
+  | "alergologia"
+  | "fisiatria"
 
 const SECTIONS: { id: SectionId; key: "S" | "O" | "A" | "P" | "R" | "L" | "I" | "M" | "T" | "E"; label: string; icon: string; shortcut: string }[] = [
   { id: "subjetivo", key: "S", label: "Subjetivo", icon: "💬", shortcut: "1" },
@@ -176,6 +196,19 @@ export function EncounterWorkspace({
       "Otorrinolaringología": "otorrinolaringologia",
       "ORL": "otorrinolaringologia",
       "Otorrino": "otorrinolaringologia",
+      "Oftalmología": "oftalmologia",
+      "Reumatología": "reumatologia",
+      "Nefrología": "nefrologia",
+      "Medicina de Emergencia": "emergencias",
+      "Emergencias": "emergencias",
+      "Geriatría": "geriatria",
+      "Medicina Familiar": "medicina-familiar",
+      "Cirugía Plástica": "cirugia-plastica",
+      "Hematología": "hematologia",
+      "Alergología e Inmunología": "alergologia",
+      "Alergología": "alergologia",
+      "Fisiatría": "fisiatria",
+      "Medicina Física y Rehabilitación": "fisiatria",
     }
     const secId = specMap[especialidad]
     if (secId) {
@@ -945,6 +978,66 @@ export function EncounterWorkspace({
               disabled={locked}
               initialData={enc?.datosEspecialidad || {}}
             />
+          </Section>
+        )}
+
+        {visibleSections.has("oftalmologia") && especialidad === "Oftalmología" && (
+          <Section id="oftalmologia" key="oftalmologia" title="Evaluación Oftalmológica" icon="👁️" collapsible open={openSections.has("oftalmologia")} onToggle={() => toggleSection("oftalmologia")}>
+            <OftalmologiaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
+          </Section>
+        )}
+
+        {visibleSections.has("reumatologia") && especialidad === "Reumatología" && (
+          <Section id="reumatologia" key="reumatologia" title="Evaluación Reumatológica" icon="🦴" collapsible open={openSections.has("reumatologia")} onToggle={() => toggleSection("reumatologia")}>
+            <ReumatologiaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
+          </Section>
+        )}
+
+        {visibleSections.has("nefrologia") && especialidad === "Nefrología" && (
+          <Section id="nefrologia" key="nefrologia" title="Evaluación Nefrológica" icon="🩺" collapsible open={openSections.has("nefrologia")} onToggle={() => toggleSection("nefrologia")}>
+            <NefrologiaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
+          </Section>
+        )}
+
+        {visibleSections.has("emergencias") && (especialidad === "Emergencias" || especialidad === "Medicina de Emergencia") && (
+          <Section id="emergencias" key="emergencias" title="Evaluación de Urgencias y Emergencias" icon="🚨" collapsible open={openSections.has("emergencias")} onToggle={() => toggleSection("emergencias")}>
+            <EmergenciasForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
+          </Section>
+        )}
+
+        {visibleSections.has("geriatria") && especialidad === "Geriatría" && (
+          <Section id="geriatria" key="geriatria" title="Valoración Geriátrica Integral (VGI)" icon="👵" collapsible open={openSections.has("geriatria")} onToggle={() => toggleSection("geriatria")}>
+            <GeriatriaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
+          </Section>
+        )}
+
+        {visibleSections.has("medicina-familiar") && especialidad === "Medicina Familiar" && (
+          <Section id="medicina-familiar" key="medicina-familiar" title="Medicina Familiar & Genograma" icon="👨‍👩‍👧" collapsible open={openSections.has("medicina-familiar")} onToggle={() => toggleSection("medicina-familiar")}>
+            <MedicinaFamiliarForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
+          </Section>
+        )}
+
+        {visibleSections.has("cirugia-plastica") && especialidad === "Cirugía Plástica" && (
+          <Section id="cirugia-plastica" key="cirugia-plastica" title="Cirugía Plástica y Reconstructiva" icon="🪡" collapsible open={openSections.has("cirugia-plastica")} onToggle={() => toggleSection("cirugia-plastica")}>
+            <CirugiaPlasticaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
+          </Section>
+        )}
+
+        {visibleSections.has("hematologia") && especialidad === "Hematología" && (
+          <Section id="hematologia" key="hematologia" title="Evaluación Hematológica & Transfusional" icon="🩸" collapsible open={openSections.has("hematologia")} onToggle={() => toggleSection("hematologia")}>
+            <HematologiaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
+          </Section>
+        )}
+
+        {visibleSections.has("alergologia") && (especialidad === "Alergología" || especialidad === "Alergología e Inmunología") && (
+          <Section id="alergologia" key="alergologia" title="Alergología e Inmunología Clínica" icon="🌿" collapsible open={openSections.has("alergologia")} onToggle={() => toggleSection("alergologia")}>
+            <AlergologiaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
+          </Section>
+        )}
+
+        {visibleSections.has("fisiatria") && (especialidad === "Fisiatría" || especialidad === "Medicina Física y Rehabilitación") && (
+          <Section id="fisiatria" key="fisiatria" title="Medicina Física y Rehabilitación (Fisiatría)" icon="🦾" collapsible open={openSections.has("fisiatria")} onToggle={() => toggleSection("fisiatria")}>
+            <FisiatriaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
           </Section>
         )}
 
