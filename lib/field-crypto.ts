@@ -35,19 +35,47 @@ const ALGO = "aes-256-gcm";
 const IV_BYTES = 12; // 96 bits, recommended for GCM
 const TAG_BYTES = 16;
 
-function getKey(): Buffer {
-  const raw = process.env.FIELD_ENCRYPTION_KEY;
-  if (!raw) {
+interface Keyring {
+  active: string;
+  keys: Record<string, string>;
+}
+
+function getKeyring(): Keyring {
+  const rawKeyring = process.env.FIELD_ENCRYPTION_KEYS_KEYRING;
+  if (rawKeyring) {
+    try {
+      const parsed = JSON.parse(rawKeyring) as Keyring;
+      if (parsed.active && parsed.keys && parsed.keys[parsed.active]) {
+        return parsed;
+      }
+    } catch (e) {
+      // Fallback
+    }
+  }
+
+  const rawKey = process.env.FIELD_ENCRYPTION_KEY;
+  if (!rawKey) {
     throw new Error(
-      "FIELD_ENCRYPTION_KEY not set — refusing to encrypt/decrypt PHI. " +
-        "Generate with: openssl rand -base64 32",
+      "FIELD_ENCRYPTION_KEY or FIELD_ENCRYPTION_KEYS_KEYRING not set — refusing to encrypt/decrypt PHI."
     );
   }
-  const key = Buffer.from(raw, "base64");
+  return {
+    active: "v1",
+    keys: {
+      v1: rawKey,
+    },
+  };
+}
+
+function getKeyByVersion(version: string): Buffer {
+  const keyring = getKeyring();
+  const rawKey = keyring.keys[version];
+  if (!rawKey) {
+    throw new Error(`Key version ${version} not found in keyring`);
+  }
+  const key = Buffer.from(rawKey, "base64");
   if (key.length !== 32) {
-    throw new Error(
-      `FIELD_ENCRYPTION_KEY must decode to 32 bytes, got ${key.length}`,
-    );
+    throw new Error(`FIELD_ENCRYPTION_KEY version ${version} must decode to 32 bytes`);
   }
   return key;
 }
@@ -55,16 +83,19 @@ function getKey(): Buffer {
 /**
  * Encrypt a string. Returns base64-encoded blob, or null for empty input.
  *
- * Output format: base64(IV[12] || ciphertext || authTag[16])
+ * Output format: <version>:base64(IV[12] || ciphertext || authTag[16])
  */
 export function encryptField(plaintext: string | null | undefined): string | null {
   if (plaintext == null || plaintext === "") return null;
-  const key = getKey();
+  const keyring = getKeyring();
+  const activeVersion = keyring.active;
+  const key = getKeyByVersion(activeVersion);
   const iv = crypto.randomBytes(IV_BYTES);
   const cipher = crypto.createCipheriv(ALGO, key, iv);
   const ct = Buffer.concat([cipher.update(plaintext, "utf-8"), cipher.final()]);
   const tag = cipher.getAuthTag();
-  return Buffer.concat([iv, ct, tag]).toString("base64");
+  const cipherTextBase64 = Buffer.concat([iv, ct, tag]).toString("base64");
+  return `${activeVersion}:${cipherTextBase64}`;
 }
 
 /**
@@ -73,8 +104,18 @@ export function encryptField(plaintext: string | null | undefined): string | nul
  */
 export function decryptField(ciphertext: string | null | undefined): string | null {
   if (ciphertext == null || ciphertext === "") return null;
-  const key = getKey();
-  const buf = Buffer.from(ciphertext, "base64");
+
+  let version = "v1";
+  let cipherTextBase64 = ciphertext;
+
+  const colonIndex = ciphertext.indexOf(":");
+  if (colonIndex !== -1 && colonIndex < 10) {
+    version = ciphertext.substring(0, colonIndex);
+    cipherTextBase64 = ciphertext.substring(colonIndex + 1);
+  }
+
+  const key = getKeyByVersion(version);
+  const buf = Buffer.from(cipherTextBase64, "base64");
   if (buf.length < IV_BYTES + TAG_BYTES) {
     throw new Error("Ciphertext too short — corrupt or wrong format");
   }
@@ -120,7 +161,7 @@ export function hmacIndex(plaintext: string): string {
  * fast if the key is missing or wrong length.
  */
 export function assertEncryptionConfigured(): void {
-  getKey();
+  getKeyring();
   if (!process.env.FIELD_HMAC_KEY) {
     throw new Error("FIELD_HMAC_KEY not set — failing fast to protect searchable encryption.");
   }

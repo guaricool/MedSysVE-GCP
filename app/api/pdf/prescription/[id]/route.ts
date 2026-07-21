@@ -114,6 +114,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="${filename}"`,
       "Content-Length": buffer.length.toString(),
+      "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
     },
   })
 }

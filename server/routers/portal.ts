@@ -56,13 +56,8 @@ async function getPatientIdsForPortalUser(ctx: any) {
 export const portalRouter = router({
   myAppointments: portalProcedure.query(async ({ ctx }) => {
     const patientIds = await getPatientIdsForPortalUser(ctx)
-    const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: { in: patientIds } },
-      select: { id: true },
-    })
-    const regIds = regs.map((r) => r.id)
     return ctx.db.appointment.findMany({
-      where: { patientRegistrationId: { in: regIds } },
+      where: { patientRegistration: { patientId: { in: patientIds } } },
       orderBy: { fechaHora: "desc" },
       select: {
         id: true,
@@ -80,13 +75,8 @@ export const portalRouter = router({
 
   myDocuments: portalProcedure.query(async ({ ctx }) => {
     const patientIds = await getPatientIdsForPortalUser(ctx)
-    const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: { in: patientIds } },
-      select: { id: true },
-    })
-    const regIds = regs.map((r) => r.id)
     return ctx.db.document.findMany({
-      where: { patientRegistrationId: { in: regIds }, visibleEnPortal: true },
+      where: { patientRegistration: { patientId: { in: patientIds } }, visibleEnPortal: true },
       orderBy: { createdAt: "desc" },
       select: { id: true, tipo: true, createdAt: true, pdfUrl: true, encounterId: true, patientRegistration: { select: { workspaceId: true } } },
     })
@@ -94,34 +84,37 @@ export const portalRouter = router({
 
   myEncounters: portalProcedure.query(async ({ ctx }) => {
     const patientIds = await getPatientIdsForPortalUser(ctx)
-    const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: { in: patientIds } },
-      include: {
-        workspace: {
-          select: {
-            nombre: true,
-            doctor: { select: { nombre: true, apellido: true } },
-          },
-        },
-      },
-    })
-    const regIds = regs.map((r) => r.id)
-    const regMap = Object.fromEntries(regs.map((r) => [r.id, r]))
-    
     const encounters = await ctx.db.encounter.findMany({
-      where: { patientRegistrationId: { in: regIds }, status: { in: ["SIGNED", "AMENDED"] } },
+      where: {
+        patientRegistration: { patientId: { in: patientIds } },
+        status: { in: ["SIGNED", "AMENDED"] }
+      },
       orderBy: { createdAt: "desc" },
-      select: { id: true, createdAt: true, patientRegistrationId: true },
+      select: {
+        id: true,
+        createdAt: true,
+        patientRegistration: {
+          select: {
+            workspaceId: true,
+            workspace: {
+              select: {
+                nombre: true,
+                doctor: { select: { nombre: true, apellido: true } }
+              }
+            }
+          }
+        }
+      },
       take: 50,
     })
     
     return encounters.map((e) => ({
       id: e.id,
       createdAt: e.createdAt,
-      workspaceId: regMap[e.patientRegistrationId]?.workspaceId ?? "",
-      workspaceNombre: regMap[e.patientRegistrationId]?.workspace.nombre ?? "",
+      workspaceId: e.patientRegistration.workspaceId,
+      workspaceNombre: e.patientRegistration.workspace.nombre,
       doctorNombre: (() => {
-        const doc = regMap[e.patientRegistrationId]?.workspace.doctor
+        const doc = e.patientRegistration.workspace.doctor
         return doc ? `Dr. ${doc.nombre} ${doc.apellido}` : ""
       })(),
     }))
@@ -160,13 +153,8 @@ export const portalRouter = router({
 
   myLabResults: portalProcedure.query(async ({ ctx }) => {
     const patientIds = await getPatientIdsForPortalUser(ctx)
-    const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: { in: patientIds } },
-      select: { id: true },
-    })
-    const regIds = regs.map((r) => r.id)
     return ctx.db.labResult.findMany({
-      where: { patientRegistrationId: { in: regIds } },
+      where: { patientRegistration: { patientId: { in: patientIds } } },
       orderBy: { fecha: "desc" },
       select: { id: true, titulo: true, fecha: true, resultado: true, patientRegistration: { select: { workspaceId: true } } },
       take: 50,
@@ -177,16 +165,11 @@ export const portalRouter = router({
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const patientIds = await getPatientIdsForPortalUser(ctx)
-      const regs = await ctx.db.patientRegistration.findMany({
-        where: { patientId: { in: patientIds } },
-        select: { id: true },
-      })
-      const regIds = new Set(regs.map((r) => r.id))
       const appt = await ctx.db.appointment.findUnique({
         where: { id: input.id },
-        select: { id: true, status: true, patientRegistrationId: true },
+        select: { id: true, status: true, patientRegistration: { select: { patientId: true } } },
       })
-      if (!appt || !regIds.has(appt.patientRegistrationId ?? "")) {
+      if (!appt || !appt.patientRegistration || !patientIds.includes(appt.patientRegistration.patientId)) {
         throw new TRPCError({ code: "FORBIDDEN" })
       }
       if (appt.status === "COMPLETED" || appt.status === "NO_SHOW" || appt.status === "CANCELLED") {
@@ -361,13 +344,8 @@ export const portalRouter = router({
 
   myLabOrders: portalProcedure.query(async ({ ctx }) => {
     const patientIds = await getPatientIdsForPortalUser(ctx)
-    const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: { in: patientIds } },
-      select: { id: true },
-    })
-    const regIds = regs.map((r) => r.id)
     return ctx.db.labOrder.findMany({
-      where: { encounter: { patientRegistrationId: { in: regIds } } },
+      where: { encounter: { patientRegistration: { patientId: { in: patientIds } } } },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -384,13 +362,8 @@ export const portalRouter = router({
 
   myImagingOrders: portalProcedure.query(async ({ ctx }) => {
     const patientIds = await getPatientIdsForPortalUser(ctx)
-    const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: { in: patientIds } },
-      select: { id: true },
-    })
-    const regIds = regs.map((r) => r.id)
     return ctx.db.imagingOrder.findMany({
-      where: { encounter: { patientRegistrationId: { in: regIds } } },
+      where: { encounter: { patientRegistration: { patientId: { in: patientIds } } } },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -410,23 +383,8 @@ export const portalRouter = router({
 
   myPrescriptions: portalProcedure.query(async ({ ctx }) => {
     const patientIds = await getPatientIdsForPortalUser(ctx)
-    const regs = await ctx.db.patientRegistration.findMany({
-      where: { patientId: { in: patientIds } },
-      select: {
-        id: true,
-        workspaceId: true,
-        workspace: {
-          select: {
-            nombre: true,
-            doctor: { select: { nombre: true, apellido: true } },
-          },
-        },
-      },
-    })
-    const regMap = Object.fromEntries(regs.map((r) => [r.id, r]))
-    const regIds = regs.map((r) => r.id)
     const prescriptions = await ctx.db.prescription.findMany({
-      where: { encounter: { patientRegistrationId: { in: regIds }, status: "SIGNED" } },
+      where: { encounter: { patientRegistration: { patientId: { in: patientIds } }, status: "SIGNED" } },
       orderBy: { createdAt: "desc" },
       include: {
         items: {
@@ -434,7 +392,22 @@ export const portalRouter = router({
             medication: { select: { nombreGenerico: true, formaFarmaceutica: true } },
           },
         },
-        encounter: { select: { patientRegistrationId: true, createdAt: true } },
+        encounter: {
+          select: {
+            createdAt: true,
+            patientRegistration: {
+              select: {
+                workspaceId: true,
+                workspace: {
+                  select: {
+                    nombre: true,
+                    doctor: { select: { nombre: true, apellido: true } }
+                  }
+                }
+              }
+            }
+          }
+        },
       },
       take: 30,
     })
@@ -443,10 +416,10 @@ export const portalRouter = router({
       createdAt: p.createdAt,
       pdfUrl: p.pdfUrl ?? null,
       encounterId: p.encounterId,
-      workspaceId: regMap[p.encounter.patientRegistrationId]?.workspaceId ?? "",
-      workspaceNombre: regMap[p.encounter.patientRegistrationId]?.workspace.nombre ?? "",
+      workspaceId: p.encounter.patientRegistration.workspaceId,
+      workspaceNombre: p.encounter.patientRegistration.workspace.nombre,
       doctorNombre: (() => {
-        const doc = regMap[p.encounter.patientRegistrationId]?.workspace.doctor
+        const doc = p.encounter.patientRegistration.workspace.doctor
         return doc ? `Dr. ${doc.nombre} ${doc.apellido}` : ""
       })(),
       items: p.items.map((it) => ({

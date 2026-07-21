@@ -1660,9 +1660,9 @@ model GlobalPatientProfile {
   grupoSanguineo       String?
 
   // Opcionales para importación (Global EHR)
-  alergias     String[] @default([])
-  vacunas      String[] @default([])
-  seguros      String[] @default([])
+  alergias     Json     @default("[]")
+  vacunas      Json     @default("[]")
+  seguros      Json     @default("[]")
   antecedentes String?
 
   createdAt DateTime @default(now())

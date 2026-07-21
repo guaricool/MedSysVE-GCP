@@ -7,15 +7,8 @@ import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Label } from "@/components/ui/label"
 import { Shield, Plus, Check, X, Trash2, Heart, Activity, Syringe, ClipboardList } from "lucide-react"
-
-const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
-
-const SEVERITY_COLORS = {
-  LEVE: "text-yellow-400 bg-yellow-900/30 border border-yellow-800/50",
-  MODERADA: "text-orange-400 bg-orange-900/30 border border-orange-800/50",
-  SEVERA: "text-red-400 bg-red-900/30 border border-red-800/50",
-}
-const SEVERITY_LABELS = { LEVE: "Leve", MODERADA: "Moderada", SEVERA: "Severa" }
+import { BloodTypeSelector } from "@/components/ui/clinical/blood-type-selector"
+import { AllergyListEditor } from "@/components/ui/clinical/allergy-list-editor"
 
 const VACUNAS_VE = [
   "BCG",
@@ -162,11 +155,12 @@ export function PortalPerfilClient({ initialData }: Props) {
   // Load and Parse Global Profile Data
   useEffect(() => {
     if (globalProfile) {
-      setGrupoSanguineo(globalProfile.grupoSanguineo || "")
-      setNewBloodType(globalProfile.grupoSanguineo || "")
+      const profile = globalProfile as any
+      setGrupoSanguineo(profile.grupoSanguineo || "")
+      setNewBloodType(profile.grupoSanguineo || "")
 
       // Parse Allergies
-      const parsedAlergias = (globalProfile.alergias || []).map((a) => {
+      const parsedAlergias = (profile.alergias || []).map((a: string) => {
         try {
           return JSON.parse(a) as Allergy
         } catch {
@@ -176,7 +170,7 @@ export function PortalPerfilClient({ initialData }: Props) {
       setAlergias(parsedAlergias)
 
       // Parse Vaccines
-      const parsedVacunas = (globalProfile.vacunas || []).map((v) => {
+      const parsedVacunas = (profile.vacunas || []).map((v: string) => {
         try {
           return JSON.parse(v) as Vaccine
         } catch {
@@ -186,7 +180,7 @@ export function PortalPerfilClient({ initialData }: Props) {
       setVacunas(parsedVacunas)
 
       // Parse Insurances
-      const parsedSeguros = ((globalProfile as any).seguros || []).map((s: string) => {
+      const parsedSeguros = (profile.seguros || []).map((s: string) => {
         try {
           return JSON.parse(s) as Insurance
         } catch {
@@ -447,31 +441,7 @@ export function PortalPerfilClient({ initialData }: Props) {
 
         {showBloodForm ? (
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {BLOOD_TYPES.map((bt) => (
-                <button
-                  key={bt}
-                  type="button"
-                  onClick={() => setNewBloodType(bt)}
-                  className={`rounded px-3 py-1.5 text-sm font-semibold transition ${
-                    newBloodType === bt
-                      ? "bg-red-750 text-white"
-                      : "bg-slate-800 text-slate-300 hover:bg-slate-750"
-                  }`}
-                >
-                  {bt}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setNewBloodType("")}
-                className={`rounded px-3 py-1.5 text-sm transition ${
-                  newBloodType === "" ? "bg-slate-650 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-750"
-                }`}
-              >
-                Sin dato
-              </button>
-            </div>
+            <BloodTypeSelector value={newBloodType} onChange={setNewBloodType} />
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -500,97 +470,17 @@ export function PortalPerfilClient({ initialData }: Props) {
 
       {/* 2. Alergias Section */}
       <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-            <Activity className="w-4 h-4 text-orange-400" />
-            Alergias
-          </h2>
-          {!showAllergyForm && (
-            <button
-              onClick={() => setShowAllergyForm(true)}
-              className="text-xs text-blue-400 hover:underline"
-            >
-              + Agregar
-            </button>
-          )}
-        </div>
-
-        {alergias.length === 0 && !showAllergyForm && (
-          <p className="text-xs text-slate-500">Sin alergias registradas.</p>
-        )}
-
-        <div className="space-y-2">
-          {alergias.map((a, index) => (
-            <div key={index} className="flex items-center gap-2 text-sm bg-slate-950/40 p-2 rounded border border-slate-800">
-              <span className={`px-2 py-0.5 rounded text-xs font-semibold ${SEVERITY_COLORS[a.gravedad] || SEVERITY_COLORS.LEVE}`}>
-                {SEVERITY_LABELS[a.gravedad] || "Leve"}
-              </span>
-              <span className="text-slate-200 font-medium">{a.sustancia}</span>
-              {a.reaccion && <span className="text-slate-400 text-xs">· {a.reaccion}</span>}
-              <button
-                type="button"
-                onClick={() => handleDeleteAllergy(index)}
-                className="ml-auto text-slate-500 hover:text-red-400 transition-colors"
-                title="Eliminar"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {showAllergyForm && (
-          <div className="flex flex-wrap items-end gap-3 pt-3 border-t border-slate-800">
-            <div className="flex-1 min-w-[120px] space-y-1">
-              <Label className="text-xs text-slate-400">Sustancia</Label>
-              <Input
-                value={allergyInput.sustancia}
-                onChange={(e) => setAllergyInput(a => ({ ...a, sustancia: e.target.value }))}
-                placeholder="Ej: Penicilina"
-                className="bg-slate-850 border-slate-705 text-white h-9"
-              />
-            </div>
-            <div className="flex-1 min-w-[120px] space-y-1">
-              <Label className="text-xs text-slate-400">Reacción (opcional)</Label>
-              <Input
-                value={allergyInput.reaccion}
-                onChange={(e) => setAllergyInput(a => ({ ...a, reaccion: e.target.value }))}
-                placeholder="Ej: urticaria"
-                className="bg-slate-850 border-slate-705 text-white h-9"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-slate-400">Gravedad</Label>
-              <select
-                value={allergyInput.gravedad}
-                onChange={(e) => setAllergyInput(a => ({ ...a, gravedad: e.target.value as any }))}
-                className="w-full bg-slate-850 border border-slate-705 text-white rounded-md px-3 py-2 text-sm h-9"
-              >
-                <option value="LEVE">Leve</option>
-                <option value="MODERADA">Moderada</option>
-                <option value="SEVERA">Severa</option>
-              </select>
-            </div>
-            <div className="flex gap-1.5">
-              <Button
-                size="sm"
-                onClick={handleAddAllergy}
-                disabled={!allergyInput.sustancia.trim()}
-                className="bg-blue-600 hover:bg-blue-700 h-9"
-              >
-                Guardar
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowAllergyForm(false)}
-                className="text-slate-400 h-9"
-              >
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        )}
+        <AllergyListEditor
+          allergies={alergias}
+          onAdd={(newAllergy) => {
+            const updated = [...alergias, newAllergy]
+            saveMedicalUpdate({ alergias: updated })
+          }}
+          onDelete={(index) => {
+            const updated = alergias.filter((_, i) => i !== index)
+            saveMedicalUpdate({ alergias: updated })
+          }}
+        />
       </div>
 
       {/* 3. Vacunas Section */}
