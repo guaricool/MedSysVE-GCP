@@ -50,13 +50,13 @@ export default async function AdminDashboard() {
           <p className="text-slate-400 text-sm">Resumen Operativo y Financiero de MedSysVE</p>
         </div>
         <a 
-          href="https://glitchtip.13.140.181.29.sslip.io/" 
+          href="https://console.cloud.google.com/errors?project=medsysve-gcp" 
           target="_blank" 
           rel="noopener noreferrer"
           className="flex items-center gap-2 bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30 border border-indigo-500/30 px-4 py-2 rounded-lg transition-colors text-sm font-semibold shadow-lg"
         >
           <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-          Monitoreo GlitchTip (Errores VPS)
+          Monitoreo Cloud Error Reporting
         </a>
       </div>
 

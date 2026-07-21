@@ -5,6 +5,7 @@ import { ZodError } from "zod"
 import type { SessionUser } from "@/types"
 import { Redis } from "@upstash/redis"
 import { audit } from "@/lib/audit"
+import { logInfo, reportError } from "@/lib/gcp-observability"
 
 // Create Redis client if env vars exist
 const redisUrl = process.env.UPSTASH_REDIS_REST_URL
@@ -35,9 +36,49 @@ const t = initTRPC.context<Context>().create({
 })
 
 export const router = t.router
-export const publicProcedure = t.procedure
 
-export const protectedProcedure = t.procedure.use(async ({ ctx, path, next }) => {
+export const gcpTelemetryMiddleware = t.middleware(async ({ path, type, next, ctx }) => {
+  const start = performance.now()
+  logInfo(`tRPC request started: ${path}`, { path, type })
+  
+  try {
+    const result = await next()
+    const duration = performance.now() - start
+    
+    if (!result.ok && result.error) {
+      reportError(result.error, {
+        path,
+        type,
+        userId: ctx.session?.id,
+        workspaceId: ctx.session?.workspaceId,
+      })
+    } else {
+      logInfo(`tRPC request completed: ${path}`, {
+        path,
+        type,
+        durationMs: duration,
+        userId: ctx.session?.id,
+        workspaceId: ctx.session?.workspaceId,
+      })
+    }
+    
+    return result
+  } catch (err: any) {
+    const duration = performance.now() - start
+    reportError(err, {
+      path,
+      type,
+      durationMs: duration,
+      userId: ctx.session?.id,
+      workspaceId: ctx.session?.workspaceId,
+    })
+    throw err
+  }
+})
+
+export const publicProcedure = t.procedure.use(gcpTelemetryMiddleware)
+
+export const protectedProcedure = publicProcedure.use(async ({ ctx, path, next }) => {
   if (!ctx.session) throw new TRPCError({ code: "UNAUTHORIZED" })
   
   // Anti-Scraping / Pagination Anomaly Detection
@@ -87,7 +128,7 @@ export const doctorProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx })
 })
 
-export const portalProcedure = t.procedure.use(({ ctx, next }) => {
+export const portalProcedure = publicProcedure.use(({ ctx, next }) => {
   if (!ctx.session || ctx.session.role !== "PATIENT") {
     throw new TRPCError({ code: "UNAUTHORIZED" })
   }
