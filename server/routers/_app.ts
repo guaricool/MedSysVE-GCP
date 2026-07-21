@@ -53,8 +53,10 @@ import { psychRouter } from "./psych"
 import { dermRouter } from "./derm"
 import { gastroRouter } from "./gastro"
 import { anesthesiaRouter } from "./anesthesia"
+import { surgeryRouter } from "./surgery"
 
 export const appRouter = router({
+  surgery: surgeryRouter,
   anesthesia: anesthesiaRouter,
   gastro: gastroRouter,
   derm: dermRouter,

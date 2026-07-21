@@ -1,264 +1,384 @@
-"use client"
+"use client";
 
-import { useState, useMemo, useEffect } from "react"
-import { trpc } from "@/lib/trpc-client"
-import { Activity, CheckCircle, Scissors } from "lucide-react"
-import { useUnsaved } from "@/components/providers/unsaved-changes-provider"
+import { useState, useMemo, useEffect } from "react";
+import { trpc } from "@/lib/trpc-client";
+import { useUnsaved } from "@/components/providers/unsaved-changes-provider";
+import { Button } from "@/components/ui/button";
+import {
+  Scissors,
+  CheckSquare,
+  FileText,
+  AlertTriangle,
+  Plus,
+  CheckCircle2,
+  Activity,
+  ShieldCheck,
+  Award,
+} from "lucide-react";
 
 interface Props {
-  encounterId: string
-  disabled?: boolean
-  initialData?: {
-    tipoHerida?: string
-    alvaradoAnswers?: Record<string, boolean>
-    dolorEva?: number
-    omsListChecked?: Record<string, boolean>
-  }
+  encounterId: string;
+  patientRegistrationId?: string;
+  patientRegId?: string;
+  disabled?: boolean;
+  initialData?: any;
 }
 
-const ALVARADO_ITEMS = [
-  { key: "dolorMigratorio", label: "Dolor migratorio a fosa ilíaca derecha", pts: 1 },
-  { key: "anorexia", label: "Anorexia o cetonuria", pts: 1 },
-  { key: "nauseas", label: "Náuseas o vómitos", pts: 1 },
-  { key: "dolorFid", label: "Defensa o dolor en fosa ilíaca derecha", pts: 2 },
-  { key: "rebote", label: "Dolor a la descompresión (signo de Blumberg)", pts: 1 },
-  { key: "fiebre", label: "Fiebre (temperatura >= 37.3 °C)", pts: 1 },
-  { key: "leucocitosis", label: "Leucocitosis (leucocitos >= 10,000 / mm3)", pts: 2 },
-  { key: "desviacionIzq", label: "Desviación a la izquierda de neutrófilos (>75%)", pts: 1 },
-]
+const CLAVIEN_DINDO_GRADES = [
+  "Grado I (Desviación menor del curso normal sin necesidad de tratamiento farmacológico/quirúrgico)",
+  "Grado II (Requiere tratamiento farmacológico con drogas distintas a Grado I, transfusiones o NPT)",
+  "Grado IIIa (Requiere intervención quirúrgica, endoscópica o radiológica SIN anestesia general)",
+  "Grado IIIb (Requiere intervención quirúrgica, endoscópica o radiológica CON anestesia general)",
+  "Grado IVa (Complicación potencialmente mortal: disfunción de un solo órgano en UCI)",
+  "Grado IVb (Complicación potencialmente mortal: disfunción multiorgánica en UCI)",
+  "Grado V (Fallecimiento del paciente)",
+];
 
-const OMS_SAFETY_CHECKLIST = [
-  { key: "confirmarIdentidad", label: "Identidad del paciente, sitio quirúrgico y procedimiento confirmados" },
-  { key: "marcarSitio", label: "Marcación del sitio quirúrgico realizada" },
-  { key: "oximetroPulso", label: "Oxímetro de pulso colocado y funcionando" },
-  { key: "alergiasConocidas", label: "Alergias conocidas confirmadas y revisadas" },
-  { key: "riesgoAspiracion", label: "Riesgo de aspiración o vía aérea difícil evaluado" },
-  { key: "profilaxisAntibiotica", label: "Profilaxis antibiótica administrada en los últimos 60 minutos" },
-]
+export function CirugiaGeneralForm({ encounterId, disabled, initialData = {}, patientRegistrationId, patientRegId }: Props) {
+  const effectivePatId = patientRegistrationId || patientRegId || "sandbox-demo-pat";
+  const [activeTab, setActiveTab] = useState<"CHECKLIST" | "REPORTE" | "COMPLICACIONES">("CHECKLIST");
+  const [saved, setSaved] = useState(false);
+  const { setDirty } = useUnsaved();
 
-export function CirugiaGeneralForm({ encounterId, disabled, initialData = {} }: Props) {
-  const [tipoHerida, setTipoHerida] = useState(initialData.tipoHerida || "Ninguna")
-  const [alvaradoAnswers, setAlvaradoAnswers] = useState<Record<string, boolean>>(() => {
-    if (initialData.alvaradoAnswers) return initialData.alvaradoAnswers
-    const initial: Record<string, boolean> = {}
-    ALVARADO_ITEMS.forEach((item) => {
-      initial[item.key] = false
-    })
-    return initial
-  })
+  // tRPC Queries & Mutations
+  const { data: dbChk, refetch: refetchChk } = (trpc.surgery.getChecklist.useQuery as any)({ encounterId });
+  const { data: dbReports = [], refetch: refetchReports } = (trpc.surgery.listOperativeReports.useQuery as any)({ patientRegistrationId: effectivePatId });
+  const { data: dbComps = [], refetch: refetchComps } = (trpc.surgery.listComplications.useQuery as any)({ patientRegistrationId: effectivePatId });
 
-  const [dolorEva, setDolorEva] = useState<number>(initialData.dolorEva || 0)
-  const [omsListChecked, setOmsListChecked] = useState<Record<string, boolean>>(() => {
-    if (initialData.omsListChecked) return initialData.omsListChecked
-    const initial: Record<string, boolean> = {}
-    OMS_SAFETY_CHECKLIST.forEach((item) => {
-      initial[item.key] = false
-    })
-    return initial
-  })
+  const saveChkMut = (trpc.surgery.saveChecklist.useMutation as any)({ onSuccess: () => refetchChk() });
+  const saveReportMut = (trpc.surgery.saveOperativeReport.useMutation as any)({ onSuccess: () => refetchReports() });
+  const saveCompMut = (trpc.surgery.saveComplication.useMutation as any)({ onSuccess: () => refetchComps() });
 
-  const [saved, setSaved] = useState(false)
+  // Checklist State
+  const [signIn, setSignIn] = useState(true);
+  const [timeOut, setTimeOut] = useState(true);
+  const [signOut, setSignOut] = useState(true);
+  const [chkObs, setChkObs] = useState("Lista de chequeo de seguridad OMS completada sin novedades.");
 
-  const { setDirty } = useUnsaved()
+  // Operative Report State
+  const [diagPre, setDiagPre] = useState("Apendicitis Aguda Flegmonosa");
+  const [diagPost, setDiagPost] = useState("Apendicitis Aguda Gangrenosa no perforada");
+  const [cirujano, setCirujano] = useState("Dr. Carlos Pierluissi");
+  const [ayudante, setAyudante] = useState("Dr. Roberto Mendoza");
+  const [procedimiento, setProcedimiento] = useState("Apendicectomía Laparoscópica");
+  const [hallazgos, setHallazgos] = useState("Apéndice cecal subcecal edematoso y gangrenoso. Escaso líquido libre claro.");
+  const [sangreMl, setSangreMl] = useState(30);
+  const [conteoGasasOk, setConteoGasasOk] = useState(true);
+  const [patologia, setPatologia] = useState("Pieza de apendicectomía enviada a biopsia histopatológica.");
 
-  const isDirty = useMemo(() => {
-    const initialAlvarado = initialData.alvaradoAnswers || {}
-    const initialOms = initialData.omsListChecked || {}
-    return (
-      tipoHerida !== (initialData.tipoHerida || "Ninguna") ||
-      JSON.stringify(alvaradoAnswers) !== JSON.stringify(initialAlvarado) ||
-      dolorEva !== (initialData.dolorEva || 0) ||
-      JSON.stringify(omsListChecked) !== JSON.stringify(initialOms)
-    )
-  }, [tipoHerida, alvaradoAnswers, dolorEva, omsListChecked, initialData])
+  // Complications State
+  const [gradeClass, setGradeClass] = useState("Grado I (Desviación menor del curso normal sin necesidad de tratamiento farmacológico/quirúrgico)");
+  const [descComp, setDescComp] = useState("Seroma menor en puerto umbilical, manejado con drenaje espontáneo.");
+  const [reintervencion, setReintervencion] = useState(false);
 
   useEffect(() => {
-    setDirty("cirugiaGeneral", isDirty)
-  }, [isDirty, setDirty])
-
-  const utils = trpc.useUtils()
-  const save = (trpc.encounter.update as any).useMutation({
-    onSuccess: () => {
-      utils.invalidate()
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    },
-  })
-
-  // Calculate Alvarado Score
-  const alvaradoSum = ALVARADO_ITEMS.reduce((acc, item) => {
-    return acc + (alvaradoAnswers[item.key] ? item.pts : 0)
-  }, 0)
-
-  let alvaradoRiesgo = "Bajo riesgo (<=4 pts)"
-  if (alvaradoSum >= 5 && alvaradoSum <= 6) alvaradoRiesgo = "Riesgo intermedio / Observación (5-6 pts)"
-  if (alvaradoSum >= 7) alvaradoRiesgo = "Alto riesgo de apendicitis / Quirúrgico (7-10 pts)"
-
-  function handleSave() {
-    const payload = {
-      tipoHerida,
-      alvaradoAnswers,
-      dolorEva,
-      omsListChecked,
+    if (dbChk) {
+      setSignIn(dbChk.signInConfirmado);
+      setTimeOut(dbChk.timeOutPausaQuirurgica);
+      setSignOut(dbChk.signOutConteoCorrecto);
+      if (dbChk.observacionesChecklist) setChkObs(dbChk.observacionesChecklist);
     }
+  }, [dbChk]);
 
-    save.mutate({
-      id: encounterId,
-      datosEspecialidad: payload,
-    })
-  }
+  const handleSaveChk = () => {
+    saveChkMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      signInConfirmado: signIn,
+      timeOutPausaQuirurgica: timeOut,
+      signOutConteoCorrecto: signOut,
+      observacionesChecklist: chkObs,
+    });
+  };
 
-  const toggleAlvarado = (key: string) => {
-    if (disabled) return
-    setAlvaradoAnswers((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }))
-  }
+  const handleAddReport = () => {
+    saveReportMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      diagnosticoPreoperatorio: diagPre,
+      diagnosticoPostoperatorio: diagPost,
+      cirujanoPrincipal: cirujano,
+      primerAyudante: ayudante,
+      procedimientoRealizado: procedimiento,
+      hallazgosQuirurgicos: hallazgos,
+      perdidaSangreMl: sangreMl,
+      conteoGasasCompresasOk: conteoGasasOk,
+      hallazgosAnatomopatologicos: patologia,
+    });
+  };
 
-  const toggleOms = (key: string) => {
-    if (disabled) return
-    setOmsListChecked((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }))
-  }
+  const handleAddComp = () => {
+    saveCompMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      gradeClass,
+      descripcionComplicacion: descComp,
+      requirioReintervencion: reintervencion,
+    });
+  };
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 space-y-4">
-      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-white">
-        <Scissors className="h-4 w-4 text-sky-400 animate-pulse" />
-        Valoración de Cirugía General y Escala de Alvarado
-      </h3>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Alvarado Calculator */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
-              Escala de Alvarado (Apendicitis)
-            </h4>
-            <div className="text-right shrink-0">
-              <span className="text-xs font-bold text-sky-400">Total: {alvaradoSum}/10</span>
-              <span className="text-[10px] text-slate-400 block">{alvaradoRiesgo}</span>
-            </div>
+    <div className="space-y-4 bg-slate-900 border border-slate-800 p-5 rounded-xl text-slate-100 shadow-md">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400">
+            <Scissors className="w-5 h-5" />
           </div>
-
-          <div className="space-y-1">
-            {ALVARADO_ITEMS.map((item) => {
-              const active = alvaradoAnswers[item.key]
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => toggleAlvarado(item.key)}
-                  className={`w-full flex items-center justify-between rounded p-1.5 text-[11px] border transition-colors text-left ${
-                    active
-                      ? "bg-sky-900/30 border-sky-750 text-sky-300 font-semibold"
-                      : "border-slate-800 bg-slate-900/50 text-slate-400 hover:text-white"
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  <span className="text-[10px] font-semibold text-slate-500 shrink-0 ml-2">
-                    +{item.pts} pt{item.pts > 1 ? "s" : ""}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Middle: Checklist OMS & Pain EVA */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
-              Lista OMS de Cirugía Segura
-            </h4>
-          </div>
-
-          <div className="space-y-1">
-            {OMS_SAFETY_CHECKLIST.map((item) => {
-              const active = omsListChecked[item.key]
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => toggleOms(item.key)}
-                  className={`w-full flex items-center justify-between rounded p-1.5 text-[10px] border transition-colors text-left ${
-                    active
-                      ? "bg-emerald-900/20 border-emerald-700 text-emerald-400 font-semibold"
-                      : "border-slate-800 bg-slate-900/50 text-slate-500 hover:text-white"
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  {active && <CheckCircle className="h-3.5 w-3.5 text-emerald-400 shrink-0 ml-2" />}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Right: Wound Class & EVA */}
-        <div className="space-y-4">
-          <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-            Herida y Monitoreo del Dolor
-          </h4>
-
-          <label className="block text-xs text-slate-400 font-medium">
-            Clase de Herida Quirúrgica
-            <select
-              disabled={disabled}
-              value={tipoHerida}
-              onChange={(e) => setTipoHerida(e.target.value)}
-              className="mt-1 block w-full rounded border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-white"
-            >
-              <option value="Ninguna">Ninguna / No aplica</option>
-              <option value="Limpia">Limpia (Sin infección / cerrada)</option>
-              <option value="Limpia-Contaminada">Limpia-Contaminada (Apertura controlada)</option>
-              <option value="Contaminada">Contaminada (Derrame / inflamación)</option>
-              <option value="Sucia-Infectada">Sucia o Infectada (Necrosis / pus)</option>
-            </select>
-          </label>
-
-          <div className="space-y-1 text-xs">
-            <span className="block text-slate-400 font-medium">Escala Visual Analógica (EVA) de Dolor</span>
-            <div className="flex items-center gap-3 bg-slate-800/10 p-2.5 rounded border border-slate-850">
-              <input
-                type="range"
-                min="0"
-                max="10"
-                disabled={disabled}
-                value={dolorEva}
-                onChange={(e) => setDolorEva(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-750 rounded-lg appearance-none cursor-pointer accent-sky-500"
-              />
-              <span className="text-xs font-bold text-sky-400 bg-slate-800 px-2 py-1 rounded shrink-0 w-8 text-center">
-                {dolorEva}
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-500 block">0 = Sin dolor, 10 = Máximo dolor imaginable.</span>
+          <div>
+            <h3 className="font-bold text-base text-white">Cirugía General & Protocolo Quirúrgico</h3>
+            <p className="text-xs text-slate-400">Seguridad OMS, Reporte Operatorio & Clasificación Clavien-Dindo</p>
           </div>
         </div>
       </div>
 
-      {!disabled && (
-        <div className="flex items-center gap-3 border-t border-slate-800 pt-3">
-          <button
-            onClick={handleSave}
-            disabled={save.isPending}
-            className="rounded bg-sky-700 px-4 py-1.5 text-xs text-white hover:bg-sky-600 disabled:opacity-50 font-semibold"
-          >
-            {save.isPending ? "Guardando..." : "Guardar Cirugía General"}
-          </button>
-          {saved && (
-            <p className="flex items-center gap-1 text-xs text-emerald-400">
-              <CheckCircle className="h-3.5 w-3.5" /> Guardado.
-            </p>
-          )}
+      {/* Navigation Sub-Tabs */}
+      <div className="flex flex-wrap items-center gap-2 bg-slate-950/70 p-1.5 rounded-lg border border-slate-800">
+        <button
+          onClick={() => setActiveTab("CHECKLIST")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "CHECKLIST"
+              ? "bg-emerald-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <ShieldCheck className="w-3.5 h-3.5" /> Lista de Chequeo OMS
+        </button>
+
+        <button
+          onClick={() => setActiveTab("REPORTE")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "REPORTE"
+              ? "bg-emerald-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" /> Protocolo Quirúrgico ({dbReports.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab("COMPLICACIONES")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "COMPLICACIONES"
+              ? "bg-emerald-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <AlertTriangle className="w-3.5 h-3.5" /> Clavien-Dindo Complicaciones ({dbComps.length})
+        </button>
+      </div>
+
+      {/* Tab 1: Checklist OMS */}
+      {activeTab === "CHECKLIST" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4" /> Lista de Chequeo de Seguridad Quirúrgica OMS
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Verificación obligatoria de 3 fases: Entrada, Pausa Quirúrgica y Salida.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleSaveChk}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs"
+            >
+              Guardar Checklist OMS
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-3 text-xs">
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
+              <label className="flex items-center gap-2 text-slate-200 font-bold">
+                <input type="checkbox" checked={signIn} onChange={(e) => setSignIn(e.target.checked)} className="accent-emerald-500 w-4 h-4" />
+                1. Sign-In (Pre-Anestesia)
+              </label>
+              <p className="text-[10px] text-slate-400">Identidad, sitio quirúrgico, consentimiento y pulsioximetría verficados.</p>
+            </div>
+
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
+              <label className="flex items-center gap-2 text-slate-200 font-bold">
+                <input type="checkbox" checked={timeOut} onChange={(e) => setTimeOut(e.target.checked)} className="accent-emerald-500 w-4 h-4" />
+                2. Time-Out (Pausa Pre-Incisión)
+              </label>
+              <p className="text-[10px] text-slate-400">Presentación del equipo, antibiótico profiláctico e imágenes visibles.</p>
+            </div>
+
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
+              <label className="flex items-center gap-2 text-slate-200 font-bold">
+                <input type="checkbox" checked={signOut} onChange={(e) => setSignOut(e.target.checked)} className="accent-emerald-500 w-4 h-4" />
+                3. Sign-Out (Pre-Salida)
+              </label>
+              <p className="text-[10px] text-slate-400">Conteo completo de gasas, compresas e instrumental. Etiquetado de muestras.</p>
+            </div>
+          </div>
+
+          <div className="space-y-1 text-xs">
+            <label className="font-semibold text-slate-300">Observaciones del Checklist de Seguridad</label>
+            <input
+              type="text"
+              value={chkObs}
+              onChange={(e) => setChkObs(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: Protocolo Quirúrgico */}
+      {activeTab === "REPORTE" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <FileText className="w-4 h-4" /> Protocolo Quirúrgico Operatorio
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Reporte formal de la técnica, cirujanos, sangrado y hallazgos.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleAddReport}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> Registrar Protocolo
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Diagnóstico Preoperatorio</label>
+              <input
+                type="text"
+                value={diagPre}
+                onChange={(e) => setDiagPre(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Diagnóstico Postoperatorio</label>
+              <input
+                type="text"
+                value={diagPost}
+                onChange={(e) => setDiagPost(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Cirujano Principal</label>
+              <input
+                type="text"
+                value={cirujano}
+                onChange={(e) => setCirujano(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Procedimiento Realizado</label>
+              <input
+                type="text"
+                value={procedimiento}
+                onChange={(e) => setProcedimiento(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="md:col-span-2 space-y-1">
+              <label className="font-semibold text-slate-300">Hallazgos Quirúrgicos & Descripción de Técnica</label>
+              <textarea
+                value={hallazgos}
+                onChange={(e) => setHallazgos(e.target.value)}
+                rows={3}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
+              <label className="text-slate-400 font-semibold">Pérdida Hemática Estimada (mL):</label>
+              <input
+                type="number"
+                value={sangreMl}
+                onChange={(e) => setSangreMl(Number(e.target.value))}
+                className="w-full bg-slate-900 border border-slate-700 text-white font-bold rounded p-1.5"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 bg-slate-950 p-3 rounded-lg border border-slate-800">
+              <input
+                type="checkbox"
+                id="conteoGasasOk"
+                checked={conteoGasasOk}
+                onChange={(e) => setConteoGasasOk(e.target.checked)}
+                className="w-4 h-4 accent-emerald-500 rounded"
+              />
+              <label htmlFor="conteoGasasOk" className="text-slate-300 font-semibold cursor-pointer">
+                Conteo Completo de Gasas, Compresas e Instrumental Verificado OK
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Clavien-Dindo Complicaciones */}
+      {activeTab === "COMPLICACIONES" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4" /> Clasificación Clavien-Dindo de Complicaciones Quirúrgicas
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Categorización estándar internacional de eventos adversos postoperatorios.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleAddComp}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> Registrar Complicación
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 text-xs">
+            <div className="md:col-span-2 space-y-1">
+              <label className="font-semibold text-slate-300">Grado Clavien-Dindo (I al V)</label>
+              <select
+                value={gradeClass}
+                onChange={(e) => setGradeClass(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-white font-semibold rounded p-2"
+              >
+                {CLAVIEN_DINDO_GRADES.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="md:col-span-2 space-y-1">
+              <label className="font-semibold text-slate-300">Descripción de la Complicación & Manejo</label>
+              <textarea
+                value={descComp}
+                onChange={(e) => setDescComp(e.target.value)}
+                rows={2}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 bg-slate-950 p-3 rounded-lg border border-slate-800">
+              <input
+                type="checkbox"
+                id="reintervencion"
+                checked={reintervencion}
+                onChange={(e) => setReintervencion(e.target.checked)}
+                className="w-4 h-4 accent-red-500 rounded"
+              />
+              <label htmlFor="reintervencion" className="text-slate-300 font-semibold cursor-pointer">
+                Requirió Reintervención Quirúrgica o Endoscópica
+              </label>
+            </div>
+          </div>
         </div>
       )}
     </div>
-  )
+  );
 }

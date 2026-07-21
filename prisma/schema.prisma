@@ -448,6 +448,9 @@ model PatientRegistration {
   anesthesiaPreEvals    AnesthesiaPreEval[]
   anesthesiaAirways     AnesthesiaAirwayAssessment[]
   anesthesiaIntraops    AnesthesiaIntraopRecord[]
+  surgeryChecklists     SurgerySafetyChecklist[]
+  surgeryReports        SurgeryOperativeReport[]
+  surgeryComplications  SurgeryClavienDindo[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -568,6 +571,9 @@ model Encounter {
   anesthesiaPreEvals      AnesthesiaPreEval[]
   anesthesiaAirways       AnesthesiaAirwayAssessment[]
   anesthesiaIntraops      AnesthesiaIntraopRecord[]
+  surgeryChecklists       SurgerySafetyChecklist[]
+  surgeryReports          SurgeryOperativeReport[]
+  surgeryComplications    SurgeryClavienDindo[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2591,6 +2597,80 @@ model AnesthesiaIntraopRecord {
   agentesUtilizados  String // Propofol, Sevoflurano, Fentanilo, Rocuronio
   monitoreoUtilizado String // ECG, PNI, SpO2, EtCO2, BIS
   eventosRelevantes  String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// CIRUGÍA GENERAL - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model SurgerySafetyChecklist {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  signInConfirmado       Boolean @default(false) // Confirmación pre-anestesia
+  timeOutPausaQuirurgica Boolean @default(false) // Pausa pre-incisión
+  signOutConteoCorrecto  Boolean @default(false) // Conteo de gasas/compresas
+  observacionesChecklist String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model SurgeryOperativeReport {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  diagnosticoPreoperatorio    String
+  diagnosticoPostoperatorio   String
+  cirujanoPrincipal           String
+  primerAyudante              String?
+  procedimientoRealizado      String
+  hallazgosQuirurgicos        String  @db.Text
+  perdidaSangreMl             Float? // mL
+  conteoGasasCompresasOk      Boolean @default(true)
+  hallazgosAnatomopatologicos String? // Biopsia enviada
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model SurgeryClavienDindo {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  gradeClass              String // Grado I, II, IIIa, IIIb, IVa, IVb, V
+  descripcionComplicacion String  @db.Text
+  requirioReintervencion  Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
