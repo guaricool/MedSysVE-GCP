@@ -1,342 +1,453 @@
-"use client"
+"use client";
 
-import { useState, useMemo, useEffect } from "react"
-import { trpc } from "@/lib/trpc-client"
-import { Activity, CheckCircle, Database } from "lucide-react"
-import { useUnsaved } from "@/components/providers/unsaved-changes-provider"
+import { useState, useMemo, useEffect } from "react";
+import { trpc } from "@/lib/trpc-client";
+import { useUnsaved } from "@/components/providers/unsaved-changes-provider";
+import { Button } from "@/components/ui/button";
+import {
+  Droplet,
+  Activity,
+  Award,
+  Calculator,
+  Plus,
+  AlertTriangle,
+  CheckCircle2,
+  FileText,
+  Clock,
+} from "lucide-react";
 
 interface Props {
-  encounterId: string
-  disabled?: boolean
-  initialData?: {
-    ipssAnswers?: Record<number, number>
-    ipssQol?: number
-    psaTotal?: number
-    psaLibre?: number
-    volumenResiduo?: number
-    tactoRectal?: string
-    uroQmax?: number
-    uroQmed?: number
-    uroVol?: number
-    uroTiempo?: number
-  }
+  encounterId: string;
+  patientRegistrationId?: string;
+  patientRegId?: string;
+  disabled?: boolean;
+  initialData?: any;
 }
 
-const IPSS_QUESTIONS: Record<number, string> = {
-  1: "Vaciado incompleto (sensación de no vaciar bien la vejiga)",
-  2: "Frecuencia (necesidad de volver a orinar antes de 2 horas)",
-  3: "Intermitencia (parar y comenzar varias veces durante la micción)",
-  4: "Urgencia (dificultad para aguantar las ganas de orinar)",
-  5: "Chorro débil (fuerza del chorro miccional reducida)",
-  6: "Esfuerzo (necesidad de empujar o hacer fuerza para comenzar)",
-  7: "Nocturia (veces promedio que se levanta a orinar por la noche)",
-}
+const IPSS_QUESTIONS = [
+  { id: 1, key: "vaciadoIncompleto", label: "1. Vaciado incompleto (sensación de no vaciar la vejiga al orinar)" },
+  { id: 2, key: "frecuenciaUrinaria", label: "2. Frecuencia urinaria (necesidad de volver a orinar antes de 2 horas)" },
+  { id: 3, key: "intermitencia", label: "3. Intermitencia (parar y recomenzar varias veces al orinar)" },
+  { id: 4, key: "urgenciaUrinaria", label: "4. Urgencia miccional (dificultad para aguantar las ganas de orinar)" },
+  { id: 5, key: "chorroDebil", label: "5. Chorro débil (fuerza o potencia del chorro miccional reducida)" },
+  { id: 6, key: "esfuerzoUrinario", label: "6. Esfuerzo miccional (necesidad de apretar o empujar para empezar)" },
+  { id: 7, key: "nicturia", label: "7. Nicturia (número de veces promedio que se levanta a orinar por la noche)" },
+];
 
-export function UrologiaForm({ encounterId, disabled, initialData = {} }: Props) {
-  const [ipssAnswers, setIpssAnswers] = useState<Record<number, number>>(() => {
-    if (initialData.ipssAnswers) return initialData.ipssAnswers
-    const initial: Record<number, number> = {}
-    for (let i = 1; i <= 7; i++) initial[i] = 0
-    return initial
-  })
-  const [ipssQol, setIpssQol] = useState<number>(initialData.ipssQol || 0)
-  const [psaTotal, setPsaTotal] = useState<string>(initialData.psaTotal?.toString() || "")
-  const [psaLibre, setPsaLibre] = useState<string>(initialData.psaLibre?.toString() || "")
-  const [volumenResiduo, setVolumenResiduo] = useState<string>(initialData.volumenResiduo?.toString() || "")
-  const [tactoRectal, setTactoRectal] = useState(initialData.tactoRectal || "Normal")
+const QOL_OPTIONS = [
+  "0: Encantado (Disfrutaría plenamente de la vida)",
+  "1: Satisfecho (Bastante conforme)",
+  "2: Generalmente satisfecho (Aceptable)",
+  "3: Mixto (Tanto satisfecho como insatisfecho)",
+  "4: Generalmente insatisfecho (Incómodo)",
+  "5: Infeliz (Muy molesto)",
+  "6: Pésimo (Insoportable)",
+];
 
-  // Uroflowmetry
-  const [uroQmax, setUroQmax] = useState<string>(initialData.uroQmax?.toString() || "")
-  const [uroQmed, setUroQmed] = useState<string>(initialData.uroQmed?.toString() || "")
-  const [uroVol, setUroVol] = useState<string>(initialData.uroVol?.toString() || "")
-  const [uroTiempo, setUroTiempo] = useState<string>(initialData.uroTiempo?.toString() || "")
+export function UrologiaForm({ encounterId, disabled, initialData = {}, patientRegistrationId, patientRegId }: Props) {
+  const effectivePatId = patientRegistrationId || patientRegId || "sandbox-demo-pat";
+  const [activeTab, setActiveTab] = useState<"IPSS" | "PSA" | "UROFLUJO">("IPSS");
+  const [saved, setSaved] = useState(false);
+  const { setDirty } = useUnsaved();
 
-  const [saved, setSaved] = useState(false)
+  // tRPC Queries & Mutations
+  const { data: dbIpss, refetch: refetchIpss } = (trpc.uro.getIpssScore.useQuery as any)({ encounterId });
+  const { data: dbPsa, refetch: refetchPsa } = (trpc.uro.getPsaCalculator.useQuery as any)({ encounterId });
+  const { data: dbFlow, refetch: refetchFlow } = (trpc.uro.getUroflowmetry.useQuery as any)({ encounterId });
 
-  const { setDirty } = useUnsaved()
+  const saveIpssMut = (trpc.uro.saveIpssScore.useMutation as any)({ onSuccess: () => refetchIpss() });
+  const savePsaMut = (trpc.uro.savePsaCalculator.useMutation as any)({ onSuccess: () => refetchPsa() });
+  const saveFlowMut = (trpc.uro.saveUroflowmetry.useMutation as any)({ onSuccess: () => refetchFlow() });
 
-  const isDirty = useMemo(() => {
-    const initialAnswers = initialData.ipssAnswers || { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0 }
-    return (
-      JSON.stringify(ipssAnswers) !== JSON.stringify(initialAnswers) ||
-      ipssQol !== (initialData.ipssQol || 0) ||
-      psaTotal !== (initialData.psaTotal?.toString() || "") ||
-      psaLibre !== (initialData.psaLibre?.toString() || "") ||
-      volumenResiduo !== (initialData.volumenResiduo?.toString() || "") ||
-      tactoRectal !== (initialData.tactoRectal || "Normal") ||
-      uroQmax !== (initialData.uroQmax?.toString() || "") ||
-      uroQmed !== (initialData.uroQmed?.toString() || "") ||
-      uroVol !== (initialData.uroVol?.toString() || "") ||
-      uroTiempo !== (initialData.uroTiempo?.toString() || "")
-    )
-  }, [
-    ipssAnswers, ipssQol, psaTotal, psaLibre, volumenResiduo, tactoRectal, 
-    uroQmax, uroQmed, uroVol, uroTiempo, initialData
-  ])
+  // IPSS State
+  const [ipssValues, setIpssValues] = useState<Record<string, number>>({
+    vaciadoIncompleto: 3,
+    frecuenciaUrinaria: 3,
+    intermitencia: 2,
+    urgenciaUrinaria: 4,
+    chorroDebil: 4,
+    esfuerzoUrinario: 2,
+    nicturia: 3,
+  });
+  const [qol, setQol] = useState(4);
+
+  const ipssTotal = useMemo(() => {
+    return Object.values(ipssValues).reduce((acc, val) => acc + val, 0);
+  }, [ipssValues]);
+
+  const ipssCategory = useMemo(() => {
+    if (ipssTotal <= 7) return "Sintomatología Leve (0-7 pts)";
+    if (ipssTotal <= 19) return "Sintomatología Moderada (8-19 pts)";
+    return "Sintomatología Severa (20-35 pts)";
+  }, [ipssTotal]);
+
+  // PSA Calculator State
+  const [psaTotal, setPsaTotal] = useState(6.8);
+  const [psaLibre, setPsaLibre] = useState(0.95);
+  const [volProstateCc, setVolProstateCc] = useState(45.0);
+  const [interpPsa, setInterpPsa] = useState("PSA Total elevado en 'Zona Gris' (4-10 ng/mL). Ratio Libre/Total <15% sugiere mayor riesgo. Indicada Biopsia Prostática Dirigida.");
+
+  const ratioLibreTotal = useMemo(() => {
+    if (psaTotal > 0 && psaLibre > 0) {
+      return Number(((psaLibre / psaTotal) * 100).toFixed(2));
+    }
+    return 0;
+  }, [psaTotal, psaLibre]);
+
+  const densidadPsa = useMemo(() => {
+    if (psaTotal > 0 && volProstateCc > 0) {
+      return Number((psaTotal / volProstateCc).toFixed(3));
+    }
+    return 0;
+  }, [psaTotal, volProstateCc]);
+
+  // Uroflowmetry State
+  const [qmax, setQmax] = useState(9.5);
+  const [qavg, setQavg] = useState(4.8);
+  const [volEmitido, setVolEmitido] = useState(220.0);
+  const [rpm, setRpm] = useState(85.0);
+  const [interpFlow, setInterpFlow] = useState("Uroflujometría con Flujo Máximo disminuido (Qmax < 10 mL/s) y curva aplanada compatible con Obstrucción del Salida Vesical (STUI/HPB). RPM significativo (85 mL).");
 
   useEffect(() => {
-    setDirty("urologia", isDirty)
-  }, [isDirty, setDirty])
-
-  const utils = trpc.useUtils()
-  const save = (trpc.encounter.update as any).useMutation({
-    onSuccess: () => {
-      utils.invalidate()
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    },
-  })
-
-  const ipssSum = Object.values(ipssAnswers).reduce((acc, val) => acc + (val || 0), 0)
-  let ipssSeverity = "Leve (0-7)"
-  if (ipssSum >= 8 && ipssSum <= 19) ipssSeverity = "Moderado (8-19)"
-  if (ipssSum >= 20) ipssSeverity = "Severo (20-35)"
-
-  function handleSave() {
-    const payload = {
-      ipssAnswers,
-      ipssQol,
-      psaTotal: psaTotal ? Number(psaTotal) : undefined,
-      psaLibre: psaLibre ? Number(psaLibre) : undefined,
-      volumenResiduo: volumenResiduo ? Number(volumenResiduo) : undefined,
-      tactoRectal,
-      uroQmax: uroQmax ? Number(uroQmax) : undefined,
-      uroQmed: uroQmed ? Number(uroQmed) : undefined,
-      uroVol: uroVol ? Number(uroVol) : undefined,
-      uroTiempo: uroTiempo ? Number(uroTiempo) : undefined,
+    if (dbIpss) {
+      setIpssValues({
+        vaciadoIncompleto: dbIpss.vaciadoIncompleto,
+        frecuenciaUrinaria: dbIpss.frecuenciaUrinaria,
+        intermitencia: dbIpss.intermitencia,
+        urgenciaUrinaria: dbIpss.urgenciaUrinaria,
+        chorroDebil: dbIpss.chorroDebil,
+        esfuerzoUrinario: dbIpss.esfuerzoUrinario,
+        nicturia: dbIpss.nicturia,
+      });
+      setQol(dbIpss.qolScore);
     }
+  }, [dbIpss]);
 
-    save.mutate({
-      id: encounterId,
-      datosEspecialidad: payload,
-    })
-  }
+  useEffect(() => {
+    if (dbPsa) {
+      setPsaTotal(dbPsa.psaTotal);
+      if (dbPsa.psaLibre !== null) setPsaLibre(dbPsa.psaLibre);
+      if (dbPsa.volumenProstaticoCc !== null) setVolProstateCc(dbPsa.volumenProstaticoCc);
+      if (dbPsa.interpretacionPsa) setInterpPsa(dbPsa.interpretacionPsa);
+    }
+  }, [dbPsa]);
+
+  useEffect(() => {
+    if (dbFlow) {
+      setQmax(dbFlow.qmaxMlSec);
+      if (dbFlow.qavgMlSec !== null) setQavg(dbFlow.qavgMlSec);
+      setVolEmitido(dbFlow.volumenEmitidoMl);
+      setRpm(dbFlow.residuoPostMiccionalMl);
+      if (dbFlow.interpretacionUroflujo) setInterpFlow(dbFlow.interpretacionUroflujo);
+    }
+  }, [dbFlow]);
+
+  const handleSaveIpss = () => {
+    saveIpssMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      ...ipssValues,
+      ipssTotalScore: ipssTotal,
+      qolScore: qol,
+    });
+  };
+
+  const handleSavePsa = () => {
+    savePsaMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      psaTotal,
+      psaLibre,
+      ratioPsaLibreTotal: ratioLibreTotal,
+      volumenProstaticoCc: volProstateCc,
+      densidadPsa,
+      interpretacionPsa: interpPsa,
+    });
+  };
+
+  const handleSaveFlow = () => {
+    saveFlowMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      qmaxMlSec: qmax,
+      qavgMlSec: qavg,
+      volumenEmitidoMl: volEmitido,
+      residuoPostMiccionalMl: rpm,
+      interpretacionUroflujo: interpFlow,
+    });
+  };
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 space-y-4">
-      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-white">
-        <Database className="h-4 w-4 text-blue-400" />
-        Evaluación Urológica y Score IPSS
-      </h3>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left: IPSS Questionnaire */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
-              Puntuación Internacional de Síntomas Prostáticos (IPSS)
-            </h4>
-            <div className="text-right shrink-0">
-              <span className="text-xs font-bold text-blue-400">Score: {ipssSum}</span>
-              <span className="text-[10px] text-slate-400 block">{ipssSeverity}</span>
-            </div>
+    <div className="space-y-4 bg-slate-900 border border-slate-800 p-5 rounded-xl text-slate-100 shadow-md">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400">
+            <Droplet className="w-5 h-5" />
           </div>
-
-          <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
-            {Object.keys(IPSS_QUESTIONS).map((key) => {
-              const qId = Number(key)
-              return (
-                <div key={qId} className="flex flex-col gap-1.5 p-2 bg-slate-800/10 rounded border border-slate-800/50 text-xs">
-                  <span className="text-slate-300 font-medium">{qId}. {IPSS_QUESTIONS[qId]}</span>
-                  <div className="flex gap-1">
-                    {["Ninguna (0)", "1/5 veces (1)", "< la mitad (2)", "la mitad (3)", "> la mitad (4)", "Siempre (5)"].map((opt, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => setIpssAnswers((prev) => ({ ...prev, [qId]: idx }))}
-                        className={`rounded px-1.5 py-0.5 text-[9px] border transition-colors flex-1 text-center ${
-                          ipssAnswers[qId] === idx
-                            ? "bg-blue-600 border-blue-500 text-white font-medium"
-                            : "border-slate-800 bg-slate-900 text-slate-500 hover:text-white"
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-
-            <div className="flex flex-col gap-1.5 p-2 bg-slate-800/10 rounded border border-slate-800/50 text-xs">
-              <span className="text-slate-300 font-medium">Calidad de Vida debido a Síntomas Urinarios</span>
-              <select
-                disabled={disabled}
-                value={ipssQol}
-                onChange={(e) => setIpssQol(Number(e.target.value))}
-                className="block w-full rounded border border-slate-700 bg-slate-800 px-2 py-1 text-white text-xs"
-              >
-                <option value={0}>0 - Encantado</option>
-                <option value={1}>1 - Muy satisfecho</option>
-                <option value={2}>2 - Mayormente satisfecho</option>
-                <option value={3}>3 - Mezcla de sentimientos</option>
-                <option value={4}>4 - Mayormente insatisfecho</option>
-                <option value={5}>5 - Infeliz</option>
-                <option value={6}>6 - Terrible</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: PSA, Uroflowmetry and Prostate Exam */}
-        <div className="space-y-4">
-          <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-            Marcadores y Examen Físico
-          </h4>
-
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <label className="block text-slate-400">
-              Antígeno Prostático Total (PSA)
-              <div className="relative mt-1">
-                <input
-                  type="number"
-                  step="0.01"
-                  disabled={disabled}
-                  placeholder="2.5"
-                  value={psaTotal}
-                  onChange={(e) => setPsaTotal(e.target.value)}
-                  className="block w-full rounded border border-slate-700 bg-slate-800 pl-3 pr-12 py-1.5 text-white"
-                />
-                <span className="absolute right-2.5 top-2 text-[10px] text-slate-500 font-semibold">ng/mL</span>
-              </div>
-            </label>
-
-            <label className="block text-slate-400">
-              PSA Libre (Opcional)
-              <div className="relative mt-1">
-                <input
-                  type="number"
-                  step="0.01"
-                  disabled={disabled}
-                  placeholder="0.5"
-                  value={psaLibre}
-                  onChange={(e) => setPsaLibre(e.target.value)}
-                  className="block w-full rounded border border-slate-700 bg-slate-800 pl-3 pr-12 py-1.5 text-white"
-                />
-                <span className="absolute right-2.5 top-2 text-[10px] text-slate-500 font-semibold">ng/mL</span>
-              </div>
-            </label>
-
-            <label className="block text-slate-400 col-span-2">
-              Volumen de Residuo Post-Miccional
-              <div className="relative mt-1">
-                <input
-                  type="number"
-                  disabled={disabled}
-                  placeholder="20"
-                  value={volumenResiduo}
-                  onChange={(e) => setVolumenResiduo(e.target.value)}
-                  className="block w-full rounded border border-slate-700 bg-slate-800 pl-3 pr-8 py-1.5 text-white"
-                />
-                <span className="absolute right-2.5 top-2 text-[10px] text-slate-500 font-semibold">cc</span>
-              </div>
-            </label>
-          </div>
-
-          <label className="block text-xs text-slate-400 font-medium">
-            Tacto Rectal (Examen Prostático)
-            <select
-              disabled={disabled}
-              value={tactoRectal}
-              onChange={(e) => setTactoRectal(e.target.value)}
-              className="mt-1 block w-full rounded border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-sm text-white"
-            >
-              <option value="Normal">Normal (Blanda, no dolorosa, sin nódulos)</option>
-              <option value="Hipertrofia Benigna">Hipertrofia Prostática Benigna (Grado I-IV)</option>
-              <option value="Nódulo Sospechoso">Nódulo sospechoso (Pétrea / Asimétrica)</option>
-              <option value="Prostatitis">Prostatitis (Dolorosa al tacto / congestiva)</option>
-            </select>
-          </label>
-
-          {/* Uroflowmetry fields */}
-          <div className="rounded-lg border border-slate-800 bg-slate-800/10 p-3 space-y-2.5">
-            <h5 className="text-xs font-semibold text-slate-350 uppercase tracking-wide">
-              Estudio de Uroflujometría
-            </h5>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <label className="block text-slate-400">
-                Flujo Máximo (Qmax)
-                <div className="relative mt-1">
-                  <input
-                    type="number"
-                    step="0.1"
-                    disabled={disabled}
-                    placeholder="15"
-                    value={uroQmax}
-                    onChange={(e) => setUroQmax(e.target.value)}
-                    className="block w-full rounded border border-slate-700 bg-slate-800 pl-3 pr-10 py-1 text-white"
-                  />
-                  <span className="absolute right-2 top-1.5 text-[9px] text-slate-500 font-semibold">mL/s</span>
-                </div>
-              </label>
-
-              <label className="block text-slate-400">
-                Flujo Medio (Qmed)
-                <div className="relative mt-1">
-                  <input
-                    type="number"
-                    step="0.1"
-                    disabled={disabled}
-                    placeholder="8"
-                    value={uroQmed}
-                    onChange={(e) => setUroQmed(e.target.value)}
-                    className="block w-full rounded border border-slate-700 bg-slate-800 pl-3 pr-10 py-1 text-white"
-                  />
-                  <span className="absolute right-2 top-1.5 text-[9px] text-slate-500 font-semibold">mL/s</span>
-                </div>
-              </label>
-
-              <label className="block text-slate-400">
-                Volumen Miccionado
-                <div className="relative mt-1">
-                  <input
-                    type="number"
-                    disabled={disabled}
-                    placeholder="300"
-                    value={uroVol}
-                    onChange={(e) => setUroVol(e.target.value)}
-                    className="block w-full rounded border border-slate-700 bg-slate-800 pl-3 pr-8 py-1 text-white"
-                  />
-                  <span className="absolute right-2 top-1.5 text-[9px] text-slate-500 font-semibold">mL</span>
-                </div>
-              </label>
-
-              <label className="block text-slate-400">
-                Tiempo Miccional
-                <div className="relative mt-1">
-                  <input
-                    type="number"
-                    disabled={disabled}
-                    placeholder="25"
-                    value={uroTiempo}
-                    onChange={(e) => setUroTiempo(e.target.value)}
-                    className="block w-full rounded border border-slate-700 bg-slate-800 pl-3 pr-8 py-1 text-white"
-                  />
-                  <span className="absolute right-2 top-1.5 text-[9px] text-slate-500 font-semibold">seg</span>
-                </div>
-              </label>
-            </div>
+          <div>
+            <h3 className="font-bold text-base text-white">Urología & Síntomas del Trato Urinario Inferior (STUI)</h3>
+            <p className="text-xs text-slate-400">Puntuación IPSS / QoL, Calculadora PSA / Densidad & Uroflujometría con RPM</p>
           </div>
         </div>
       </div>
 
-      {!disabled && (
-        <div className="flex items-center gap-3 border-t border-slate-800 pt-3">
-          <button
-            onClick={handleSave}
-            disabled={save.isPending}
-            className="rounded bg-blue-700 px-4 py-1.5 text-xs text-white hover:bg-blue-600 disabled:opacity-50 font-semibold"
-          >
-            {save.isPending ? "Guardando..." : "Guardar Urología"}
-          </button>
-          {saved && (
-            <p className="flex items-center gap-1 text-xs text-emerald-400">
-              <CheckCircle className="h-3.5 w-3.5" /> Guardado.
-            </p>
-          )}
+      {/* Navigation Sub-Tabs */}
+      <div className="flex flex-wrap items-center gap-2 bg-slate-950/70 p-1.5 rounded-lg border border-slate-800">
+        <button
+          onClick={() => setActiveTab("IPSS")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "IPSS"
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <Award className="w-3.5 h-3.5" /> Puntuación IPSS & Calidad de Vida
+        </button>
+
+        <button
+          onClick={() => setActiveTab("PSA")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "PSA"
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <Calculator className="w-3.5 h-3.5" /> Calculadora PSA & Densidad
+        </button>
+
+        <button
+          onClick={() => setActiveTab("UROFLUJO")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "UROFLUJO"
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <Activity className="w-3.5 h-3.5" /> Uroflujometría & RPM
+        </button>
+      </div>
+
+      {/* Tab 1: Puntuación IPSS */}
+      {activeTab === "IPSS" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Award className="w-4 h-4" /> Cuestionario Internacional IPSS & Escala de Calidad de Vida (QoL)
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Cuantificación estandarizada de severidad sintomática prostática (0-35 pts).</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleSaveIpss}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs"
+            >
+              Guardar IPSS
+            </Button>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            {IPSS_QUESTIONS.map((q) => (
+              <div key={q.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-950 p-2.5 rounded border border-slate-800">
+                <label className="font-semibold text-slate-300">{q.label}</label>
+                <select
+                  value={ipssValues[q.key] || 0}
+                  onChange={(e) => setIpssValues((prev) => ({ ...prev, [q.key]: Number(e.target.value) }))}
+                  className="bg-slate-900 border border-slate-700 text-white font-bold rounded p-1.5 sm:w-48"
+                >
+                  <option value={0}>0 - Ninguna vez</option>
+                  <option value={1}>1 - Menos de 1 de 5 veces</option>
+                  <option value={2}>2 - Menos de la mitad</option>
+                  <option value={3}>3 - Aproximadamente la mitad</option>
+                  <option value={4}>4 - Más de la mitad</option>
+                  <option value={5}>5 - Casi siempre (5/5)</option>
+                </select>
+              </div>
+            ))}
+
+            <div className="grid md:grid-cols-2 gap-4 pt-2">
+              <div className="bg-slate-950 p-3 rounded border border-blue-500/30 flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-slate-400 block font-semibold uppercase">Puntaje IPSS Total</span>
+                  <span className="text-xl font-bold text-blue-300">{ipssTotal} / 35 pts</span>
+                </div>
+                <span className="text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded">
+                  {ipssCategory}
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-300">Calidad de Vida Debida a Síntomas Urinarios (QoL)</label>
+                <select
+                  value={qol}
+                  onChange={(e) => setQol(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-700 text-white font-semibold rounded p-2"
+                >
+                  {QOL_OPTIONS.map((desc, idx) => (
+                    <option key={idx} value={idx}>{desc}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: Calculadora PSA */}
+      {activeTab === "PSA" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Calculator className="w-4 h-4" /> Calculadora de PSA, Ratio Libre/Total & Densidad Prostática
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Marcadores tumorales, estimación de riesgo prostático y ajuste por volumen glandular.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleSavePsa}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs"
+            >
+              Guardar PSA
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-4 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">PSA Total (ng/mL)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={psaTotal}
+                onChange={(e) => setPsaTotal(Number(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-700 text-white font-bold rounded p-2 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">PSA Libre (ng/mL)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={psaLibre}
+                onChange={(e) => setPsaLibre(Number(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-700 text-white font-bold rounded p-2 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Volumen Prostático ECO (cc / cm³)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={volProstateCc}
+                onChange={(e) => setVolProstateCc(Number(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-700 text-white font-bold rounded p-2 text-sm"
+              />
+            </div>
+
+            <div className="bg-slate-950 p-3 rounded border border-slate-800 space-y-0.5">
+              <span className="text-slate-400 block text-xs">Relación PSA Libre / Total</span>
+              <span className="text-lg font-bold text-blue-300">{ratioLibreTotal} %</span>
+              <span className="text-[10px] text-slate-500 block">Corte de riesgo: &lt;15% alto riesgo</span>
+            </div>
+
+            <div className="bg-slate-950 p-3 rounded border border-slate-800 space-y-0.5 md:col-span-2">
+              <span className="text-slate-400 block text-xs">Densidad de PSA (PSAD)</span>
+              <span className="text-lg font-bold text-emerald-300">{densidadPsa} ng/mL/cc</span>
+              <span className="text-[10px] text-slate-500 block">Corte de sospecha: &gt;0.15 ng/mL/cc</span>
+            </div>
+
+            <div className="md:col-span-3 space-y-1">
+              <label className="font-semibold text-slate-300">Interpretación Diagnóstica Prostática</label>
+              <textarea
+                value={interpPsa}
+                onChange={(e) => setInterpPsa(e.target.value)}
+                rows={2}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Uroflujometría & RPM */}
+      {activeTab === "UROFLUJO" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Activity className="w-4 h-4" /> Uroflujometría Computarizada & Residuo Post-Miccional (RPM)
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Evaluación urodinámica no invasiva de flujo miccional y capacidad de vaciado vesical.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleSaveFlow}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs"
+            >
+              Guardar Uroflujometría
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Flujo Máximo Qmax (mL/s)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={qmax}
+                onChange={(e) => setQmax(Number(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-700 text-blue-300 font-bold rounded p-2 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Flujo Medio Qavg (mL/s)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={qavg}
+                onChange={(e) => setQavg(Number(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Volumen Urinario Emitido (mL)</label>
+              <input
+                type="number"
+                step="1"
+                value={volEmitido}
+                onChange={(e) => setVolEmitido(Number(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-700 text-white font-bold rounded p-2 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Residuo Post-Miccional RPM por Ecografía (mL)</label>
+              <input
+                type="number"
+                step="1"
+                value={rpm}
+                onChange={(e) => setRpm(Number(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-700 text-amber-300 font-bold rounded p-2 text-sm"
+              />
+            </div>
+
+            <div className="md:col-span-2 space-y-1">
+              <label className="font-semibold text-slate-300">Interpretación Urodinámica del Trazado</label>
+              <textarea
+                value={interpFlow}
+                onChange={(e) => setInterpFlow(e.target.value)}
+                rows={2}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
-  )
+  );
 }

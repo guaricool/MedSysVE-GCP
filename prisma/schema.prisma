@@ -463,6 +463,9 @@ model PatientRegistration {
   oncoStagings            OncoTnmStaging[]
   oncoStatuses            OncoPerformanceStatus[]
   oncoChemos              OncoChemoProtocol[]
+  uroIpssScores           UroIpssScore[]
+  uroPsas                 UroPsaCalculator[]
+  uroFlowmetries          UroUroflowmetry[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -598,6 +601,9 @@ model Encounter {
   oncoStagings            OncoTnmStaging[]
   oncoStatuses            OncoPerformanceStatus[]
   oncoChemos              OncoChemoProtocol[]
+  uroIpssScores           UroIpssScore[]
+  uroPsas                 UroPsaCalculator[]
+  uroFlowmetries          UroUroflowmetry[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2976,6 +2982,84 @@ model OncoChemoProtocol {
   cicloNumero            Int
   toxicidadCtcaeGrade    String? // CTCAE v5.0
   observacionesProtocolo String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// UROLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model UroIpssScore {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  vaciadoIncompleto  Int // 0-5
+  frecuenciaUrinaria Int // 0-5
+  intermitencia      Int // 0-5
+  urgenciaUrinaria   Int // 0-5
+  chorroDebil        Int // 0-5
+  esfuerzoUrinario   Int // 0-5
+  nicturia           Int // 0-5
+  ipssTotalScore     Int // 0-35
+  qolScore           Int // 0-6
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model UroPsaCalculator {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  psaTotal            Float // ng/mL
+  psaLibre            Float? // ng/mL
+  ratioPsaLibreTotal  Float? // %
+  volumenProstaticoCc Float? // cc
+  densidadPsa         Float? // ng/mL/cc
+  interpretacionPsa   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model UroUroflowmetry {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  qmaxMlSec              Float // mL/s
+  qavgMlSec              Float? // mL/s
+  volumenEmitidoMl       Float // mL
+  residuoPostMiccionalMl Float // mL (RPM)
+  interpretacionUroflujo String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
