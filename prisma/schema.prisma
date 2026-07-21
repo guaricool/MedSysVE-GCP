@@ -460,6 +460,9 @@ model PatientRegistration {
   pneumoSpirometries      PneumoSpirometry[]
   pneumoGinaGolds         PneumoGinaGold[]
   pneumoDyspneas          PneumoDyspneaCat[]
+  oncoStagings            OncoTnmStaging[]
+  oncoStatuses            OncoPerformanceStatus[]
+  oncoChemos              OncoChemoProtocol[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -592,6 +595,9 @@ model Encounter {
   pneumoSpirometries      PneumoSpirometry[]
   pneumoGinaGolds         PneumoGinaGold[]
   pneumoDyspneaCats       PneumoDyspneaCat[]
+  oncoStagings            OncoTnmStaging[]
+  oncoStatuses            OncoPerformanceStatus[]
+  oncoChemos              OncoChemoProtocol[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2900,6 +2906,76 @@ model PneumoDyspneaCat {
   mmrcDyspneaGrade   Int // 0 a 4
   catScoreTotal      Int // 0 a 40 pts
   pao2Fio2KirbyIndex Float? // PaO2/FiO2
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// ONCOLOGÍA MÉDICA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model OncoTnmStaging {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  primaryTumorT      String // Tis, T1, T2, T3, T4
+  regionalNodesN     String // N0, N1, N2, N3
+  distantMetastasisM String // M0, M1
+  clinicalStageGroup String // Estadio I, II, III, IV
+  histopatologia     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model OncoPerformanceStatus {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  ecogGrade        Int // 0 a 4
+  karnofskyPercent Int // 10% a 100%
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model OncoChemoProtocol {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  esquemaAntineoplasico  String // FOLFOX, AC-T
+  intencionTratamiento   String // Adyuvante, Neoadyuvante, Paliativo
+  cicloNumero            Int
+  toxicidadCtcaeGrade    String? // CTCAE v5.0
+  observacionesProtocolo String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
