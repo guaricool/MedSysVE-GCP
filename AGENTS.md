@@ -12,17 +12,17 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
-## Estado actual (2026-07-20)
+## Estado actual (2026-07-21)
 
-- **HEAD:** Current workspace changes (security hardening + portal EHR/verification flow)
-- **Cambios recientes (2026-07-14 → 2026-07-20):**
-  - **Bloqueo y Verificación de Portal de Paciente:** Implementación de bloqueo de login para usuarios no verificados, redirección directa a panel de ingreso de OTP (correo o WhatsApp con link directo a bot +58 424-4967367), y unificación de registros de paciente EHR locales mediante coincidencia de Cédula/Email/Teléfono.
-  - **Antecedentes Médicos en Portal:** Expuesta la edición y consulta de grupo sanguíneo, alergias y antecedentes médicos desde la pantalla de perfil del paciente (`portal-perfil-client.tsx`).
-  - **Mitigación de Credencial en msmtprc:** Removida contraseña hardcodeada de `config/msmtprc`, agregada a `.gitignore` y eliminada de la caché de Git (`git rm --cached`).
-  - **Actualización de Dependencias (SCA):** Actualizado `nodemailer` a `^9.0.3` y nested `postcss` a `^8.5.15` mediante `overrides` en `package.json`, mitigando vulnerabilidades altas y críticas de inyección SMTP y XSS.
-  - **Hardening de GitHub Actions:** Añadido `permissions: contents: read` a `.github/workflows/ci.yml` para mitigar riesgos de elevación de privilegios.
+- **HEAD:** Current workspace changes (portal EHR dashboard + location search dropdowns + default availability fallback)
+- **Cambios recientes (2026-07-14 → 2026-07-21):**
+  - **Fallback de Disponibilidad Médica:** Implementado fallback automático en el backend (`getDoctorAvailability` y `getAvailableSlots`) al horario predeterminado (Lunes a Viernes de 8:00 AM a 5:00 PM con turnos de 30m) cuando el doctor no ha guardado su configuración en base de datos.
+  - **Filtro de Especialidad, Estado y Ciudad en Portal:** Reemplazados inputs de texto libre por desplegables dinámicos de Estados y Ciudades (según el estado seleccionado) y menú auto-completado de especialidad con búsqueda inteligente accent-insensitive y case-insensitive.
+  - **Expediente EHR Global en Portal:** Diseñado e implementado el expediente clínico editable para pacientes en el portal, incluyendo botones de grupo sanguíneo, gestor de alergias estructuradas, vacuna manager, seguro médico y grilla de antecedentes (personales/familiares/hábitos/quirúrgicos).
+  - **Bloqueo y Verificación de Portal de Paciente:** Bloqueo de login para usuarios no verificados, redirección directa a OTP (correo/WhatsApp con link al bot +58 424-4967367) y unificación de perfiles locales.
+  - **Hardening y SCA:** Removida contraseña de `config/msmtprc`, actualizado `nodemailer` a `^9.0.3` / nested `postcss` a `^8.5.15` y robustecido CI workflow permissions.
   - **`tsc --noEmit`:** clean ✅
-  - **`next build`:** Compiled successfully in 9.5s ✅
+  - **`next build`:** Compiled successfully in 28.9s ✅
 
 ## Feature: location-aware system (implementada 2026-06-27)
 
