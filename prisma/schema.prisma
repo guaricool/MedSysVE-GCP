@@ -394,16 +394,16 @@ model Patient {
 }
 
 model PatientRegistration {
-  id                    String                      @id @default(cuid())
+  id                    String                       @id @default(cuid())
   idDisplay             String
   patientId             String
-  patient               Patient                     @relation(fields: [patientId], references: [id])
+  patient               Patient                      @relation(fields: [patientId], references: [id])
   workspaceId           String
-  workspace             Workspace                   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace             Workspace                    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   notasInternas         String?
   antecedentes          Json?
-  createdAt             DateTime                    @default(now())
-  updatedAt             DateTime                    @updatedAt
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
   encounters            Encounter[]
   documents             Document[]
   appointments          Appointment[]
@@ -445,6 +445,9 @@ model PatientRegistration {
   gastroReports         GastroEndoscopyReport[]
   gastroBleedings       GastroBleedingScale[]
   gastroIbdScores       GastroIbdScore[]
+  anesthesiaPreEvals    AnesthesiaPreEval[]
+  anesthesiaAirways     AnesthesiaAirwayAssessment[]
+  anesthesiaIntraops    AnesthesiaIntraopRecord[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -562,6 +565,9 @@ model Encounter {
   gastroReports           GastroEndoscopyReport[]
   gastroBleedings         GastroBleedingScale[]
   gastroIbdScores         GastroIbdScore[]
+  anesthesiaPreEvals      AnesthesiaPreEval[]
+  anesthesiaAirways       AnesthesiaAirwayAssessment[]
+  anesthesiaIntraops      AnesthesiaIntraopRecord[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2512,6 +2518,79 @@ model GastroIbdScore {
   mayoEvaluacionGlobalMedico Int? // 0 a 3 pts
   mayoTotalScore             Int? // 0 a 12 pts (Índice de Mayo)
   mayoCategory               String? // Remisión (0-2), Leve (3-5), Moderada (6-10), Grave (11-12)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// ANESTESIOLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model AnesthesiaPreEval {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  asaPhysicalStatus       String // ASA I, ASA II, ASA III, ASA IV, ASA V, ASA VI
+  isEmergency             Boolean @default(false) // Modificador 'E'
+  horasAyuno              Int? // Horas de ayuno
+  antecedentesAnestesicos String? // Hipertermia maligna, NVPO, VAD
+  riesgoCardiovascular    String? // Bajo, Moderado, Alto (RCRI Lee)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model AnesthesiaAirwayAssessment {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  mallampatiClass           String // Clase I, Clase II, Clase III, Clase IV
+  distanciaTiromentonianaMm Float? // mm (<60mm sospechoso)
+  aperturaBucalMm           Float? // mm (<35mm sospechoso)
+  movilidadCervical         String // Conservada, Limitada, Nula
+  protrusionMandibular      String // Clase I, II, III
+  prediccionViaAereaDificil Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model AnesthesiaIntraopRecord {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  tecnicaAnestesica  String // General Inhalatoria, TIVA, Raquídea, Epidural, Bloqueo
+  agentesUtilizados  String // Propofol, Sevoflurano, Fentanilo, Rocuronio
+  monitoreoUtilizado String // ECG, PNI, SpO2, EtCO2, BIS
+  eventosRelevantes  String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
