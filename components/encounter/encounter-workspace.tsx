@@ -56,6 +56,7 @@ interface Props {
   patientEdad: number
   patientAlergias: { sustancia: string; gravedad: string; reaccion?: string | null }[]
   patientCronicos: string[]
+  overrideSpecialty?: string
 }
 
 type SectionId =
@@ -129,12 +130,13 @@ export function EncounterWorkspace({
   patientEdad,
   patientAlergias,
   patientCronicos,
+  overrideSpecialty,
 }: Props) {
   const router = useRouter()
   const locked = initialStatus !== "DRAFT"
   const [activeSection, setActiveSection] = useState<SectionId>("subjetivo")
   const { data: doctor } = (trpc.doctor.myProfile.useQuery as any)()
-  const especialidad = doctor?.especialidadPrincipal
+  const especialidad = overrideSpecialty !== undefined ? overrideSpecialty : doctor?.especialidadPrincipal
   // Sections start open by id (subjetivo is the entry point). User toggles
   // and shortcuts add/remove from this set.
   const [openSections, setOpenSections] = useState<Set<SectionId>>(
@@ -145,6 +147,37 @@ export function EncounterWorkspace({
   const [visibleSections, setVisibleSections] = useState<Set<SectionId>>(
     () => new Set<SectionId>(["templates", "subjetivo"]),
   )
+
+  // Auto-enable specialty section in canvas when specialty is present
+  useEffect(() => {
+    if (!especialidad) return
+    const specMap: Record<string, SectionId> = {
+      "Traumatología": "traumatologia",
+      "Ortopedia": "traumatologia",
+      "Ginecología y Obstetricia": "obstetricia",
+      "Obstetricia": "obstetricia",
+      "Oncología": "oncologia",
+      "Cardiología": "cardiologia",
+      "Neumología": "neumonologia",
+      "Neumonología": "neumonologia",
+      "Pediatría": "pediatria",
+      "Gastroenterología": "gastroenterologia",
+      "Neurología": "neurologia",
+      "Urología": "urologia",
+      "Anestesiología": "anestesiologia",
+      "Dermatología": "dermatologia",
+      "Endocrinología": "endocrinologia",
+      "Cirugía General": "cirugia-general",
+      "Medicina Interna": "medicina-interna",
+      "Psiquiatría": "psiquiatria",
+      "Infectología": "infectologia",
+    }
+    const secId = specMap[especialidad]
+    if (secId) {
+      setVisibleSections((prev) => new Set([...Array.from(prev), secId]))
+      setOpenSections((prev) => new Set([...Array.from(prev), secId]))
+    }
+  }, [especialidad])
 
   // Protect against accidental navigation/tab close
   useEffect(() => {
