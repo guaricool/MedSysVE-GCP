@@ -478,6 +478,9 @@ model PatientRegistration {
   emergTriages            EmergTriageAssessment[]
   emergResusCodes         EmergResusCode[]
   emergFastProtocols      EmergFastProtocol[]
+  geriVgis                GeriVgiFunctional[]
+  geriFrails              GeriFrailFallRisk[]
+  geriCognitives          GeriCognitiveMood[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -628,6 +631,9 @@ model Encounter {
   emergTriages            EmergTriageAssessment[]
   emergResusCodes         EmergResusCode[]
   emergFastProtocols      EmergFastProtocol[]
+  geriVgis                GeriVgiFunctional[]
+  geriFrails              GeriFrailFallRisk[]
+  geriCognitives          GeriCognitiveMood[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -3393,6 +3399,78 @@ model EmergFastProtocol {
   vasopressorUsed     String? // Noradrenalina, Adrenalina
   fluidResusLiters    Float?
   protocolStatus      String // En curso, Completado, Contraindicado
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// GERIATRÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model GeriVgiFunctional {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  katzScore        Int // 0 a 6 (Katz AVD)
+  katzCategory     String // Independiente, Dependencia leve, moderada, severa
+  lawtonBrodyScore Int // 0 a 8 (Lawton-Brody AIVD)
+  lawtonCategory   String // Independiente, Dependencia parcial/total
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model GeriFrailFallRisk {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  frailScore         Int // 0 a 5 (Cuestionario FRAIL)
+  frailCategory      String // Robusto, Pre-frágil, Frágil
+  timedUpAndGoSec    Float? // TUG en segundos
+  fallRiskCategory   String // Bajo, Moderado, Alto Riesgo
+  fallsLastYearCount Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model GeriCognitiveMood {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  pfeifferErrors     Int? // 0 a 10 (Pfeiffer SPMSQ)
+  mmseScore          Int? // 0 a 30 (Minimental)
+  cognitiveCategory  String // Normal, Deterioro Leve, Moderado, Severo
+  yesavageGds15Score Int? // 0 a 15 (Depresión Yesavage)
+  moodCategory       String // Normal, Depresión Leve, Depresión Severa
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
