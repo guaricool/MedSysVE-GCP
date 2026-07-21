@@ -188,7 +188,9 @@ export const marketplaceRouter = router({
     .query(async ({ ctx, input }) => {
       const doctors = await ctx.db.doctor.findMany({
         where: {
-          ...(input.especialidad && { especialidadPrincipal: input.especialidad }),
+          ...(input.especialidad && {
+            especialidadPrincipal: { contains: input.especialidad, mode: "insensitive" },
+          }),
           workspaces: {
             some: {
               ...(input.estado && { estado: input.estado }),
