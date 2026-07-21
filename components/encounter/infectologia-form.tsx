@@ -1,286 +1,412 @@
-"use client"
+"use client";
 
-import { useState, useMemo, useEffect } from "react"
-import { trpc } from "@/lib/trpc-client"
-import { ShieldAlert, CheckCircle, Plus, Trash2, Activity, Globe } from "lucide-react"
-import { useUnsaved } from "@/components/providers/unsaved-changes-provider"
-
-interface Antimicrobiano {
-  farmaco: string
-  dosis: string
-  dot: string // Days of Therapy
-  motivo: string
-}
+import { useState, useMemo, useEffect } from "react";
+import { trpc } from "@/lib/trpc-client";
+import { useUnsaved } from "@/components/providers/unsaved-changes-provider";
+import { Button } from "@/components/ui/button";
+import {
+  ShieldAlert,
+  Activity,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  AlertTriangle,
+  Biohazard,
+  FlaskConical,
+  Calculator,
+  ShieldCheck,
+} from "lucide-react";
 
 interface Props {
-  encounterId: string
-  disabled?: boolean
-  initialData?: {
-    qsofa?: {
-      respiracion?: boolean
-      mental?: boolean
-      presion?: boolean
-    }
-    sirs?: {
-      temperatura?: boolean
-      cardiaca?: boolean
-      respiratoria?: boolean
-      leucocitos?: boolean
-    }
-    cronicos?: {
-      vihCv?: string
-      vihCd4?: string
-      hepCv?: string
-      tbcBk?: string
-    }
-    antimicrobianos?: Antimicrobiano[]
-    epidemiologia?: {
-      viajes?: string
-      vacunas?: string
-    }
-  }
+  encounterId: string;
+  patientRegistrationId?: string;
+  patientRegId?: string;
+  disabled?: boolean;
+  initialData?: any;
 }
 
-export function InfectologiaForm({ encounterId, disabled, initialData = {} }: Props) {
-  const iQ = initialData.qsofa || {}
-  const [qsofa, setQsofa] = useState({
-    respiracion: iQ.respiracion || false,
-    mental: iQ.mental || false,
-    presion: iQ.presion || false,
-  })
+interface AntibioticRow {
+  antibiotico: string;
+  interpretacion: "S" | "I" | "R";
+  micUgMl: number;
+}
 
-  const iS = initialData.sirs || {}
-  const [sirs, setSirs] = useState({
-    temperatura: iS.temperatura || false,
-    cardiaca: iS.cardiaca || false,
-    respiratoria: iS.respiratoria || false,
-    leucocitos: iS.leucocitos || false,
-  })
+const DEFAULT_ANTIBIOTICS: AntibioticRow[] = [
+  { antibiotico: "Meropenem", interpretacion: "S", micUgMl: 0.25 },
+  { antibiotico: "Amikacina", interpretacion: "S", micUgMl: 2.0 },
+  { antibiotico: "Ceftriaxona", interpretacion: "R", micUgMl: 64.0 },
+  { antibiotico: "Ciprofloxacina", interpretacion: "R", micUgMl: 16.0 },
+  { antibiotico: "Piperacilina/Tazobactam", interpretacion: "I", micUgMl: 16.0 },
+];
 
-  const iC = initialData.cronicos || {}
-  const [cronicos, setCronicos] = useState({
-    vihCv: iC.vihCv || "",
-    vihCd4: iC.vihCd4 || "",
-    hepCv: iC.hepCv || "",
-    tbcBk: iC.tbcBk || "",
-  })
+export function InfectologiaForm({ encounterId, disabled, initialData = {}, patientRegistrationId, patientRegId }: Props) {
+  const effectivePatId = patientRegistrationId || patientRegId || "sandbox-demo-pat";
+  const [activeTab, setActiveTab] = useState<"ANTIBIOGRAMA" | "RENAL" | "CONTROL">("ANTIBIOGRAMA");
+  const [saved, setSaved] = useState(false);
+  const { setDirty } = useUnsaved();
 
-  const [antimicrobianos, setAntimicrobianos] = useState<Antimicrobiano[]>(
-    initialData.antimicrobianos || []
-  )
+  // tRPC Queries & Mutations
+  const { data: dbAbgs = [], refetch: refetchAbgs } = (trpc.infecto.listAntibiograms.useQuery as any)({ patientRegistrationId: effectivePatId });
+  const { data: dbRenals = [], refetch: refetchRenals } = (trpc.infecto.listRenalAdjustments.useQuery as any)({ patientRegistrationId: effectivePatId });
+  const { data: dbCtrl, refetch: refetchCtrl } = (trpc.infecto.getInfectionControl.useQuery as any)({ encounterId });
 
-  const iE = initialData.epidemiologia || {}
-  const [epidemiologia, setEpidemiologia] = useState({
-    viajes: iE.viajes || "",
-    vacunas: iE.vacunas || "",
-  })
+  const saveAbgMut = (trpc.infecto.saveAntibiogram.useMutation as any)({ onSuccess: () => refetchAbgs() });
+  const saveRenalMut = (trpc.infecto.saveRenalAdjustment.useMutation as any)({ onSuccess: () => refetchRenals() });
+  const saveCtrlMut = (trpc.infecto.saveInfectionControl.useMutation as any)({ onSuccess: () => refetchCtrl() });
 
-  const [saved, setSaved] = useState(false)
-  const { setDirty } = useUnsaved()
+  // Antibiogram State
+  const [tipoMuestra, setTipoMuestra] = useState("Hemocultivo Central");
+  const [microorganismo, setMicroorganismo] = useState("Klebsiella pneumoniae BLEE (+)");
+  const [panel, setPanel] = useState<AntibioticRow[]>(DEFAULT_ANTIBIOTICS);
 
-  const isDirty = useMemo(() => {
-    return (
-      JSON.stringify(qsofa) !== JSON.stringify({
-        respiracion: iQ.respiracion || false,
-        mental: iQ.mental || false,
-        presion: iQ.presion || false,
-      }) ||
-      JSON.stringify(sirs) !== JSON.stringify({
-        temperatura: iS.temperatura || false,
-        cardiaca: iS.cardiaca || false,
-        respiratoria: iS.respiratoria || false,
-        leucocitos: iS.leucocitos || false,
-      }) ||
-      JSON.stringify(cronicos) !== JSON.stringify({
-        vihCv: iC.vihCv || "",
-        vihCd4: iC.vihCd4 || "",
-        hepCv: iC.hepCv || "",
-        tbcBk: iC.tbcBk || "",
-      }) ||
-      JSON.stringify(antimicrobianos) !== JSON.stringify(initialData.antimicrobianos || []) ||
-      JSON.stringify(epidemiologia) !== JSON.stringify({
-        viajes: iE.viajes || "",
-        vacunas: iE.vacunas || "",
-      })
-    )
-  }, [qsofa, sirs, cronicos, antimicrobianos, epidemiologia, iQ, iS, iC, iE, initialData])
+  // Renal State
+  const [creatinina, setCreatinina] = useState(1.8);
+  const [clCr, setClCr] = useState(42.5);
+  const [antimicrobiano, setAntimicrobiano] = useState("Vancomicina IV");
+  const [dosisAjustada, setDosisAjustada] = useState("15 mg/kg cada 24 horas (Ajustado por ClCr 42.5 mL/min)");
+
+  // Infection Control State
+  const [aislamiento, setAislamiento] = useState("Aislamiento de Contacto + Gotas");
+  const [germenMdr, setGermenMdr] = useState("KPC (Klebsiella pneumoniae productora de carbapenemasa)");
+  const [notificadoEpidem, setNotificadoEpidem] = useState(true);
+  const [obsCtrl, setObsCtrl] = useState("Habitación individual con presión negativa. Uso obligatorio de bata y guantes al ingreso.");
 
   useEffect(() => {
-    setDirty("infectologia", isDirty)
-  }, [isDirty, setDirty])
+    if (dbCtrl) {
+      setAislamiento(dbCtrl.tipoAislamiento);
+      if (dbCtrl.germenMultidrogorresistenteMdr) setGermenMdr(dbCtrl.germenMultidrogorresistenteMdr);
+      setNotificadoEpidem(dbCtrl.notificadoEpidemiologia);
+      if (dbCtrl.observacionesControlInfeccion) setObsCtrl(dbCtrl.observacionesControlInfeccion);
+    }
+  }, [dbCtrl]);
 
-  const utils = trpc.useUtils()
-  const save = (trpc.encounter.update as any).useMutation({
-    onSuccess: () => {
-      utils.invalidate()
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    },
-  })
+  const handleAddAbgRow = () => {
+    setPanel([...panel, { antibiotico: "Nuevo Antimicrobiano", interpretacion: "S", micUgMl: 1.0 }]);
+  };
 
-  function handleSave() {
-    save.mutate({
-      id: encounterId,
-      datosEspecialidad: { qsofa, sirs, cronicos, antimicrobianos, epidemiologia },
-    })
-  }
+  const handleRemoveAbgRow = (index: number) => {
+    setPanel(panel.filter((_, i) => i !== index));
+  };
 
-  const qsofaScore = (qsofa.respiracion ? 1 : 0) + (qsofa.mental ? 1 : 0) + (qsofa.presion ? 1 : 0)
-  const sirsScore = (sirs.temperatura ? 1 : 0) + (sirs.cardiaca ? 1 : 0) + (sirs.respiratoria ? 1 : 0) + (sirs.leucocitos ? 1 : 0)
+  const handleUpdateAbgRow = (index: number, field: keyof AntibioticRow, value: any) => {
+    const next = [...panel];
+    next[index] = { ...next[index], [field]: value };
+    setPanel(next);
+  };
+
+  const handleSaveAbg = () => {
+    saveAbgMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      tipoMuestra,
+      microorganismoAislado: microorganismo,
+      panelSensibilidadJson: panel,
+    });
+  };
+
+  const handleSaveRenal = () => {
+    saveRenalMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      creatininaSericaMgDl: creatinina,
+      clearanceCreatininaMlMin: clCr,
+      antimicrobianoEvaluado: antimicrobiano,
+      dosisAjustadaRecomendada: dosisAjustada,
+    });
+  };
+
+  const handleSaveCtrl = () => {
+    saveCtrlMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      tipoAislamiento: aislamiento,
+      germenMultidrogorresistenteMdr: germenMdr,
+      notificadoEpidemiologia: notificadoEpidem,
+      observacionesControlInfeccion: obsCtrl,
+    });
+  };
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h3 className="flex items-center gap-2 font-medium text-slate-200">
-          <ShieldAlert className="h-4 w-4 text-emerald-400" />
-          Control de Infecciones y Escalas (Infectología)
-        </h3>
+    <div className="space-y-4 bg-slate-900 border border-slate-800 p-5 rounded-xl text-slate-100 shadow-md">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg text-purple-400">
+            <Biohazard className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-white">Infectología & Control de Infecciones</h3>
+            <p className="text-xs text-slate-400">Antibiograma Interactivo (MIC), Dosis Renal & Vigilancia Epidemiológica MDR</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Sub-Tabs */}
+      <div className="flex flex-wrap items-center gap-2 bg-slate-950/70 p-1.5 rounded-lg border border-slate-800">
         <button
-          onClick={handleSave}
-          disabled={disabled || save.isPending || !isDirty}
-          className="flex h-8 items-center gap-2 rounded-md bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          onClick={() => setActiveTab("ANTIBIOGRAMA")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "ANTIBIOGRAMA"
+              ? "bg-purple-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
         >
-          {saved ? (
-            <>
-              <CheckCircle className="h-3.5 w-3.5" /> Guardado
-            </>
-          ) : (
-            "Guardar Evaluación"
-          )}
+          <FlaskConical className="w-3.5 h-3.5" /> Antibiograma & CMI ({dbAbgs.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab("RENAL")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "RENAL"
+              ? "bg-purple-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <Calculator className="w-3.5 h-3.5" /> Ajuste Renal Antimicrobiano ({dbRenals.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab("CONTROL")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "CONTROL"
+              ? "bg-purple-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <ShieldAlert className="w-3.5 h-3.5" /> Aislamiento & MDR
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-6 border-r border-slate-800 pr-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                <Activity className="h-4 w-4 text-rose-400" />
-                Escala qSOFA (Sepsis)
+      {/* Tab 1: Antibiograma Interactivo */}
+      {activeTab === "ANTIBIOGRAMA" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                <FlaskConical className="w-4 h-4" /> Antibiograma Interactivo & Panel de Sensibilidad (MIC)
               </h4>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${qsofaScore >= 2 ? 'bg-red-500/20 text-red-400' : 'bg-slate-800 text-slate-400'}`}>
-                {qsofaScore} / 3
-              </span>
+              <p className="text-xs text-slate-400 mt-0.5">Microorganismo aislado, interpretación S/I/R y CMI / MIC en µg/mL.</p>
             </div>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={qsofa.respiracion} onChange={(e) => setQsofa({ ...qsofa, respiracion: e.target.checked })} disabled={disabled} className="rounded border-slate-700 bg-slate-800 text-rose-500" />
-                <span className="text-xs text-slate-300">FR ≥ 22 rpm</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={qsofa.mental} onChange={(e) => setQsofa({ ...qsofa, mental: e.target.checked })} disabled={disabled} className="rounded border-slate-700 bg-slate-800 text-rose-500" />
-                <span className="text-xs text-slate-300">Alteración mental (Glasgow {"<"} 15)</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={qsofa.presion} onChange={(e) => setQsofa({ ...qsofa, presion: e.target.checked })} disabled={disabled} className="rounded border-slate-700 bg-slate-800 text-rose-500" />
-                <span className="text-xs text-slate-300">PAS ≤ 100 mmHg</span>
-              </label>
+            <Button
+              size="sm"
+              onClick={handleSaveAbg}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs"
+            >
+              Guardar Antibiograma
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-3 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Tipo de Muestra Biolólgica</label>
+              <input
+                type="text"
+                value={tipoMuestra}
+                onChange={(e) => setTipoMuestra(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Microorganismo Aislado</label>
+              <input
+                type="text"
+                value={microorganismo}
+                onChange={(e) => setMicroorganismo(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
             </div>
           </div>
 
-          <div className="space-y-3 pt-4 border-t border-slate-800">
+          {/* Table of Antibiotics */}
+          <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3 text-xs">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-slate-300">Criterios SIRS</h4>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${sirsScore >= 2 ? 'bg-orange-500/20 text-orange-400' : 'bg-slate-800 text-slate-400'}`}>
-                {sirsScore} / 4
-              </span>
-            </div>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={sirs.temperatura} onChange={(e) => setSirs({ ...sirs, temperatura: e.target.checked })} disabled={disabled} className="rounded border-slate-700 bg-slate-800 text-orange-500" />
-                <span className="text-xs text-slate-300">Temp {">"} 38°C o {"<"} 36°C</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={sirs.cardiaca} onChange={(e) => setSirs({ ...sirs, cardiaca: e.target.checked })} disabled={disabled} className="rounded border-slate-700 bg-slate-800 text-orange-500" />
-                <span className="text-xs text-slate-300">FC {">"} 90 lpm</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={sirs.respiratoria} onChange={(e) => setSirs({ ...sirs, respiratoria: e.target.checked })} disabled={disabled} className="rounded border-slate-700 bg-slate-800 text-orange-500" />
-                <span className="text-xs text-slate-300">FR {">"} 20 rpm o PaCO2 {"<"} 32</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={sirs.leucocitos} onChange={(e) => setSirs({ ...sirs, leucocitos: e.target.checked })} disabled={disabled} className="rounded border-slate-700 bg-slate-800 text-orange-500" />
-                <span className="text-xs text-slate-300">GB {">"} 12,000 o {"<"} 4,000 o {">"} 10% bandas</span>
-              </label>
-            </div>
-          </div>
-          
-          <div className="space-y-3 pt-4 border-t border-slate-800">
-            <h4 className="text-sm font-medium text-slate-300 flex items-center gap-2">
-              <Globe className="h-4 w-4 text-blue-400" />
-              Epidemiología
-            </h4>
-            <div className="space-y-2">
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Viajes Recientes</label>
-                <input type="text" value={epidemiologia.viajes} onChange={(e) => setEpidemiologia({ ...epidemiologia, viajes: e.target.value })} disabled={disabled} placeholder="Zonas endémicas..." className="w-full rounded border-slate-700 bg-slate-800/50 text-xs text-slate-200" />
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Vacunación Especial</label>
-                <input type="text" value={epidemiologia.vacunas} onChange={(e) => setEpidemiologia({ ...epidemiologia, vacunas: e.target.value })} disabled={disabled} placeholder="Fiebre amarilla, Neumococo, etc." className="w-full rounded border-slate-700 bg-slate-800/50 text-xs text-slate-200" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-slate-300">Control Antimicrobiano (Stewardship)</h4>
+              <span className="font-bold text-slate-200">Panel de Antimicrobianos Evaluados:</span>
               <button
-                type="button"
-                onClick={() => setAntimicrobianos([...antimicrobianos, { farmaco: "", dosis: "", dot: "", motivo: "" }])}
-                disabled={disabled}
-                className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300"
+                onClick={handleAddAbgRow}
+                className="flex items-center gap-1 text-purple-400 hover:text-purple-300 font-semibold"
               >
-                <Plus className="h-3.5 w-3.5" /> Agregar
+                <Plus className="w-3.5 h-3.5" /> Agregar Fármaco
               </button>
             </div>
-            
+
             <div className="space-y-2">
-              {antimicrobianos.map((anti, idx) => (
-                <div key={idx} className="flex gap-2 items-start bg-slate-800/30 p-2 rounded border border-slate-800">
-                  <div className="grid grid-cols-2 gap-2 flex-1">
-                    <input type="text" placeholder="Fármaco" value={anti.farmaco} onChange={(e) => { const n = [...antimicrobianos]; n[idx].farmaco = e.target.value; setAntimicrobianos(n); }} disabled={disabled} className="rounded border-slate-700 bg-slate-800 text-xs" />
-                    <input type="text" placeholder="Dosis" value={anti.dosis} onChange={(e) => { const n = [...antimicrobianos]; n[idx].dosis = e.target.value; setAntimicrobianos(n); }} disabled={disabled} className="rounded border-slate-700 bg-slate-800 text-xs" />
-                    <input type="text" placeholder="Motivo/Infección" value={anti.motivo} onChange={(e) => { const n = [...antimicrobianos]; n[idx].motivo = e.target.value; setAntimicrobianos(n); }} disabled={disabled} className="rounded border-slate-700 bg-slate-800 text-xs" />
-                    <input type="text" placeholder="Días (DOT)" value={anti.dot} onChange={(e) => { const n = [...antimicrobianos]; n[idx].dot = e.target.value; setAntimicrobianos(n); }} disabled={disabled} className="rounded border-slate-700 bg-slate-800 text-xs" />
+              {panel.map((row, idx) => (
+                <div key={idx} className="flex flex-wrap items-center gap-2 bg-slate-900 p-2 rounded border border-slate-800">
+                  <input
+                    type="text"
+                    value={row.antibiotico}
+                    onChange={(e) => handleUpdateAbgRow(idx, "antibiotico", e.target.value)}
+                    className="flex-1 min-w-[150px] bg-slate-950 border border-slate-700 text-white rounded p-1.5"
+                  />
+                  <select
+                    value={row.interpretacion}
+                    onChange={(e) => handleUpdateAbgRow(idx, "interpretacion", e.target.value as any)}
+                    className={`font-bold rounded p-1.5 text-xs ${
+                      row.interpretacion === "S"
+                        ? "bg-emerald-950 border-emerald-700 text-emerald-300"
+                        : row.interpretacion === "I"
+                        ? "bg-amber-950 border-amber-700 text-amber-300"
+                        : "bg-red-950 border-red-700 text-red-300"
+                    }`}
+                  >
+                    <option value="S">Sensible (S)</option>
+                    <option value="I">Intermedio (I)</option>
+                    <option value="R">Resistente (R)</option>
+                  </select>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-400">CMI (µg/mL):</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={row.micUgMl}
+                      onChange={(e) => handleUpdateAbgRow(idx, "micUgMl", Number(e.target.value))}
+                      className="w-20 bg-slate-950 border border-slate-700 text-white rounded p-1.5"
+                    />
                   </div>
-                  <button type="button" onClick={() => setAntimicrobianos(antimicrobianos.filter((_, i) => i !== idx))} disabled={disabled} className="text-slate-500 hover:text-red-400 p-1">
-                    <Trash2 className="h-4 w-4" />
+                  <button
+                    onClick={() => handleRemoveAbgRow(idx)}
+                    className="p-1 text-slate-500 hover:text-red-400"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               ))}
-              {antimicrobianos.length === 0 && (
-                <p className="text-xs text-slate-500 italic">No hay antimicrobianos registrados en la consulta.</p>
-              )}
             </div>
           </div>
-
-          <div className="space-y-3 pt-4 border-t border-slate-800">
-            <h4 className="text-sm font-medium text-slate-300">Marcadores Crónicos Específicos</h4>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">VIH - Carga Viral</label>
-                <input type="text" value={cronicos.vihCv} onChange={(e) => setCronicos({ ...cronicos, vihCv: e.target.value })} disabled={disabled} className="w-full rounded border-slate-700 bg-slate-800 text-xs text-slate-200" placeholder="Ej: < 20 copias" />
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">VIH - CD4</label>
-                <input type="text" value={cronicos.vihCd4} onChange={(e) => setCronicos({ ...cronicos, vihCd4: e.target.value })} disabled={disabled} className="w-full rounded border-slate-700 bg-slate-800 text-xs text-slate-200" placeholder="Ej: 540 cel/mm3" />
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Hepatitis - Carga Viral</label>
-                <input type="text" value={cronicos.hepCv} onChange={(e) => setCronicos({ ...cronicos, hepCv: e.target.value })} disabled={disabled} className="w-full rounded border-slate-700 bg-slate-800 text-xs text-slate-200" />
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">TBC - Baciloscopia</label>
-                <input type="text" value={cronicos.tbcBk} onChange={(e) => setCronicos({ ...cronicos, tbcBk: e.target.value })} disabled={disabled} className="w-full rounded border-slate-700 bg-slate-800 text-xs text-slate-200" placeholder="Negativo / Positivo" />
-              </div>
-            </div>
-          </div>
-
         </div>
-      </div>
+      )}
+
+      {/* Tab 2: Ajuste Renal */}
+      {activeTab === "RENAL" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Calculator className="w-4 h-4" /> Calculadora de Ajuste Antimicrobiano Renal (ClCr)
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Depuración de Creatinina (Cockcroft-Gault en mL/min) y dosificación de fármacos.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleSaveRenal}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs"
+            >
+              Guardar Ajuste Renal
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Creatinina Sérica (mg/dL)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={creatinina}
+                onChange={(e) => setCreatinina(Number(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Clearance de Creatinina (ClCr mL/min)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={clCr}
+                onChange={(e) => setClCr(Number(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-700 text-white font-bold text-purple-300 rounded p-2"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Antimicrobiano a Ajustar</label>
+              <input
+                type="text"
+                value={antimicrobiano}
+                onChange={(e) => setAntimicrobiano(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Dosis Ajustada Recomendada</label>
+              <input
+                type="text"
+                value={dosisAjustada}
+                onChange={(e) => setDosisAjustada(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-white font-semibold text-emerald-300 rounded p-2"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Control de Infecciones & Aislamiento */}
+      {activeTab === "CONTROL" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldAlert className="w-4 h-4" /> Control de Infecciones & Vigilancia Epidemiológica MDR
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Precauciones de aislamiento hospitalario y notificación de gérmenes MDR.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleSaveCtrl}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs"
+            >
+              Guardar Aislamiento & Control
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Tipo de Aislamiento Hospitalario Requedido</label>
+              <input
+                type="text"
+                value={aislamiento}
+                onChange={(e) => setAislamiento(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2 font-semibold"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-300">Germen Multidrogorresistente (MDR / KPC / MRSA)</label>
+              <input
+                type="text"
+                value={germenMdr}
+                onChange={(e) => setGermenMdr(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-red-300 rounded p-2 font-bold"
+              />
+            </div>
+
+            <div className="md:col-span-2 space-y-1">
+              <label className="font-semibold text-slate-300">Indicaciones de Control & Barrera de Infección</label>
+              <textarea
+                value={obsCtrl}
+                onChange={(e) => setObsCtrl(e.target.value)}
+                rows={2}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 bg-slate-950 p-3 rounded-lg border border-slate-800">
+              <input
+                type="checkbox"
+                id="notificadoEpidem"
+                checked={notificadoEpidem}
+                onChange={(e) => setNotificadoEpidem(e.target.checked)}
+                className="w-4 h-4 accent-purple-500 rounded"
+              />
+              <label htmlFor="notificadoEpidem" className="text-slate-300 font-semibold cursor-pointer">
+                Caso Notificado al Comité de Infecciones / Epidemiología de Salud Pública
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
 }

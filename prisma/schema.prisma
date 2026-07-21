@@ -394,63 +394,66 @@ model Patient {
 }
 
 model PatientRegistration {
-  id                    String                       @id @default(cuid())
-  idDisplay             String
-  patientId             String
-  patient               Patient                      @relation(fields: [patientId], references: [id])
-  workspaceId           String
-  workspace             Workspace                    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  notasInternas         String?
-  antecedentes          Json?
-  createdAt             DateTime                     @default(now())
-  updatedAt             DateTime                     @updatedAt
-  encounters            Encounter[]
-  documents             Document[]
-  appointments          Appointment[]
-  invoices              Invoice[]
-  labResults            LabResult[]
-  mensajes              Mensaje[]
-  alergias              Alergia[]
-  tags                  PatientTag[]
-  vaccines              Vaccine[]
-  waitingEntries        WaitingEntry[]
-  tasks                 Task[]
-  insurances            PatientInsurance[]
-  consents              PatientConsent[]
-  orlAudiometries       OrlAudiometry[]
-  orlEndoscopies        OrlEndoscopyReport[]
-  traumaImplantes       TraumaImplante[]
-  traumaRehabProtocols  TraumaRehabProtocol[]
-  cardioEkgs            CardioEkg[]
-  cardioEchos           CardioEcho[]
-  cardioRiskScores      CardioRiskScore[]
-  pediaGrowthPoints     PediaGrowthPoint[]
-  pediaMilestones       PediaDevelopmentMilestone[]
-  pediaDoseRecords      PediaDoseRecord[]
-  obGynoProfile         ObGynoProfile?
-  obPrenatalControls    ObPrenatalControl[]
-  gynoScreenings        GynoScreening[]
-  neuroScales           NeuroScaleRecord[]
-  neuroDermatomes       NeuroDermatomeMap[]
-  neuroSeizures         NeuroSeizureLog[]
-  endoGlycemicLogs      EndoGlycemicLog[]
-  endoInsulinTitrations EndoInsulinTitration[]
-  endoThyroidNodules    EndoThyroidNodule[]
-  psychMentalStates     PsychMentalStateExam[]
-  psychScales           PsychScalesRecord[]
-  psychMedications      PsychMedicationMonitoring[]
-  dermProfiles          DermSkinProfile[]
-  dermLesions           DermLesionRecord[]
-  dermBiopsies          DermBiopsyRecord[]
-  gastroReports         GastroEndoscopyReport[]
-  gastroBleedings       GastroBleedingScale[]
-  gastroIbdScores       GastroIbdScore[]
-  anesthesiaPreEvals    AnesthesiaPreEval[]
-  anesthesiaAirways     AnesthesiaAirwayAssessment[]
-  anesthesiaIntraops    AnesthesiaIntraopRecord[]
-  surgeryChecklists     SurgerySafetyChecklist[]
-  surgeryReports        SurgeryOperativeReport[]
-  surgeryComplications  SurgeryClavienDindo[]
+  id                      String                       @id @default(cuid())
+  idDisplay               String
+  patientId               String
+  patient                 Patient                      @relation(fields: [patientId], references: [id])
+  workspaceId             String
+  workspace               Workspace                    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  notasInternas           String?
+  antecedentes            Json?
+  createdAt               DateTime                     @default(now())
+  updatedAt               DateTime                     @updatedAt
+  encounters              Encounter[]
+  documents               Document[]
+  appointments            Appointment[]
+  invoices                Invoice[]
+  labResults              LabResult[]
+  mensajes                Mensaje[]
+  alergias                Alergia[]
+  tags                    PatientTag[]
+  vaccines                Vaccine[]
+  waitingEntries          WaitingEntry[]
+  tasks                   Task[]
+  insurances              PatientInsurance[]
+  consents                PatientConsent[]
+  orlAudiometries         OrlAudiometry[]
+  orlEndoscopies          OrlEndoscopyReport[]
+  traumaImplantes         TraumaImplante[]
+  traumaRehabProtocols    TraumaRehabProtocol[]
+  cardioEkgs              CardioEkg[]
+  cardioEchos             CardioEcho[]
+  cardioRiskScores        CardioRiskScore[]
+  pediaGrowthPoints       PediaGrowthPoint[]
+  pediaMilestones         PediaDevelopmentMilestone[]
+  pediaDoseRecords        PediaDoseRecord[]
+  obGynoProfile           ObGynoProfile?
+  obPrenatalControls      ObPrenatalControl[]
+  gynoScreenings          GynoScreening[]
+  neuroScales             NeuroScaleRecord[]
+  neuroDermatomes         NeuroDermatomeMap[]
+  neuroSeizures           NeuroSeizureLog[]
+  endoGlycemicLogs        EndoGlycemicLog[]
+  endoInsulinTitrations   EndoInsulinTitration[]
+  endoThyroidNodules      EndoThyroidNodule[]
+  psychMentalStates       PsychMentalStateExam[]
+  psychScales             PsychScalesRecord[]
+  psychMedications        PsychMedicationMonitoring[]
+  dermProfiles            DermSkinProfile[]
+  dermLesions             DermLesionRecord[]
+  dermBiopsies            DermBiopsyRecord[]
+  gastroReports           GastroEndoscopyReport[]
+  gastroBleedings         GastroBleedingScale[]
+  gastroIbdScores         GastroIbdScore[]
+  anesthesiaPreEvals      AnesthesiaPreEval[]
+  anesthesiaAirways       AnesthesiaAirwayAssessment[]
+  anesthesiaIntraops      AnesthesiaIntraopRecord[]
+  surgeryChecklists       SurgerySafetyChecklist[]
+  surgeryReports          SurgeryOperativeReport[]
+  surgeryComplications    SurgeryClavienDindo[]
+  infectoAntibiograms     InfectoAntibiogram[]
+  infectoRenalAdjustments InfectoRenalAdjustment[]
+  infectoControls         InfectoInfectionControl[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -574,6 +577,9 @@ model Encounter {
   surgeryChecklists       SurgerySafetyChecklist[]
   surgeryReports          SurgeryOperativeReport[]
   surgeryComplications    SurgeryClavienDindo[]
+  infectoAntibiograms     InfectoAntibiogram[]
+  infectoRenalAdjustments InfectoRenalAdjustment[]
+  infectoControls         InfectoInfectionControl[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2671,6 +2677,75 @@ model SurgeryClavienDindo {
   gradeClass              String // Grado I, II, IIIa, IIIb, IVa, IVb, V
   descripcionComplicacion String  @db.Text
   requirioReintervencion  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// INFECTOLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model InfectoAntibiogram {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  tipoMuestra           String // Hemocultivo, Urocultivo, Esputo, LCR
+  microorganismoAislado String // Klebsiella pneumoniae, MRSA
+  panelSensibilidadJson Json // Array de { antibiotico, interpretacion: 'S'|'I'|'R', micUgMl }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model InfectoRenalAdjustment {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  creatininaSericaMgDl     Float
+  clearanceCreatininaMlMin Float // Cockcroft-Gault
+  antimicrobianoEvaluado   String // Vancomicina, Colistina, Meropenem
+  dosisAjustadaRecomendada String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model InfectoInfectionControl {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  tipoAislamiento                String // Estándar, Contacto, Gotas, Aéreo
+  germenMultidrogorresistenteMdr String? // MRSA, KPC, VRE, Acinetobacter XDR
+  notificadoEpidemiologia        Boolean @default(false)
+  observacionesControlInfeccion  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
