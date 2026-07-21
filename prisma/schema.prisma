@@ -439,6 +439,9 @@ model PatientRegistration {
   psychMentalStates     PsychMentalStateExam[]
   psychScales           PsychScalesRecord[]
   psychMedications      PsychMedicationMonitoring[]
+  dermProfiles          DermSkinProfile[]
+  dermLesions           DermLesionRecord[]
+  dermBiopsies          DermBiopsyRecord[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -550,6 +553,9 @@ model Encounter {
   psychMentalStates       PsychMentalStateExam[]
   psychScales             PsychScalesRecord[]
   psychMedications        PsychMedicationMonitoring[]
+  dermProfiles            DermSkinProfile[]
+  dermLesions             DermLesionRecord[]
+  dermBiopsies            DermBiopsyRecord[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2351,6 +2357,80 @@ model PsychMedicationMonitoring {
   perimetroAbdominalCm  Float? // cm
   qtcIntervaloMs        Int? // ms (EKG QTc)
   efectosAdversos       String? @db.Text // Acatisia, Sedación, Ganancia de peso
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// DERMATOLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model DermSkinProfile {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  fitzpatrickType           String // Tipo I, II, III, IV, V, VI
+  antecedentesCancerPiel    Boolean @default(false)
+  historiaQuemadurasSolares String? // Ej: Quemaduras solares severas con ampollas
+  usoFotoprotector          String? // Diario FPS 50+, Ocasional, Ninguno
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model DermLesionRecord {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  localizacion           String // Ej: Rostro, Espalda superior, Antebrazo
+  asimetriaAbcde         Boolean @default(false) // A - Asimetría
+  bordesIrregularesAbcde Boolean @default(false) // B - Bordes irregulares
+  colorVariadoAbcde      Boolean @default(false) // C - Color policromático
+  diametroMayorMm        Float? // D - Diámetro en mm (>6mm sospechoso)
+  evolucionCambiosAbcde  Boolean @default(false) // E - Evolución / Cambios
+  dermatoscopiaPatron    String? // Red pigmentada atípica, Glóbulos, Velo azul
+  diagnosticoPresuntivo  String? // Nevus melánico, CBC, CEC, Melanoma
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model DermBiopsyRecord {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  sitioBiopsia             String // Ej: Hombro derecho (lesión 12mm)
+  tipoBiopsia              String // Punch, Shave (Afeitado), Escisional, Incisional
+  indicacion               String? // Sospecha de Malignidad
+  resultadoHistopatologico String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
