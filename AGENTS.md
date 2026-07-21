@@ -21,8 +21,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - **Expediente EHR Global en Portal:** Diseñado e implementado el expediente clínico editable para pacientes en el portal, incluyendo botones de grupo sanguíneo, gestor de alergias estructuradas, vacuna manager, seguro médico y grilla de antecedentes (personales/familiares/hábitos/quirúrgicos).
   - **Bloqueo y Verificación de Portal de Paciente:** Bloqueo de login para usuarios no verificados, redirección directa a OTP (correo/WhatsApp con link al bot +58 424-4967367) y unificación de perfiles locales.
   - **Hardening y SCA:** Removida contraseña de `config/msmtprc`, actualizado `nodemailer` a `^9.0.3` / nested `postcss` a `^8.5.15` y robustecido CI workflow permissions.
+  - **Refactorización Arquitectónica Crítica (Fases 1-4):**
+    - *Optimización DB y tRPC:* Migrados campos de `GlobalPatientProfile` a tipo `Json` (JsonB) en PostgreSQL con Prisma. Optimizadas consultas tRPC en `portal.ts` para eliminar N+1 y queries secuenciales mediante relación de relaciones directas en un único viaje de base de datos.
+    - *Cifrado Versioneado (Zero-Downtime Keyring):* Implementado sistema de llavero en `field-crypto.ts` que añade prefijos de versión (ej: `v2:`) al cifrar y lee dinámicamente según la versión, manteniendo retrocompatibilidad total transparente con datos históricos sin prefijo. Añadidas pruebas unitarias en `field-crypto-versioned.test.ts`.
+    - *Rendimiento en PDFs:* Incorporada cabecera HTTP `Cache-Control: stale-while-revalidate` en route handlers de PDF y creado el diseño base del `pdf-worker.ts`.
+    - *UI Compartida:* Extraídos los widgets clínicos a componentes puros `BloodTypeSelector` y `AllergyListEditor` en `components/ui/clinical/` y creado el formulario genérico `DynamicSoapForm.tsx`.
   - **`tsc --noEmit`:** clean ✅
-  - **`next build`:** Compiled successfully in 28.9s ✅
+  - **`next build`:** Compiled successfully in 11.4s ✅
 
 ## Feature: location-aware system (implementada 2026-06-27)
 
