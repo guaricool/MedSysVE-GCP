@@ -472,6 +472,9 @@ model PatientRegistration {
   rheumaJoints            RheumaJointMapper[]
   rheumaScores            RheumaActivityScores[]
   rheumaPostVirals        RheumaPostViralArthritis[]
+  nephroEgfrs             NephroEgfrCalculator[]
+  nephroSessions          NephroDialysisSession[]
+  nephroAccesses          NephroVascularAccess[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -616,6 +619,9 @@ model Encounter {
   rheumaJoints            RheumaJointMapper[]
   rheumaScores            RheumaActivityScores[]
   rheumaPostVirals        RheumaPostViralArthritis[]
+  nephroEgfrs             NephroEgfrCalculator[]
+  nephroSessions          NephroDialysisSession[]
+  nephroAccesses          NephroVascularAccess[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -3229,6 +3235,81 @@ model RheumaPostViralArthritis {
   patronArticular      String // Poliartritis, Oligoartritis, Tenosinovitis
   tratamientoPrevio    String?
   respuestaTratamiento String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// NEFROLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model NephroEgfrCalculator {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  creatininaSerica Float // mg/dL
+  edadAnos         Int
+  sexo             String // M o F
+  ckdEpi2021Result Float // mL/min/1.73m²
+  estadioCkd       String // G1 a G5
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model NephroDialysisSession {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  pesoPreDialisisKg       Float
+  pesoPostDialisisKg      Float
+  pesoSecoObjetivoKg      Float
+  ultrafiltracionUfLiters Float // UF en Litros
+  flujoSangreQbMlMin      Int // Qb mL/min
+  flujoDializadoQdMlMin   Int // Qd mL/min
+  filtroDializador        String?
+  anticoagulacionHeparina String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model NephroVascularAccess {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  tipoAcceso            String // FAV Autóloga, FAV Protésica, Catéter Tunelizado, Catéter Temporal
+  localizacionAnatomica String // Radiocefálica, Braquiocefálica, Yugular, Femoral
+  fechaImplantacion     DateTime?
+  estadoAcceso          String // Normofuncionante, Estenosis, Trombosado, Infección
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
