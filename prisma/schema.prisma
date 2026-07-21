@@ -436,6 +436,9 @@ model PatientRegistration {
   endoGlycemicLogs      EndoGlycemicLog[]
   endoInsulinTitrations EndoInsulinTitration[]
   endoThyroidNodules    EndoThyroidNodule[]
+  psychMentalStates     PsychMentalStateExam[]
+  psychScales           PsychScalesRecord[]
+  psychMedications      PsychMedicationMonitoring[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -544,6 +547,9 @@ model Encounter {
   endoGlycemicLogs        EndoGlycemicLog[]
   endoInsulinTitrations   EndoInsulinTitration[]
   endoThyroidNodules      EndoThyroidNodule[]
+  psychMentalStates       PsychMentalStateExam[]
+  psychScales             PsychScalesRecord[]
+  psychMedications        PsychMedicationMonitoring[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2267,6 +2273,84 @@ model EndoThyroidNodule {
   focosEcogenicos      String // Ninguno, Macrocalcificaciones, Punteados
   tiRadsCategory       String // TI-RADS 1 al 5
   bafnBethesdaCategory String? // Bethesda Tiroideo I al VI (PAAF)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// PSIQUIATRÍA Y SALUD MENTAL - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model PsychMentalStateExam {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  aspectoPorte         String // Adecuado, Aliñado, Desaliñado, Extravagante
+  actitud              String // Colaboradora, Hostil, Suspicaz, Pasiva
+  afectoEstructura     String // Eutímico, Deprimido, Labil, Aplanado, Eufórico
+  cursoPensamiento     String // Lógico-Coherente, Taquipsiquia, Bradipsiquia, Fuga de ideas
+  contenidoPensamiento String // Sin ideas delirantes, Ideas delirantes, Obsesiones, Ideas suicidas
+  sensorioOrientacion  String // Orientado 3 esferas, Desorientado parcial, Obnubilado
+  juicioIntrospeccion  String // Conservado, Parcialmente conservado, Nulo / Sin conciencia
+  observaciones        String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model PsychScalesRecord {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  phq9Score      Int? // 0 a 27 pts (Depresión)
+  phq9Category   String? // Mínima (0-4), Leve (5-9), Moderada (10-14), Grave (20-27)
+  gad7Score      Int? // 0 a 21 pts (Ansiedad)
+  gad7Category   String? // Mínima (0-4), Leve (5-9), Moderada (10-14), Grave (15-21)
+  cssrsRiskLevel String? // BAJO | MODERADO | ALTO | EXTREMO (Columbia Suicidio)
+  cssrsDetail    String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model PsychMedicationMonitoring {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  psicofarmacosActuales String // Ej: Risperidona 2mg, Sertralina 50mg
+  prolactinaNgMl        Float? // ng/mL
+  pesoKg                Float? // kg
+  perimetroAbdominalCm  Float? // cm
+  qtcIntervaloMs        Int? // ms (EKG QTc)
+  efectosAdversos       String? @db.Text // Acatisia, Sedación, Ganancia de peso
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

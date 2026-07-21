@@ -49,8 +49,10 @@ import { pediaRouter } from "./pedia"
 import { obgynoRouter } from "./obgyno"
 import { neuroRouter } from "./neuro"
 import { endoRouter } from "./endo"
+import { psychRouter } from "./psych"
 
 export const appRouter = router({
+  psych: psychRouter,
   endo: endoRouter,
   neuro: neuroRouter,
   obgyno: obgynoRouter,
