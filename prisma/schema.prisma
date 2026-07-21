@@ -481,6 +481,9 @@ model PatientRegistration {
   geriVgis                GeriVgiFunctional[]
   geriFrails              GeriFrailFallRisk[]
   geriCognitives          GeriCognitiveMood[]
+  famMedGenograms         FamMedGenogram[]
+  famMedApgarScores       FamMedApgarScore[]
+  famMedFamilyLifeCycles  FamMedFamilyLifeCycle[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -634,6 +637,9 @@ model Encounter {
   geriVgis                GeriVgiFunctional[]
   geriFrails              GeriFrailFallRisk[]
   geriCognitives          GeriCognitiveMood[]
+  famMedGenograms         FamMedGenogram[]
+  famMedApgars            FamMedApgarScore[]
+  famMedLifeCycles        FamMedFamilyLifeCycle[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -3471,6 +3477,78 @@ model GeriCognitiveMood {
   cognitiveCategory  String // Normal, Deterioro Leve, Moderado, Severo
   yesavageGds15Score Int? // 0 a 15 (Depresión Yesavage)
   moodCategory       String // Normal, Depresión Leve, Depresión Severa
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// MEDICINA FAMILIAR Y PRÁCTICA AVANZADA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model FamMedGenogram {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  generationsCount    Int     @default(3)
+  membersCount        Int     @default(0)
+  genogramDataJson    String? @db.Text
+  hereditaryRisksJson String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model FamMedApgarScore {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  adaptabilityScore     Int // 0, 1, 2
+  partnershipScore      Int // 0, 1, 2
+  growthScore           Int // 0, 1, 2
+  affectionScore        Int // 0, 1, 2
+  resolveScore          Int // 0, 1, 2
+  totalApgarScore       Int // 0 a 10
+  functionalityCategory String // Buena funcionalidad, Disfunción leve, moderada, severa
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model FamMedFamilyLifeCycle {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  duvallStage        String // Etapa I a VIII de Duvall
+  normativeCrises    String?
+  nonNormativeCrises String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
