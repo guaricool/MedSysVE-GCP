@@ -1,382 +1,422 @@
-"use client"
+"use client";
 
-import { useState, useMemo, useEffect } from "react"
-import { trpc } from "@/lib/trpc-client"
-import { Activity, CheckCircle, Database } from "lucide-react"
-import { useUnsaved } from "@/components/providers/unsaved-changes-provider"
+import { useState, useMemo, useEffect } from "react";
+import { trpc } from "@/lib/trpc-client";
+import { useUnsaved } from "@/components/providers/unsaved-changes-provider";
+import { Button } from "@/components/ui/button";
+import {
+  Database,
+  Activity,
+  Plus,
+  CheckCircle2,
+  AlertTriangle,
+  FileText,
+  Flame,
+  Layers,
+  Sparkles,
+} from "lucide-react";
 
 interface Props {
-  encounterId: string
-  disabled?: boolean
-  initialData?: {
-    bristolType?: number
-    forrestClass?: string
-    childPugh?: {
-      bilirrubina?: number
-      albumina?: number
-      inr?: number
-      encefalopatia?: number
-      ascitis?: number
-    }
-    sintomas?: string[]
-    mayoScore?: {
-      frecuenciaEvacuacion?: number
-      sangradoRectal?: number
-      evaluacionGlobal?: number
-    }
-  }
+  encounterId: string;
+  patientRegistrationId?: string;
+  patientRegId?: string;
+  disabled?: boolean;
+  initialData?: any;
 }
 
-const BRISTOL_TYPES = [
-  { type: 1, desc: "Trozos duros separados, como nueces (difícil de excretar)" },
-  { type: 2, desc: "Forma de salchicha pero grumosa" },
-  { type: 3, desc: "Forma de salchicha con grietas en la superficie" },
-  { type: 4, desc: "Forma de salchicha o serpiente, lisa y blanda (ideal)" },
-  { type: 5, desc: "Trozos blandos con bordes recortados (fácil de excretar)" },
-  { type: 6, desc: "Pedazos blandos y esponjosos con bordes irregulares" },
-  { type: 7, desc: "Acuosa, sin trozos sólidos, totalmente líquida" },
-]
+const FORREST_OPTIONS = [
+  "Sin sangrado activo ni ulceración relevante",
+  "Forrest Ia (Sangrado arterial activo en chorro)",
+  "Forrest Ib (Sangrado activo rezumante en napa)",
+  "Forrest IIa (Vaso visible no sangrante en lecho ulceroso)",
+  "Forrest IIb (Coágulo adherido sobre úlcera)",
+  "Forrest IIc (Mancha de hematina / pigmento oscuro)",
+  "Forrest III (Úlcera con base limpia de fibrina)",
+];
 
-const FORREST_CLASSES = [
-  { val: "Ninguno", label: "Sin sangrado activo" },
-  { val: "Ia", label: "Ia (Sangrado arterial en chorro)" },
-  { val: "Ib", label: "Ib (Sangrado rezumante en napa)" },
-  { val: "IIa", label: "IIa (Vaso visible no sangrante)" },
-  { val: "IIb", label: "IIb (Coágulo adherido)" },
-  { val: "IIc", label: "IIc (Mancha hematina en fondo ulceroso)" },
-  { val: "III", label: "III (Fondo limpio de fibrina sin lesión vascular)" },
-]
+const LOS_ANGELES_OPTIONS = [
+  "Sin esofagitis péptica",
+  "Grado A (1 o más erosiones < 5mm que no se extienden entre pliegues)",
+  "Grado B (1 o más erosiones > 5mm que no se extienden entre pliegues)",
+  "Grado C (Erosiones confluentes entre 2 o más pliegues, < 75% del perímetro)",
+  "Grado D (Erosiones confluentes que comprometen >= 75% del perímetro)",
+];
 
-export function GastroenterologiaForm({ encounterId, disabled, initialData = {} }: Props) {
-  const [bristolType, setBristolType] = useState<number>(initialData.bristolType || 4)
-  const [forrestClass, setForrestClass] = useState<string>(initialData.forrestClass || "Ninguno")
+export function GastroenterologiaForm({ encounterId, disabled, initialData = {}, patientRegistrationId, patientRegId }: Props) {
+  const effectivePatId = patientRegistrationId || patientRegId || "sandbox-demo-pat";
+  const [activeTab, setActiveTab] = useState<"ENDOSCOPIA" | "SANGRADO" | "MAYO">("ENDOSCOPIA");
+  const [saved, setSaved] = useState(false);
+  const { setDirty } = useUnsaved();
 
-  const cp = initialData.childPugh || {}
-  const [bilirrubina, setBilirrubina] = useState<number>(cp.bilirrubina || 1)
-  const [albumina, setAlbumina] = useState<number>(cp.albumina || 1)
-  const [inr, setInr] = useState<number>(cp.inr || 1)
-  const [encefalopatia, setEncefalopatia] = useState<number>(cp.encefalopatia || 1)
-  const [ascitis, setAscitis] = useState<number>(cp.ascitis || 1)
+  // tRPC Queries & Mutations
+  const { data: dbReports = [], refetch: refetchReports } = (trpc.gastro.listEndoscopyReports.useQuery as any)({ patientRegistrationId: effectivePatId });
+  const { data: dbBleed, refetch: refetchBleed } = (trpc.gastro.getBleedingScale.useQuery as any)({ encounterId });
+  const { data: dbIbd, refetch: refetchIbd } = (trpc.gastro.getIbdScore.useQuery as any)({ encounterId });
 
-  const [sintomas, setSintomas] = useState<string[]>(initialData.sintomas || [])
+  const saveReportMut = (trpc.gastro.saveEndoscopyReport.useMutation as any)({ onSuccess: () => refetchReports() });
+  const saveBleedMut = (trpc.gastro.saveBleedingScale.useMutation as any)({ onSuccess: () => refetchBleed() });
+  const saveIbdMut = (trpc.gastro.saveIbdScore.useMutation as any)({ onSuccess: () => refetchIbd() });
 
-  // Mayo Score State
-  const ms = initialData.mayoScore || {}
-  const [frecuenciaEvacuacion, setFrecuenciaEvacuacion] = useState<number>(ms.frecuenciaEvacuacion || 0)
-  const [sangradoRectal, setSangradoRectal] = useState<number>(ms.sangradoRectal || 0)
-  const [evaluacionGlobal, setEvaluacionGlobal] = useState<number>(ms.evaluacionGlobal || 0)
+  // Endoscopy State
+  const [tipoProc, setTipoProc] = useState("Colonoscopia Total");
+  const [hallazgos, setHallazgos] = useState("Mucosa de colon de características normales. Adecuado patrón vascular.");
+  const [bostonDer, setBostonDer] = useState(3);
+  const [bostonTrans, setBostonTrans] = useState(3);
+  const [bostonIzq, setBostonIzq] = useState(2);
+  const [biopsias, setBiopsias] = useState("Pólipo colon ascendente (Frasco 1)");
 
-  const [saved, setSaved] = useState(false)
+  // Bleeding / Esophagitis State
+  const [forrest, setForrest] = useState("Forrest III (Úlcera con base limpia de fibrina)");
+  const [losAngeles, setLosAngeles] = useState("Grado A (1 o más erosiones < 5mm que no se extienden entre pliegues)");
+  const [hemostasia, setHemostasia] = useState("Ninguna requerida");
 
-  const { setDirty } = useUnsaved()
-
-  const isDirty = useMemo(() => {
-    return (
-      bristolType !== (initialData.bristolType || 4) ||
-      forrestClass !== (initialData.forrestClass || "Ninguno") ||
-      bilirrubina !== (cp.bilirrubina || 1) ||
-      albumina !== (cp.albumina || 1) ||
-      inr !== (cp.inr || 1) ||
-      encefalopatia !== (cp.encefalopatia || 1) ||
-      ascitis !== (cp.ascitis || 1) ||
-      frecuenciaEvacuacion !== (ms.frecuenciaEvacuacion || 0) ||
-      sangradoRectal !== (ms.sangradoRectal || 0) ||
-      evaluacionGlobal !== (ms.evaluacionGlobal || 0) ||
-      JSON.stringify(sintomas) !== JSON.stringify(initialData.sintomas || [])
-    )
-  }, [
-    bristolType, forrestClass, bilirrubina, albumina, inr, encefalopatia, ascitis, 
-    frecuenciaEvacuacion, sangradoRectal, evaluacionGlobal, sintomas, initialData, cp, ms
-  ])
+  // Mayo IBD State
+  const [diagEii, setDiagEii] = useState("Colitis Ulcerosa (CU)");
+  const [mayoEvac, setMayoEvac] = useState(1);
+  const [mayoSangre, setMayoSangre] = useState(0);
+  const [mayoEndo, setMayoEndo] = useState(1);
+  const [mayoMed, setMayoMed] = useState(1);
 
   useEffect(() => {
-    setDirty("gastroenterologia", isDirty)
-  }, [isDirty, setDirty])
-
-  const utils = trpc.useUtils()
-  const save = (trpc.encounter.update as any).useMutation({
-    onSuccess: () => {
-      utils.invalidate()
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    },
-  })
-
-  // Child-Pugh Score Calculation
-  const cpScore = bilirrubina + albumina + inr + encefalopatia + ascitis
-  let cpClass = "Clase A (Buen pronóstico)"
-  if (cpScore >= 7 && cpScore <= 9) cpClass = "Clase B (Compromiso funcional moderado)"
-  if (cpScore >= 10) cpClass = "Clase C (Compromiso funcional severo)"
-
-  // Mayo Score Calculation
-  const mayoTotal = frecuenciaEvacuacion + sangradoRectal + evaluacionGlobal
-  let mayoSeveridad = "Remisión clínica (0-1 pts)"
-  if (mayoTotal >= 2 && mayoTotal <= 4) mayoSeveridad = "Actividad Leve (2-4 pts)"
-  if (mayoTotal >= 5 && mayoTotal <= 6) mayoSeveridad = "Actividad Moderada (5-6 pts)"
-  if (mayoTotal >= 7) mayoSeveridad = "Actividad Grave (7-9 pts)"
-
-  function handleSave() {
-    const payload = {
-      bristolType,
-      forrestClass,
-      childPugh: {
-        bilirrubina,
-        albumina,
-        inr,
-        encefalopatia,
-        ascitis,
-      },
-      sintomas,
-      mayoScore: {
-        frecuenciaEvacuacion,
-        sangradoRectal,
-        evaluacionGlobal,
-      },
+    if (dbBleed) {
+      if (dbBleed.forrestClassification) setForrest(dbBleed.forrestClassification);
+      if (dbBleed.losAngelesEsofagitis) setLosAngeles(dbBleed.losAngelesEsofagitis);
+      if (dbBleed.hemostasiaEndoscopica) setHemostasia(dbBleed.hemostasiaEndoscopica);
     }
+  }, [dbBleed]);
 
-    save.mutate({
-      id: encounterId,
-      datosEspecialidad: payload,
-    })
-  }
+  useEffect(() => {
+    if (dbIbd) {
+      setDiagEii(dbIbd.diagnosticoEii);
+      if (dbIbd.mayoFrecuenciaDeposiciones !== null) setMayoEvac(dbIbd.mayoFrecuenciaDeposiciones);
+      if (dbIbd.mayoSangradoRectal !== null) setMayoSangre(dbIbd.mayoSangradoRectal);
+      if (dbIbd.mayoHallazgosEndoscopicos !== null) setMayoEndo(dbIbd.mayoHallazgosEndoscopicos);
+      if (dbIbd.mayoEvaluacionGlobalMedico !== null) setMayoMed(dbIbd.mayoEvaluacionGlobalMedico);
+    }
+  }, [dbIbd]);
 
-  const toggleSintoma = (sin: string) => {
-    if (disabled) return
-    setSintomas((prev) =>
-      prev.includes(sin) ? prev.filter((s) => s !== sin) : [...prev, sin]
-    )
-  }
+  const handleAddReport = () => {
+    saveReportMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      tipoProcedimiento: tipoProc,
+      hallazgos,
+      bostonScoreColonDerecho: bostonDer,
+      bostonScoreColonTransverso: bostonTrans,
+      bostonScoreColonIzquierdo: bostonIzq,
+      biopsiasTomadas: biopsias,
+    });
+  };
+
+  const handleSaveBleed = () => {
+    saveBleedMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      forrestClassification: forrest,
+      losAngelesEsofagitis: losAngeles,
+      hemostasiaEndoscopica: hemostasia,
+    });
+  };
+
+  const handleSaveIbd = () => {
+    saveIbdMut.mutate({
+      encounterId,
+      patientRegistrationId: effectivePatId,
+      diagnosticoEii: diagEii,
+      mayoFrecuenciaDeposiciones: mayoEvac,
+      mayoSangradoRectal: mayoSangre,
+      mayoHallazgosEndoscopicos: mayoEndo,
+      mayoEvaluacionGlobalMedico: mayoMed,
+    });
+  };
+
+  const totalBoston = bostonDer + bostonTrans + bostonIzq;
+  const totalMayo = mayoEvac + mayoSangre + mayoEndo + mayoMed;
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 space-y-4">
-      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-white">
-        <Database className="h-4 w-4 text-emerald-400" />
-        Evaluación Gastroenterológica
-      </h3>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Bristol, Forrest, Sintomas */}
-        <div className="space-y-4">
-          <label className="block text-xs text-slate-400 font-medium">
-            Escala de Bristol (Consistencia de Heces)
-            <select
-              disabled={disabled}
-              value={bristolType}
-              onChange={(e) => setBristolType(Number(e.target.value))}
-              className="mt-1 block w-full rounded border border-slate-700 bg-slate-800 px-2.5 py-1 text-xs text-white"
-            >
-              {BRISTOL_TYPES.map((b) => (
-                <option key={b.type} value={b.type}>
-                  Tipo {b.type} - {b.desc}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-xs text-slate-400 font-medium">
-            Clasificación de Forrest (Hemorragia Digestiva)
-            <select
-              disabled={disabled}
-              value={forrestClass}
-              onChange={(e) => setForrestClass(e.target.value)}
-              className="mt-1 block w-full rounded border border-slate-700 bg-slate-800 px-2.5 py-1 text-xs text-white"
-            >
-              {FORREST_CLASSES.map((f) => (
-                <option key={f.val} value={f.val}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="space-y-1.5">
-            <span className="block text-xs text-slate-400 font-medium">Síntomas Clínicos</span>
-            <div className="grid grid-cols-2 gap-1.5">
-              {["Disfagia", "Dispepsia", "Pirosis", "Dolor Abdominal", "Nauseas/Vomito", "Melena", "Rectorragia", "Ictericia"].map((sin) => {
-                const active = sintomas.includes(sin)
-                return (
-                  <button
-                    key={sin}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => toggleSintoma(sin)}
-                    className={`rounded p-1 text-[10px] border transition-colors text-left font-medium ${
-                      active
-                        ? "bg-emerald-950/30 border-emerald-700 text-emerald-300"
-                        : "border-slate-800 bg-slate-900 text-slate-500 hover:text-white"
-                    }`}
-                  >
-                    {sin}
-                  </button>
-                )
-              })}
-            </div>
+    <div className="space-y-4 bg-slate-900 border border-slate-800 p-5 rounded-xl text-slate-100 shadow-md">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400">
+            <Database className="w-5 h-5" />
           </div>
-        </div>
-
-        {/* Middle: Child-Pugh Calculator */}
-        <div className="rounded-lg border border-slate-800 bg-slate-800/20 p-3 space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
-              Child-Pugh (Hepatopatía)
-            </h4>
-            <span className="text-xs font-bold text-emerald-400">Score: {cpScore}</span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 text-xs">
-            <label className="flex items-center justify-between text-slate-400">
-              <span>Bilirrubina total</span>
-              <select
-                disabled={disabled}
-                value={bilirrubina}
-                onChange={(e) => setBilirrubina(Number(e.target.value))}
-                className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-white w-24"
-              >
-                <option value={1}>&lt;2.0 (1 pt)</option>
-                <option value={2}>2.0–3.0 (2 pt)</option>
-                <option value={3}>&gt;3.0 (3 pt)</option>
-              </select>
-            </label>
-
-            <label className="flex items-center justify-between text-slate-400">
-              <span>Albúmina sérica</span>
-              <select
-                disabled={disabled}
-                value={albumina}
-                onChange={(e) => setAlbumina(Number(e.target.value))}
-                className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-white w-24"
-              >
-                <option value={1}>&gt;3.5 (1 pt)</option>
-                <option value={2}>2.8–3.5 (2 pt)</option>
-                <option value={3}>&lt;2.8 (3 pt)</option>
-              </select>
-            </label>
-
-            <label className="flex items-center justify-between text-slate-400">
-              <span>Tiempo INR</span>
-              <select
-                disabled={disabled}
-                value={inr}
-                onChange={(e) => setInr(Number(e.target.value))}
-                className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-white w-24"
-              >
-                <option value={1}>&lt;1.7 (1 pt)</option>
-                <option value={2}>1.7–2.3 (2 pt)</option>
-                <option value={3}>&gt;2.3 (3 pt)</option>
-              </select>
-            </label>
-
-            <label className="flex items-center justify-between text-slate-400">
-              <span>Encefalopatía</span>
-              <select
-                disabled={disabled}
-                value={encefalopatia}
-                onChange={(e) => setEncefalopatia(Number(e.target.value))}
-                className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-white w-24"
-              >
-                <option value={1}>Ausente (1 pt)</option>
-                <option value={2}>I-II (2 pt)</option>
-                <option value={3}>III-IV (3 pt)</option>
-              </select>
-            </label>
-
-            <label className="flex items-center justify-between text-slate-400">
-              <span>Ascitis</span>
-              <select
-                disabled={disabled}
-                value={ascitis}
-                onChange={(e) => setAscitis(Number(e.target.value))}
-                className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-white w-24"
-              >
-                <option value={1}>Ausente (1 pt)</option>
-                <option value={2}>Leve (2 pt)</option>
-                <option value={3}>Severa (3 pt)</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="border-t border-slate-800 pt-2 text-[10px] font-semibold text-slate-350">
-            {cpClass}
-          </div>
-        </div>
-
-        {/* Right: Mayo Score Calculator */}
-        <div className="rounded-lg border border-slate-800 bg-slate-800/20 p-3 space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
-              Mayo Score (Actividad de Colitis)
-            </h4>
-            <div className="text-right shrink-0">
-              <span className="text-xs font-bold text-emerald-400">Total: {mayoTotal}/9</span>
-              <span className="text-[9px] text-slate-400 block">{mayoSeveridad}</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 text-xs">
-            <label className="block text-slate-400">
-              Frecuencia de Deposiciones
-              <select
-                disabled={disabled}
-                value={frecuenciaEvacuacion}
-                onChange={(e) => setFrecuenciaEvacuacion(Number(e.target.value))}
-                className="mt-1 block w-full rounded border border-slate-700 bg-slate-800 px-2 py-1 text-white"
-              >
-                <option value={0}>0 - Frecuencia normal</option>
-                <option value={1}>1 - 1 a 2 deposiciones más de lo normal</option>
-                <option value={2}>2 - 3 a 4 deposiciones más de lo normal</option>
-                <option value={3}>3 - &gt;=5 deposiciones más de lo normal</option>
-              </select>
-            </label>
-
-            <label className="block text-slate-400">
-              Sangrado Rectal
-              <select
-                disabled={disabled}
-                value={sangradoRectal}
-                onChange={(e) => setSangradoRectal(Number(e.target.value))}
-                className="mt-1 block w-full rounded border border-slate-700 bg-slate-800 px-2 py-1 text-white"
-              >
-                <option value={0}>0 - Sin sangre visible</option>
-                <option value={1}>1 - Trazas de sangre menos de la mitad de las veces</option>
-                <option value={2}>2 - Sangre obvia la mayoría de las veces</option>
-                <option value={3}>3 - Sangre pura (sin heces) o rectorragia franca</option>
-              </select>
-            </label>
-
-            <label className="block text-slate-400">
-              Evaluación Global del Médico
-              <select
-                disabled={disabled}
-                value={evaluacionGlobal}
-                onChange={(e) => setEvaluacionGlobal(Number(e.target.value))}
-                className="mt-1 block w-full rounded border border-slate-700 bg-slate-800 px-2 py-1 text-white"
-              >
-                <option value={0}>0 - Normal / Inactiva</option>
-                <option value={1}>1 - Actividad Leve</option>
-                <option value={2}>2 - Actividad Moderada</option>
-                <option value={3}>3 - Actividad Grave / Brote severo</option>
-              </select>
-            </label>
+          <div>
+            <h3 className="font-bold text-base text-white">Gastroenterología & Endoscopia Digestive</h3>
+            <p className="text-xs text-slate-400">Reportes Endoscópicos (BBPS Boston), Clasificación Forrest / Los Ángeles & Índice Mayo EII</p>
           </div>
         </div>
       </div>
 
-      {!disabled && (
-        <div className="flex items-center gap-3 border-t border-slate-800 pt-3">
-          <button
-            onClick={handleSave}
-            disabled={save.isPending}
-            className="rounded bg-emerald-700 px-4 py-1.5 text-xs text-white hover:bg-emerald-600 disabled:opacity-50 font-semibold"
-          >
-            {save.isPending ? "Guardando..." : "Guardar Gastroenterología"}
-          </button>
-          {saved && (
-            <p className="flex items-center gap-1 text-xs text-emerald-400">
-              <CheckCircle className="h-3.5 w-3.5" /> Guardado.
-            </p>
-          )}
+      {/* Navigation Sub-Tabs */}
+      <div className="flex flex-wrap items-center gap-2 bg-slate-950/70 p-1.5 rounded-lg border border-slate-800">
+        <button
+          onClick={() => setActiveTab("ENDOSCOPIA")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "ENDOSCOPIA"
+              ? "bg-amber-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" /> Endoscopia & Boston BBPS ({dbReports.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab("SANGRADO")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "SANGRADO"
+              ? "bg-amber-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <Flame className="w-3.5 h-3.5" /> Forrest (Sangrado) & Los Ángeles (Esofagitis)
+        </button>
+
+        <button
+          onClick={() => setActiveTab("MAYO")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === "MAYO"
+              ? "bg-amber-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <Activity className="w-3.5 h-3.5" /> Índice Mayo (Colitis Ulcerosa)
+        </button>
+      </div>
+
+      {/* Tab 1: Endoscopia & Boston Score */}
+      {activeTab === "ENDOSCOPIA" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                <FileText className="w-4 h-4" /> Reporte Endoscópico & Escala de Preparación Colónica de Boston (BBPS)
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Puntuación Boston (0-3 por segmento) para adecuada visualización mucosal.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleAddReport}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> Registrar Procedimiento
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-3">
+              <div>
+                <label className="font-semibold text-slate-300">Tipo de Procedimiento Endoscópico</label>
+                <input
+                  type="text"
+                  value={tipoProc}
+                  onChange={(e) => setTipoProc(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2 mt-1"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-300">Biopsias / Muestras Histológicas</label>
+                <input
+                  type="text"
+                  value={biopsias}
+                  onChange={(e) => setBiopsias(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2 mt-1"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-300">Hallazgos Endoscópicos</label>
+                <textarea
+                  value={hallazgos}
+                  onChange={(e) => setHallazgos(e.target.value)}
+                  rows={3}
+                  className="w-full bg-slate-950 border border-slate-700 text-white rounded p-2 mt-1"
+                />
+              </div>
+            </div>
+
+            {/* Boston BBPS Score */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+              <h5 className="font-bold text-emerald-400">🧹 Escala de Boston (BBPS 0-9 pts)</h5>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-slate-400 text-[10px]">Colon Derecho (0-3):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="3"
+                    value={bostonDer}
+                    onChange={(e) => setBostonDer(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 text-white font-bold rounded p-1.5 mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 text-[10px]">Transverso (0-3):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="3"
+                    value={bostonTrans}
+                    onChange={(e) => setBostonTrans(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 text-white font-bold rounded p-1.5 mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 text-[10px]">Colon Izquierdo (0-3):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="3"
+                    value={bostonIzq}
+                    onChange={(e) => setBostonIzq(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 text-white font-bold rounded p-1.5 mt-1"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-center">
+                <span className="text-[10px] text-slate-400 block">Puntuación Total Boston (BBPS):</span>
+                <span className={`text-xl font-extrabold ${totalBoston >= 6 ? "text-emerald-400" : "text-amber-400"}`}>
+                  {totalBoston} / 9 Puntos {totalBoston >= 6 ? "(Preparación Excelente)" : "(Preparación Inadecuada)"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: Forrest & Los Ángeles */}
+      {activeTab === "SANGRADO" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Flame className="w-4 h-4" /> Clasificación de Forrest & Esofagitis de Los Ángeles
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Riesgo de resangrado ulceroso y severidad de esofagitis péptica.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleSaveBleed}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs"
+            >
+              Guardar Clasificaciones
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 text-xs">
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+              <h5 className="font-bold text-red-400">🩸 Clasificación de Forrest (Úlceras Pépticas)</h5>
+              <select
+                value={forrest}
+                onChange={(e) => setForrest(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2 font-semibold"
+              >
+                {FORREST_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+              <h5 className="font-bold text-blue-400">🧪 Esofagitis (Clasificación de Los Ángeles)</h5>
+              <select
+                value={losAngeles}
+                onChange={(e) => setLosAngeles(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 text-white rounded p-2 font-semibold"
+              >
+                {LOS_ANGELES_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Índice Mayo (EII) */}
+      {activeTab === "MAYO" && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Activity className="w-4 h-4" /> Índice de Mayo (Colitis Ulcerosa 0-12 pts)
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Puntuación clínica y endoscópica de severidad en Enfermedad Inflamatoria Intestinal.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleSaveIbd}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs"
+            >
+              Guardar Índice Mayo
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 text-xs">
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+              <h5 className="font-bold text-amber-400">📊 Desglose de Puntuación Mayo</h5>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-400">Deposiciones (0-3):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="3"
+                    value={mayoEvac}
+                    onChange={(e) => setMayoEvac(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1.5 mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400">Sangrado Rectal (0-3):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="3"
+                    value={mayoSangre}
+                    onChange={(e) => setMayoSangre(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1.5 mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400">Endoscopia (0-3):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="3"
+                    value={mayoEndo}
+                    onChange={(e) => setMayoEndo(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1.5 mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400">Eval. Médica (0-3):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="3"
+                    value={mayoMed}
+                    onChange={(e) => setMayoMed(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1.5 mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 flex flex-col justify-center text-center">
+              <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Resultado Total Mayo:</span>
+              <span className="text-3xl font-extrabold text-amber-400">{totalMayo} / 12 Puntos</span>
+              <span className="text-xs text-slate-300 font-semibold">
+                {totalMayo <= 2 ? "🟢 Remisión Clínica (0-2 pts)" : totalMayo <= 5 ? "🟡 Colitis Ulcerosa Leve (3-5 pts)" : totalMayo <= 10 ? "🟠 Colitis Ulcerosa Moderada (6-10 pts)" : "🔴 Colitis Ulcerosa Grave (11-12 pts)"}
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </div>
-  )
+  );
 }

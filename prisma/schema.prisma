@@ -442,6 +442,9 @@ model PatientRegistration {
   dermProfiles          DermSkinProfile[]
   dermLesions           DermLesionRecord[]
   dermBiopsies          DermBiopsyRecord[]
+  gastroReports         GastroEndoscopyReport[]
+  gastroBleedings       GastroBleedingScale[]
+  gastroIbdScores       GastroIbdScore[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -556,6 +559,9 @@ model Encounter {
   dermProfiles            DermSkinProfile[]
   dermLesions             DermLesionRecord[]
   dermBiopsies            DermBiopsyRecord[]
+  gastroReports           GastroEndoscopyReport[]
+  gastroBleedings         GastroBleedingScale[]
+  gastroIbdScores         GastroIbdScore[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2431,6 +2437,81 @@ model DermBiopsyRecord {
   tipoBiopsia              String // Punch, Shave (Afeitado), Escisional, Incisional
   indicacion               String? // Sospecha de Malignidad
   resultadoHistopatologico String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// GASTROENTEROLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model GastroEndoscopyReport {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  tipoProcedimiento          String // EDA / EGD (Digestiva Alta), Colonoscopia, Rectosigmoidoscopia
+  hallazgos                  String  @db.Text
+  bostonScoreColonDerecho    Int? // 0 a 3 (BBPS Derecha)
+  bostonScoreColonTransverso Int? // 0 a 3 (BBPS Transverso)
+  bostonScoreColonIzquierdo  Int? // 0 a 3 (BBPS Izquierda)
+  bostonTotalScore           Int? // 0 a 9 (BBPS Total)
+  biopsiasTomadas            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model GastroBleedingScale {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  forrestClassification String? // Ia, Ib, IIa, IIb, IIc, III (Clasificación de Forrest)
+  losAngelesEsofagitis  String? // Grado A, B, C, D (Clasificación Los Ángeles)
+  hemostasiaEndoscopica String? // Inyección adrenalina, Clips, Argón plasma
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model GastroIbdScore {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  diagnosticoEii             String // Colitis Ulcerosa (CU) / Enfermedad de Crohn (EC)
+  mayoFrecuenciaDeposiciones Int? // 0 a 3 pts
+  mayoSangradoRectal         Int? // 0 a 3 pts
+  mayoHallazgosEndoscopicos  Int? // 0 a 3 pts
+  mayoEvaluacionGlobalMedico Int? // 0 a 3 pts
+  mayoTotalScore             Int? // 0 a 12 pts (Índice de Mayo)
+  mayoCategory               String? // Remisión (0-2), Leve (3-5), Moderada (6-10), Grave (11-12)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
