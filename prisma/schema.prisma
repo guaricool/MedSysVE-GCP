@@ -475,6 +475,9 @@ model PatientRegistration {
   nephroEgfrs             NephroEgfrCalculator[]
   nephroSessions          NephroDialysisSession[]
   nephroAccesses          NephroVascularAccess[]
+  emergTriages            EmergTriageAssessment[]
+  emergResusCodes         EmergResusCode[]
+  emergFastProtocols      EmergFastProtocol[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -622,6 +625,9 @@ model Encounter {
   nephroEgfrs             NephroEgfrCalculator[]
   nephroSessions          NephroDialysisSession[]
   nephroAccesses          NephroVascularAccess[]
+  emergTriages            EmergTriageAssessment[]
+  emergResusCodes         EmergResusCode[]
+  emergFastProtocols      EmergFastProtocol[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -3310,6 +3316,83 @@ model NephroVascularAccess {
   localizacionAnatomica String // Radiocefálica, Braquiocefálica, Yugular, Femoral
   fechaImplantacion     DateTime?
   estadoAcceso          String // Normofuncionante, Estenosis, Trombosado, Infección
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// MEDICINA DE EMERGENCIA / URGENCIAS - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model EmergTriageAssessment {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  esiLevel          Int // 1 (Rojo) a 5 (Azul)
+  triageColor       String // Rojo, Naranja, Amarillo, Verde, Azul
+  chiefComplaint    String
+  targetWaitTimeMin Int
+  glasgowComaScale  Int? // 3 a 15
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model EmergResusCode {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  startTime        DateTime @default(now())
+  initialRhythm    String // FV, TVSP, Asistolia, AESP
+  shocksDelivered  Int      @default(0)
+  joulesPerShock   Int?
+  epinephrineDoses Int      @default(0)
+  amiodaroneDoses  Int      @default(0)
+  roscAchieved     Boolean  @default(false)
+  resusDurationMin Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model EmergFastProtocol {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  protocolType        String // Código Ictus, Código IAM, Shock Séptico, Cetoacidosis CAD
+  doorToNeedleTimeMin Int?
+  thrombolyticAgent   String? // Estreptoquinasa, Alteplasa
+  vasopressorUsed     String? // Noradrenalina, Adrenalina
+  fluidResusLiters    Float?
+  protocolStatus      String // En curso, Completado, Contraindicado
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

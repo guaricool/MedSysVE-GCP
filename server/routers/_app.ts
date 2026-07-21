@@ -62,8 +62,10 @@ import { uroRouter } from "./uro"
 import { ophthoRouter } from "./ophtho"
 import { rheumaRouter } from "./rheuma"
 import { nephroRouter } from "./nephro"
+import { emergRouter } from "./emerg"
 
 export const appRouter = router({
+  emerg: emergRouter,
   nephro: nephroRouter,
   rheuma: rheumaRouter,
   ophtho: ophthoRouter,
