@@ -469,6 +469,9 @@ model PatientRegistration {
   ophthoRefractions       OphthoRefractionVisualAcuity[]
   ophthoGlaucomas         OphthoGlaucomaRetinopathy[]
   ophthoFindings          OphthoEyeFindings[]
+  rheumaJoints            RheumaJointMapper[]
+  rheumaScores            RheumaActivityScores[]
+  rheumaPostVirals        RheumaPostViralArthritis[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -610,6 +613,9 @@ model Encounter {
   ophthoRefractions       OphthoRefractionVisualAcuity[]
   ophthoGlaucomas         OphthoGlaucomaRetinopathy[]
   ophthoFindings          OphthoEyeFindings[]
+  rheumaJoints            RheumaJointMapper[]
+  rheumaScores            RheumaActivityScores[]
+  rheumaPostVirals        RheumaPostViralArthritis[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -3149,6 +3155,80 @@ model OphthoEyeFindings {
   segmentoPosteriorOi String? @db.Text
   hallazgosDiagramaOd String? @db.Text
   hallazgosDiagramaOi String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// REUMATOLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model RheumaJointMapper {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  tenderJointCount28   Int // TJC28 (0-28)
+  swollenJointCount28  Int // SJC28 (0-28)
+  patientGlobalVasMm   Int // VAS 0-100 mm
+  evaluatorGlobalVasMm Int? // VAS 0-100 mm
+  jointDetailsJson     String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model RheumaActivityScores {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  crpMgL           Float? // PCR mg/L
+  esrMmHr          Float? // VSG mm/h
+  das28Score       Float? // DAS28
+  cdaiScore        Float // CDAI (0-76)
+  sdaiScore        Float? // SDAI
+  activityCategory String // Remisión, Baja, Moderada, Alta
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model RheumaPostViralArthritis {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  viralEtiology        String // Chikungunya, Zika, Dengue, Mayaro
+  faseEvolucion        String // Aguda, Subaguda, Crónica
+  patronArticular      String // Poliartritis, Oligoartritis, Tenosinovitis
+  tratamientoPrevio    String?
+  respuestaTratamiento String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
