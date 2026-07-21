@@ -383,9 +383,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     redirect({ url, baseUrl }) {
       const canonicalBase = process.env.NEXTAUTH_URL || "https://www.medsysve.com"
+      if (url.includes("0.0.0.0") || url.includes("127.0.0.1") || url.includes("8080")) {
+        url = url.replace(/^https?:\/\/[^\/]+/, canonicalBase)
+      }
+
       if (url.startsWith("/")) return `${canonicalBase}${url}`
-      else if (new URL(url).origin === baseUrl || new URL(url).origin === canonicalBase) return url
-      return canonicalBase
+
+      try {
+        const targetUrl = new URL(url)
+        if (targetUrl.hostname === "medsysve.com" || targetUrl.hostname.endsWith(".medsysve.com")) {
+          return url
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      return `${canonicalBase}/login`
     },
   },
   pages: {

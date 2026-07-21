@@ -282,38 +282,45 @@ export default async function proxy(req: NextRequest) {
   //    regardless of session — leaving them stranded on a page with no
   //    portal entry point (auth.portal_login_ok in logs, but UX broken).
   // ------------------------------------------------------------------
+function getCanonicalUrl(path: string, req: NextRequest): URL {
+  const canonicalBase = process.env.NEXTAUTH_URL || "https://www.medsysve.com"
+  if (process.env.NODE_ENV === "development") {
+    return new URL(path, req.url)
+  }
+  return new URL(path, canonicalBase)
+}
+
+  // ------------------------------------------------------------------
+  // 4. Root `/` — send authenticated users to their role-appropriate
+  //    dashboard. Unauthenticated users see the marketing landing.
+  // ------------------------------------------------------------------
   if (pathname === "/") {
     if (isLoggedIn) {
       const target = isPatient ? "/portal" : "/doctor"
-      return NextResponse.redirect(new URL(target, req.url))
+      return NextResponse.redirect(getCanonicalUrl(target, req))
     }
     return NextResponse.next()
   }
 
   // ------------------------------------------------------------------
-  // 5. Role isolation (2026-07-07): a PATIENT session must only see
-  //    `/portal/*`. A doctor/staff/admin session must NOT see `/portal/*`
-  //    except the login page. Without this, a patient navigating back to
-  //    `/doctor` rendered the doctor dashboard with empty data, and
-  //    inversely a doctor could navigate into the patient portal.
+  // 5. Role isolation: a PATIENT session must only see `/portal/*`.
   // ------------------------------------------------------------------
   if (isLoggedIn && isPatient && !isPortalPath && !pathname.startsWith("/api/")) {
-    return NextResponse.redirect(new URL("/portal", req.url))
+    return NextResponse.redirect(getCanonicalUrl("/portal", req))
   }
   if (isLoggedIn && !isPatient && isPortalPath && !isPortalAuthPage) {
-    return NextResponse.redirect(new URL("/", req.url))
+    return NextResponse.redirect(getCanonicalUrl("/", req))
   }
 
   // ------------------------------------------------------------------
-  // 6. Auth pages when already logged in — send to the role-appropriate
-  //    landing so the user doesn't see a "login" form while authenticated.
+  // 6. Auth pages when already logged in — send to dashboard.
   // ------------------------------------------------------------------
   if (isLoggedIn && isAuthPage) {
     const target = isPatient ? "/portal" : "/doctor"
-    return NextResponse.redirect(new URL(target, req.url))
+    return NextResponse.redirect(getCanonicalUrl(target, req))
   }
   if (isLoggedIn && isPortalAuthPage && isPatient) {
-    return NextResponse.redirect(new URL("/portal", req.url))
+    return NextResponse.redirect(getCanonicalUrl("/portal", req))
   }
 
   // ------------------------------------------------------------------
@@ -322,9 +329,9 @@ export default async function proxy(req: NextRequest) {
   if (!isLoggedIn) {
     if (isPortalAuthPage || isAuthPage) return NextResponse.next()
     if (isPortalPath) {
-      return NextResponse.redirect(new URL("/portal/login", req.url))
+      return NextResponse.redirect(getCanonicalUrl("/portal/login", req))
     }
-    return NextResponse.redirect(new URL("/login", req.url))
+    return NextResponse.redirect(getCanonicalUrl("/login", req))
   }
 
   return NextResponse.next()
