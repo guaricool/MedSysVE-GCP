@@ -421,6 +421,9 @@ model PatientRegistration {
   orlEndoscopies       OrlEndoscopyReport[]
   traumaImplantes      TraumaImplante[]
   traumaRehabProtocols TraumaRehabProtocol[]
+  cardioEkgs           CardioEkg[]
+  cardioEchos          CardioEcho[]
+  cardioRiskScores     CardioRiskScore[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -515,10 +518,99 @@ model Encounter {
   traumaImplantes         TraumaImplante[]
   traumaAoClassifications TraumaAoClassification[]
   traumaRehabProtocols    TraumaRehabProtocol[]
+  cardioEkgs              CardioEkg[]
+  cardioEchos             CardioEcho[]
+  cardioRiskScores        CardioRiskScore[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
   @@index([doctorId])
+}
+
+model CardioEkg {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  ritmo              String // Sinusal Normal, Fibrilación Auricular, Flutter, etc.
+  frecuenciaCardiaca Int // bpm
+  ejeQrs             Int? // Grados
+  intervaloPr        Int? // ms
+  duracionQrs        Int? // ms
+  intervaloQtc       Int? // ms (Bazett)
+  ondaP              String?
+  segmentoSt         String? // Isoeléctrico, Supradesnivel, Infradesnivel
+  ondaT              String? // Positiva, Invertida, Picuda
+  conclusion         String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model CardioEcho {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  fevi                    Float // Fracción Eyección VI %
+  metodoFevi              String? @default("Simpson Biplano")
+  ddvi                    Float? // Diámetro Diastólico VI (mm)
+  dsvi                    Float? // Diámetro Sistólico VI (mm)
+  septum                  Float? // Grosor Septum (mm)
+  paredPosterior          Float? // Grosor Pared Posterior (mm)
+  auriculaIzquierda       Float? // Diámetro AI (mm)
+  raizAortica             Float? // Raíz Aórtica (mm)
+  valvulaAortica          String?
+  valvulaMitral           String?
+  valvulaTricuspide       String?
+  motilidadPared          String?
+  presionArterialPulmonar Float? // PSAP (mmHg)
+  conclusion              String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model CardioRiskScore {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  score2Value      Float? // Riesgo SCORE2 %
+  score2Category   String? // Bajo, Moderado, Alto, Muy Alto
+  ascvdValue       Float? // Riesgo ASCVD AHA %
+  ascvdCategory    String? // Bajo, Limítrofe, Intermedio, Alto
+  cha2ds2VascScore Int? // Puntuación 0-9
+  cha2ds2VascRisk  String? // Riesgo ACV / Indicación Anticoagulación
+  hasBledScore     Int? // Puntuación HAS-BLED 0-9
+  observaciones    String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
 }
 
 model EncounterScale {

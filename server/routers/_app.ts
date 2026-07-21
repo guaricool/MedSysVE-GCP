@@ -44,8 +44,10 @@ import { adminMensajesRouter } from "./admin-mensajes"
 import { marketplaceRouter } from "./marketplace"
 import { orlRouter } from "./orl"
 import { traumaRouter } from "./trauma"
+import { cardioRouter } from "./cardio"
 
 export const appRouter = router({
+  cardio: cardioRouter,
   trauma: traumaRouter,
   orl: orlRouter,
   marketplace: marketplaceRouter,
