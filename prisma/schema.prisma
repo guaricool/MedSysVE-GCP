@@ -427,6 +427,9 @@ model PatientRegistration {
   pediaGrowthPoints    PediaGrowthPoint[]
   pediaMilestones      PediaDevelopmentMilestone[]
   pediaDoseRecords     PediaDoseRecord[]
+  obGynoProfile        ObGynoProfile?
+  obPrenatalControls   ObPrenatalControl[]
+  gynoScreenings       GynoScreening[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -527,6 +530,8 @@ model Encounter {
   pediaGrowthPoints       PediaGrowthPoint[]
   pediaMilestones         PediaDevelopmentMilestone[]
   pediaDoseRecords        PediaDoseRecord[]
+  obPrenatalControls      ObPrenatalControl[]
+  gynoScreenings          GynoScreening[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -2014,6 +2019,88 @@ model PediaDoseRecord {
   duracionDias      Int // Ej: 7 días
 
   createdAt DateTime @default(now())
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+// ============================================================================
+// OBSTETRICIA Y GINECOLOGÍA - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model ObGynoProfile {
+  id                    String @id @default(cuid())
+  patientRegistrationId String @unique
+  workspaceId           String
+
+  gestas             Int       @default(0)
+  partos             Int       @default(0)
+  abortos            Int       @default(0)
+  cesareas           Int       @default(0)
+  hijosVivos         Int       @default(0)
+  fur                DateTime? // Fecha Última Regla
+  fpp                DateTime? // Fecha Probable Parto
+  ecoPrecozFecha     DateTime?
+  ecoPrecozEgSemanas Float?
+  grupoSanguineoRh   String?
+  isRhNegative       Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model ObPrenatalControl {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  fechaControl           DateTime @default(now())
+  edadGestacionalSemanas Float // Ej: 28.4 semanas
+  fcfLpm                 Int? // FCF en lpm
+  alturaUterinaCm        Float? // AU en cm
+  presionArterial        String? // PA sistólica/diastólica
+  pesoKg                 Float? // Peso en kg
+  movimientosFetales     String?
+  presentacionFetal      String? // Cefálica, Podálica, Transversa
+  proteinuria            String? // Negativa, +, ++
+  edema                  String? // Ausente, Grado I, II
+  observaciones          String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model GynoScreening {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  citologiaBethesda   String? // NILM, LIEBG, LIEAG, ASC-US
+  citologiaFecha      DateTime?
+  mamografiaBirads    String? // BI-RADS 0 a 6
+  mamografiaFecha     DateTime?
+  ecoPelvicoHallazgos String?   @db.Text
+  observaciones       String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
   patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)

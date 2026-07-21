@@ -46,8 +46,10 @@ import { orlRouter } from "./orl"
 import { traumaRouter } from "./trauma"
 import { cardioRouter } from "./cardio"
 import { pediaRouter } from "./pedia"
+import { obgynoRouter } from "./obgyno"
 
 export const appRouter = router({
+  obgyno: obgynoRouter,
   pedia: pediaRouter,
   cardio: cardioRouter,
   trauma: traumaRouter,
