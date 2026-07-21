@@ -496,6 +496,7 @@ model PatientRegistration {
   physiatryMuscles        PhysiatryMuscleGonio[]
   physiatryAshworths      PhysiatryAshworthScale[]
   physiatryPrescriptions  PhysiatryPrescriptionPlan[]
+  dicomStudies            DicomStudy[]
 
   @@unique([workspaceId, idDisplay])
   @@unique([workspaceId, patientId])
@@ -664,6 +665,7 @@ model Encounter {
   physiatryMuscles        PhysiatryMuscleGonio[]
   physiatryAshworths      PhysiatryAshworthScale[]
   physiatryPrescriptions  PhysiatryPrescriptionPlan[]
+  dicomStudies            DicomStudy[]
 
   @@index([workspaceId])
   @@index([patientRegistrationId])
@@ -3884,4 +3886,80 @@ model PhysiatryPrescriptionPlan {
   @@index([encounterId])
   @@index([patientRegistrationId])
   @@index([workspaceId])
+}
+
+// ============================================================================
+// DICOM / PACS NATIVO EN CLOUD STORAGE - MODELOS DE ESTUDIO, SERIE E IMAGEN
+// ============================================================================
+
+model DicomStudy {
+  id                    String  @id @default(cuid())
+  encounterId           String?
+  patientRegistrationId String
+  workspaceId           String
+
+  studyInstanceUid   String    @unique
+  patientIdDicom     String?
+  patientNameDicom   String?
+  studyDate          DateTime?
+  studyTime          String?
+  modality           String // CR, DX, CT, MR, US, MG, ECG, XA
+  studyDescription   String?
+  referringPhysician String?
+  numberOfSeries     Int       @default(1)
+  numberOfInstances  Int       @default(1)
+  gcsBucket          String?
+  gcsFolderPath      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter?          @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+  series              DicomSeries[]
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+  @@index([modality])
+}
+
+model DicomSeries {
+  id      String @id @default(cuid())
+  studyId String
+
+  seriesInstanceUid String  @unique
+  seriesNumber      Int?
+  modality          String
+  seriesDescription String?
+  numberOfInstances Int     @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  study  DicomStudy   @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  images DicomImage[]
+
+  @@index([studyId])
+}
+
+model DicomImage {
+  id       String @id @default(cuid())
+  seriesId String
+
+  sopInstanceUid String @unique
+  instanceNumber Int?
+  storageUrl     String @db.Text // GCP Signed URL o enlace Cloud Storage
+  frameRate      Float? // Para DICOM Multiframe (Ecos, Cateterismos)
+  rows           Int?
+  columns        Int?
+  windowCenter   Float?
+  windowWidth    Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  series DicomSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@index([seriesId])
 }

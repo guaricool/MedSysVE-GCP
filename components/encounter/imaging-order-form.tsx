@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Scan, FileText, Plus, Trash2 } from "lucide-react"
+import { DicomViewer } from "@/components/dicom/dicom-viewer"
 
 const TIPOS_IMAGEN = ["Radiografía", "Ecografía", "TAC", "RMN", "Mamografía", "Densitometría", "Otro"]
 
@@ -256,6 +257,14 @@ export function ImagingOrderForm({ encounterId, disabled }: Props) {
       {add.isSuccess && (
         <p className="text-sm text-green-400">Orden de imagenología registrada.</p>
       )}
+
+      {/* PACS Native DICOM Viewer Integration */}
+      <div className="pt-4 border-t border-slate-800 space-y-2">
+        <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+          <Scan className="w-4 h-4" /> Visor Radiológico DICOM / PACS GCP integrados
+        </h4>
+        <DicomViewer patientRegistrationId="sandbox-demo-pat" encounterId={encounterId} compact />
+      </div>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { useUnsaved } from "@/components/providers/unsaved-changes-provider";
 import { Button } from "@/components/ui/button";
+import { DicomViewer } from "@/components/dicom/dicom-viewer";
 import {
   Droplet,
   Activity,
@@ -448,6 +449,14 @@ export function UrologiaForm({ encounterId, disabled, initialData = {}, patientR
           </div>
         </div>
       )}
+
+      {/* PACS Native DICOM Viewer with Hounsfield Units */}
+      <div className="pt-4 border-t border-slate-800 space-y-2">
+        <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+          <Activity className="w-4 h-4" /> Visor DICOM PACS: Uro-TAC & Densidad de Litiasis (Unidades Hounsfield HU)
+        </h4>
+        <DicomViewer patientRegistrationId={effectivePatId} encounterId={encounterId} enableHounsfield={true} />
+      </div>
     </div>
   );
 }

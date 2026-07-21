@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { useUnsaved } from "@/components/providers/unsaved-changes-provider";
 import { Button } from "@/components/ui/button";
+import { DicomViewer } from "@/components/dicom/dicom-viewer";
 import {
   Heart,
   Activity,
@@ -533,6 +534,14 @@ export function CardiologiaForm({ encounterId, disabled, initialData = {}, patie
           </div>
         </div>
       )}
+
+      {/* PACS Native DICOM Viewer with CINE Multiframe */}
+      <div className="pt-4 border-t border-slate-800 space-y-2">
+        <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+          <Heart className="w-4 h-4" /> Visor DICOM PACS: Ecocardiogramas & Cateterismos (CINE Multiframe)
+        </h4>
+        <DicomViewer patientRegistrationId={patientRegistrationId} encounterId={encounterId} enableMultiframe={true} />
+      </div>
     </div>
   );
 }

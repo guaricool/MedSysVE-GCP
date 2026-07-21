@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { useUnsaved } from "@/components/providers/unsaved-changes-provider";
 import { Button } from "@/components/ui/button";
+import { DicomViewer } from "@/components/dicom/dicom-viewer";
 import {
   Bone,
   Activity,
@@ -19,6 +20,7 @@ import {
 
 interface Props {
   encounterId: string;
+  patientRegistrationId?: string;
   disabled?: boolean;
   initialData?: any;
 }
@@ -33,7 +35,7 @@ const CATALAGO_AO = [
   { hueso: "Cúbito/Radio [2]", segmento: "Distal [3]", codigo: "23-A2", desc: "Fractura de radio distal extraarticular (Colles)" },
 ];
 
-export function TraumatologiaForm({ encounterId, disabled, initialData = {} }: Props) {
+export function TraumatologiaForm({ encounterId, disabled, initialData = {}, patientRegistrationId = "sandbox-demo-pat" }: Props) {
   const [activeTab, setActiveTab] = useState<"IMPLANTES" | "CLASIFICACION_AO" | "REHABILITACION" | "PLAN">("IMPLANTES");
   const [saved, setSaved] = useState(false);
   const { setDirty } = useUnsaved();
@@ -567,6 +569,14 @@ export function TraumatologiaForm({ encounterId, disabled, initialData = {} }: P
           </div>
         </div>
       )}
+
+      {/* PACS Native DICOM Viewer with Cobb Angle */}
+      <div className="pt-4 border-t border-slate-800 space-y-2">
+        <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+          <Bone className="w-4 h-4" /> Visor DICOM PACS: Radiografías & Medición de Ángulos Cobb
+        </h4>
+        <DicomViewer patientRegistrationId={patientRegistrationId} encounterId={encounterId} enableCobbAngle={true} />
+      </div>
     </div>
   );
 }
