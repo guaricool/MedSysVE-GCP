@@ -39,6 +39,7 @@ import { MedicinaInternaForm } from "./medicina-interna-form"
 import { TraumatologiaForm } from "./traumatologia-form"
 import { PsiquiatriaForm } from "./psiquiatria-form"
 import { InfectologiaForm } from "./infectologia-form"
+import { OtorrinolaringologiaForm } from "./otorrinolaringologia-form"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import type { Vitales } from "@/lib/clinical/vitals-alerts"
 
@@ -91,6 +92,7 @@ type SectionId =
   | "traumatologia"
   | "psiquiatria"
   | "infectologia"
+  | "otorrinolaringologia"
 
 const SECTIONS: { id: SectionId; key: "S" | "O" | "A" | "P" | "R" | "L" | "I" | "M" | "T" | "E"; label: string; icon: string; shortcut: string }[] = [
   { id: "subjetivo", key: "S", label: "Subjetivo", icon: "💬", shortcut: "1" },
@@ -171,6 +173,9 @@ export function EncounterWorkspace({
       "Medicina Interna": "medicina-interna",
       "Psiquiatría": "psiquiatria",
       "Infectología": "infectologia",
+      "Otorrinolaringología": "otorrinolaringologia",
+      "ORL": "otorrinolaringologia",
+      "Otorrino": "otorrinolaringologia",
     }
     const secId = specMap[especialidad]
     if (secId) {
@@ -285,6 +290,7 @@ export function EncounterWorkspace({
     else if (especialidad === "Medicina Interna") core.push({ id: "medicina-interna", label: "Medicina Interna", icon: "🛡️" })
     else if (especialidad === "Psiquiatría") core.push({ id: "psiquiatria", label: "Psiquiatría", icon: "🧠" })
     else if (especialidad === "Infectología") core.push({ id: "infectologia", label: "Infectología", icon: "🦠" })
+    else if (especialidad === "Otorrinolaringología" || especialidad === "ORL" || especialidad === "Otorrino") core.push({ id: "otorrinolaringologia", label: "Otorrinolaringología", icon: "👂" })
     
     return core;
   }, [especialidad, initialStatus])
@@ -917,6 +923,24 @@ export function EncounterWorkspace({
             onToggle={() => toggleSection("infectologia")}
           >
             <InfectologiaForm
+              encounterId={encounterId}
+              disabled={locked}
+              initialData={enc?.datosEspecialidad || {}}
+            />
+          </Section>
+        )}
+
+        {visibleSections.has("otorrinolaringologia") && (especialidad === "Otorrinolaringología" || especialidad === "ORL" || especialidad === "Otorrino") && (
+          <Section
+            id="otorrinolaringologia"
+            key="otorrinolaringologia"
+            title="Otorrinolaringología (ORL)"
+            icon="👂"
+            collapsible
+            open={openSections.has("otorrinolaringologia")}
+            onToggle={() => toggleSection("otorrinolaringologia")}
+          >
+            <OtorrinolaringologiaForm
               encounterId={encounterId}
               disabled={locked}
               initialData={enc?.datosEspecialidad || {}}

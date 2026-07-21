@@ -15,10 +15,12 @@ import {
   Syringe,
   Microscope,
   Zap,
+  Ear,
 } from "lucide-react";
 import { EncounterWorkspace } from "@/components/encounter/encounter-workspace";
 
 const SPECIALTIES = [
+  { id: "Otorrinolaringología", name: "Otorrinolaringología (ORL)", icon: Ear, category: "Quirúrgica / Clínica" },
   { id: "Traumatología", name: "Traumatología y Ortopedia", icon: Bone, category: "Quirúrgica" },
   { id: "Cardiología", name: "Cardiología", icon: Heart, category: "Clínica" },
   { id: "Pediatría", name: "Pediatría y Puericultura", icon: Baby, category: "Pediátrica" },
