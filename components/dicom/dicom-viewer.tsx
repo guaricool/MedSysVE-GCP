@@ -168,7 +168,7 @@ export function DicomViewer({
         throw new Error(json.error || "No se pudo obtener la apreciación de la IA.");
       }
 
-      setAiResult(json);
+      setAiResult(json.data || json);
     } catch (err: any) {
       setAiError(err?.message || "Ocurrió un error al analizar la imagen radiológica.");
     } finally {
@@ -488,14 +488,18 @@ export function DicomViewer({
               <h5 className="font-bold text-slate-300 flex items-center gap-1.5">
                 <Activity className="w-3.5 h-3.5 text-cyan-400" /> Hallazgos Radiológicos Observados
               </h5>
-              <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{aiResult.hallazgos}</p>
+              <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
+                {aiResult.hallazgos}
+              </p>
             </div>
 
             <div className="bg-slate-950 border border-cyan-900/50 p-3 rounded-lg space-y-1">
               <h5 className="font-bold text-cyan-300 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" /> Impresión Diagnóstica Sugerida
               </h5>
-              <p className="text-slate-200 leading-relaxed whitespace-pre-wrap font-semibold">{aiResult.impresion}</p>
+              <p className="text-slate-200 leading-relaxed whitespace-pre-wrap font-semibold">
+                {aiResult.impresion}
+              </p>
             </div>
           </div>
         </div>
