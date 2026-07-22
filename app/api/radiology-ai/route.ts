@@ -18,6 +18,16 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: "API Key de Google Gemini no configurada en las variables de entorno del servidor (GEMINI_API_KEY)." },
+      { status: 500 }
+    )
+  }
+
+  const ai = new GoogleGenAI({ apiKey })
+
   let formData: FormData
   try {
     formData = await req.formData()
@@ -59,11 +69,14 @@ export async function POST(req: NextRequest) {
     required: ["hallazgos", "impresion"]
   }
 
-  try {
-    let response: any
+  const modelsToTry = ["gemini-3.1-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash"]
+  let response: any
+  let lastError: any
+
+  for (const modelName of modelsToTry) {
     try {
       response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: modelName,
         contents: [
           {
             role: "user",
@@ -79,33 +92,28 @@ export async function POST(req: NextRequest) {
           maxOutputTokens: 2048,
         }
       })
-    } catch {
-      response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { inlineData: { data: base64, mimeType: mediaType } },
-              { text: "Eres un radiólogo experto analizando una imagen médica. Identifica los hallazgos radiológicos y brinda una impresión diagnóstica." }
-            ]
-          }
-        ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: responseSchema,
-          maxOutputTokens: 2048,
-        }
-      })
+      if (response?.text) break
+    } catch (err: any) {
+      lastError = err
     }
+  }
 
+  if (!response?.text) {
+    console.error("Radiology AI Cascade Error:", lastError)
+    return NextResponse.json(
+      { error: lastError?.message || "No se pudo procesar la apreciación por IA en este momento." },
+      { status: 500 }
+    )
+  }
+
+  try {
     const raw = response.text || ""
     const parsedData = JSON.parse(raw)
     return NextResponse.json({ data: parsedData })
   } catch (err: any) {
-    console.error("Radiology AI Error:", err)
+    console.error("Radiology AI Parse Error:", err)
     return NextResponse.json(
-      { error: err?.message || "No se pudo procesar la apreciación por IA en este momento." },
+      { error: "No se pudo extraer data estructurada de la respuesta de IA." },
       { status: 500 }
     )
   }
