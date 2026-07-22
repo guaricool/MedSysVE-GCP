@@ -554,7 +554,7 @@ export async function generateReportDraft(e: EncounterForReport): Promise<string
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY })
   
   const response = await ai.models.generateContent({
-    model: "gemini-3.5-flash",
+    model: "gemini-2.0-flash",
     contents: buildReportPrompt(e),
     config: {
       systemInstruction: buildSafeSystemPrompt("encounter-report"),
