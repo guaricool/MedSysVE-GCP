@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
       channel: "API",
       metadata: {
         provider: "gemini",
-        model: "gemini-2.5-flash",
+        model: "gemini-2.0-flash",
         feature: "encounter-assist",
         hasMotivo: !!cleanBody.motivo,
         hasAnamnesis: !!cleanBody.historiaClinica,
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
   ].join("\n")
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.0-flash",
     contents: userContent,
     config: {
       systemInstruction: buildSafeSystemPrompt("encounter-assist"),

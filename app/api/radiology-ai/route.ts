@@ -60,23 +60,44 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { inlineData: { data: base64, mimeType: mediaType } },
-            { text: "Eres un radiólogo experto analizando una imagen médica. Identifica los hallazgos radiológicos y brinda una impresión diagnóstica." }
-          ]
+    let response: any
+    try {
+      response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { inlineData: { data: base64, mimeType: mediaType } },
+              { text: "Eres un radiólogo experto analizando una imagen médica. Identifica los hallazgos radiológicos y brinda una impresión diagnóstica." }
+            ]
+          }
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: responseSchema,
+          maxOutputTokens: 2048,
         }
-      ],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: responseSchema,
-        maxOutputTokens: 2048,
-      }
-    })
+      })
+    } catch {
+      response = await ai.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { inlineData: { data: base64, mimeType: mediaType } },
+              { text: "Eres un radiólogo experto analizando una imagen médica. Identifica los hallazgos radiológicos y brinda una impresión diagnóstica." }
+            ]
+          }
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: responseSchema,
+          maxOutputTokens: 2048,
+        }
+      })
+    }
 
     const raw = response.text || ""
     const parsedData = JSON.parse(raw)
