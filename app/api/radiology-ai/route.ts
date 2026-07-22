@@ -59,30 +59,33 @@ export async function POST(req: NextRequest) {
     required: ["hallazgos", "impresion"]
   }
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3.5-flash",
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { inlineData: { data: base64, mimeType: mediaType } },
-          { text: "Eres un radiólogo experto analizando una imagen médica. Identifica los hallazgos radiológicos y brinda una impresión diagnóstica." }
-        ]
-      }
-    ],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: responseSchema,
-      maxOutputTokens: 2048,
-    }
-  })
-
-  const raw = response.text || ""
   try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { inlineData: { data: base64, mimeType: mediaType } },
+            { text: "Eres un radiólogo experto analizando una imagen médica. Identifica los hallazgos radiológicos y brinda una impresión diagnóstica." }
+          ]
+        }
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: responseSchema,
+        maxOutputTokens: 2048,
+      }
+    })
+
+    const raw = response.text || ""
     const parsedData = JSON.parse(raw)
     return NextResponse.json({ data: parsedData })
-  } catch (err) {
-    console.error("Failed to parse Gemini response for radiology:", raw)
-    return NextResponse.json({ error: "No se pudo extraer data estructurada de la radiografía." }, { status: 500 })
+  } catch (err: any) {
+    console.error("Radiology AI Error:", err)
+    return NextResponse.json(
+      { error: err?.message || "No se pudo procesar la apreciación por IA en este momento." },
+      { status: 500 }
+    )
   }
 }
