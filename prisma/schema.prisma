@@ -3963,4 +3963,3 @@ model DicomImage {
 
   @@index([seriesId])
 }
-

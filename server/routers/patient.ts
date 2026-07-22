@@ -542,9 +542,14 @@ export const patientRouter = router({
       z.object({
         sexo: z.enum(["MASCULINO", "FEMENINO", "OTRO"]).optional(),
         tag: z.string().optional(),
+        take: z.number().int().min(1).max(100).default(20),
+        skip: z.number().int().min(0).default(0),
       }).optional(),
     )
     .query(async ({ ctx, input }) => {
+      const takeLimit = input?.take ?? 20
+      const skipOffset = input?.skip ?? 0
+
       const regs = await ctx.db.patientRegistration.findMany({
         where: {
           workspace: { doctorId: ctx.session.doctorId },
@@ -553,15 +558,18 @@ export const patientRouter = router({
         },
         include: { patient: true },
         orderBy: { createdAt: "desc" },
-        take: 100,
+        take: takeLimit,
+        skip: skipOffset,
       })
       // Decrypt the cédula on the way out so the UI never touches the raw
       // encrypted blob. Without this transformation the frontend would
       // receive base64 ciphertext as if it were the cédula.
-      return regs.map((r) => ({
-        ...r,
-        patient: { ...r.patient, numeroIdentificacion: readPatientCedula(r.patient) ?? null },
-      }))
+      return Promise.all(
+        regs.map(async (r) => ({
+          ...r,
+          patient: { ...r.patient, numeroIdentificacion: readPatientCedula(r.patient) ?? null },
+        })),
+      )
     }),
 
   getRegistration: protectedProcedure

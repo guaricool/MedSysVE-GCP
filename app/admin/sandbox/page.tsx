@@ -26,7 +26,21 @@ import {
   Dumbbell,
   FileSpreadsheet,
 } from "lucide-react";
-import { EncounterWorkspace } from "@/components/encounter/encounter-workspace";
+import dynamic from "next/dynamic";
+import { Loader2 } from "lucide-react";
+
+const EncounterWorkspace = dynamic(
+  () => import("@/components/encounter/encounter-workspace").then((m) => m.EncounterWorkspace),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-slate-950 border border-slate-800 p-12 rounded-xl text-center space-y-3 text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-cyan-400" />
+        <p className="text-sm font-semibold text-slate-300">Cargando Espacio de Trabajo de Consulta & Módulos Especializados...</p>
+      </div>
+    ),
+  }
+);
 
 const SPECIALTIES = [
   { id: "Otorrinolaringología", name: "Otorrinolaringología (ORL)", icon: Ear, category: "Quirúrgica / Clínica" },

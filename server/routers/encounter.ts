@@ -92,10 +92,11 @@ export const encounterRouter = router({
           prescriptions: {
             include: { items: { include: { medication: true } } },
             orderBy: { createdAt: "desc" },
+            take: 10,
           },
-          labOrders: { orderBy: { createdAt: "desc" } },
-          imagingOrders: { orderBy: { createdAt: "desc" } },
-          documents: { orderBy: { createdAt: "desc" } },
+          labOrders: { orderBy: { createdAt: "desc" }, take: 10 },
+          imagingOrders: { orderBy: { createdAt: "desc" }, take: 10 },
+          documents: { orderBy: { createdAt: "desc" }, take: 10 },
           scales: true,
         },
       })

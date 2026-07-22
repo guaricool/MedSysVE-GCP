@@ -87,6 +87,7 @@ export const dicomRouter = router({
           },
         },
         orderBy: { createdAt: "desc" },
+        take: 20,
       })
     }),
 
