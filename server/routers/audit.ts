@@ -25,7 +25,7 @@ export const auditRouter = router({
           ...(input.to ? { lte: new Date(input.to) } : {}),
         }
       }
-      return (ctx.db as any).auditLog.findMany({
+      return ctx.db.auditLog.findMany({
         where,
         orderBy: { createdAt: "desc" },
         take: input.take,

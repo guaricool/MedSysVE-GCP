@@ -31,6 +31,7 @@ export async function GET(
           prescriptions: { include: { items: { include: { medication: true } } } },
         },
         orderBy: { createdAt: "desc" },
+        take: 20,
       },
     },
   })

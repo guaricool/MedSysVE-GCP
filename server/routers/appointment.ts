@@ -21,26 +21,43 @@ export const appointmentRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (input.patientRegistrationId) {
-        const reg = await ctx.db.patientRegistration.findFirst({
-          where: { id: input.patientRegistrationId, workspaceId: ctx.session.workspaceId },
+      const appt = await ctx.db.$transaction(async (tx) => {
+        if (input.patientRegistrationId) {
+          const reg = await tx.patientRegistration.findFirst({
+            where: { id: input.patientRegistrationId, workspaceId: ctx.session.workspaceId },
+          })
+          if (!reg) throw new TRPCError({ code: "NOT_FOUND" })
+        }
+
+        const existing = await tx.appointment.findFirst({
+          where: {
+            workspaceId: ctx.session.workspaceId,
+            fechaHora: new Date(input.fechaHora),
+            status: { notIn: ["CANCELLED", "NO_SHOW"] },
+          },
         })
-        if (!reg) throw new TRPCError({ code: "NOT_FOUND" })
-      }
-      const appt = await ctx.db.appointment.create({
-        data: {
-          workspaceId: ctx.session.workspaceId,
-          patientRegistrationId: input.patientRegistrationId,
-          titulo: input.titulo,
-          tipo: input.tipo,
-          fechaHora: new Date(input.fechaHora),
-          duracionMinutos: input.duracionMinutos,
-          notas: input.notas,
-        },
-        include: {
-          patientRegistration: { include: { patient: true } },
-          workspace: { include: { doctor: true } },
-        },
+        if (existing) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Ya existe una cita programada para esta fecha y hora exactas.",
+          })
+        }
+
+        return tx.appointment.create({
+          data: {
+            workspaceId: ctx.session.workspaceId,
+            patientRegistrationId: input.patientRegistrationId,
+            titulo: input.titulo,
+            tipo: input.tipo,
+            fechaHora: new Date(input.fechaHora),
+            duracionMinutos: input.duracionMinutos,
+            notas: input.notas,
+          },
+          include: {
+            patientRegistration: { include: { patient: true } },
+            workspace: { include: { doctor: true } },
+          },
+        })
       })
 
       const pat = appt.patientRegistration?.patient

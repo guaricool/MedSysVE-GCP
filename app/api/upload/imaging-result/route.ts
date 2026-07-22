@@ -41,6 +41,17 @@ export async function POST(req: Request) {
   const filePath = path.join(dir, filename)
 
   const buffer = Buffer.from(await file.arrayBuffer())
+  
+  // Magic bytes verification
+  const headerHex = buffer.subarray(0, 4).toString("hex")
+  const isPdf = headerHex.startsWith("25504446")
+  const isJpeg = headerHex.startsWith("ffd8ff")
+  const isPng = headerHex.startsWith("89504e47")
+  const isWebp = headerHex.startsWith("52494646")
+  if (!isPdf && !isJpeg && !isPng && !isWebp) {
+    return NextResponse.json({ error: "Firma de archivo (magic bytes) no válida o corrupta" }, { status: 415 })
+  }
+
   await writeFile(filePath, buffer)
 
   const url = `/api/uploads/imaging-results/${filename}`
