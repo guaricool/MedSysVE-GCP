@@ -90,7 +90,62 @@ export function RegisterForm() {
   const [clinicEstado, setClinicEstado] = useState("")
   const [clinicCiudad, setClinicCiudad] = useState("")
 
+  // SACS MPPS verification state before Email OTP (for Doctors)
+  const [sacsNacionalidad, setSacsNacionalidad] = useState<"V" | "E">("V")
+  const [sacsCedula, setSacsCedula] = useState("")
+  const [isSacsVerified, setIsSacsVerified] = useState(false)
+  const [sacsMessage, setSacsMessage] = useState<string | null>(null)
+
+  // Doctor Form controlled inputs (autocompleted by SACS)
+  const [formNombre, setFormNombre] = useState("")
+  const [formApellido, setFormApellido] = useState("")
+  const [formCedula, setFormCedula] = useState("")
+  const [formEspecialidad, setFormEspecialidad] = useState("")
+
   const { data: especialidades = [] } = trpc.doctor.especialidades.useQuery()
+
+  const verifySacsMutation = trpc.doctor.verifySacs.useMutation({
+    onSuccess: (data) => {
+      if (data.encontrado) {
+        setIsSacsVerified(true)
+        if (data.nombre) setFormNombre(data.nombre)
+        if (data.apellido) setFormApellido(data.apellido)
+        setFormCedula(data.cedula)
+        if (data.especialidades && data.especialidades.length > 0) {
+          const matchedSpec = especialidades.find((e) =>
+            data.especialidades?.some((s) => s.toLowerCase().includes(e.toLowerCase()))
+          )
+          if (matchedSpec) setFormEspecialidad(matchedSpec)
+        }
+        setSacsMessage(`✅ Credenciales verificadas en SACS MPPS: Dr(a). ${data.nombreCompleto || data.nombre || ''} ${data.matriculaMpps ? `(Matrícula MPPS: ${data.matriculaMpps})` : ''}`)
+        setError("")
+      } else if (data.origen === "MOCK_FALLBACK") {
+        setIsSacsVerified(true)
+        setFormCedula(sacsCedula)
+        setSacsMessage(`⚠️ Servicio SACS temporalmente fuera de línea. Puedes continuar e ingresar tus datos de médico manualmente.`)
+        setError("")
+      } else {
+        setIsSacsVerified(false)
+        setSacsMessage(null)
+        setError("La cédula ingresada no aparece registrada como profesional de la salud en el SACS (Ministerio de Salud).")
+      }
+    },
+    onError: () => {
+      setIsSacsVerified(true)
+      setFormCedula(sacsCedula)
+      setSacsMessage(`⚠️ No se pudo conectar con el SACS MPPS. Ingrese sus datos manualmente.`)
+    },
+  })
+
+  const handleVerifySacsClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setError("")
+    if (!sacsCedula.trim()) {
+      setError("Ingresa tu número de cédula para verificar ante el Ministerio de Salud (SACS).")
+      return
+    }
+    verifySacsMutation.mutate({ cedula: sacsCedula.trim(), nacionalidad: sacsNacionalidad })
+  }
 
   // For doctors without an invite code, fetch clinics in their selected city
   const { data: publicClinics = [], isFetching: isFetchingClinics } = trpc.doctor.searchPublicClinics.useQuery(
@@ -173,6 +228,10 @@ export function RegisterForm() {
   const handleSendCode = (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    if (accountType !== "clinic-admin" && !isSacsVerified) {
+      setError("Por favor verifica tu Cédula ante el Ministerio de Salud (SACS MPPS) en el Paso 1 antes de solicitar el código por correo.")
+      return
+    }
     if (!emailValid) {
       setError("Ingresa un correo válido.")
       return
@@ -375,7 +434,61 @@ export function RegisterForm() {
           </div>
         )}
 
-        {/* ─── Step 1: Email + send code ─── */}
+        {/* ─── Step 1 (Doctors Only): SACS MPPS Cédula Verification ─── */}
+        {accountType !== "clinic-admin" && (
+          <div className="space-y-3 mb-5 border-b border-slate-800 pb-4">
+            <div className="flex items-center gap-2">
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                  isSacsVerified ? "bg-emerald-500 text-white" : "bg-amber-500 text-slate-900"
+                }`}
+              >
+                1
+              </span>
+              <span className="text-sm font-semibold text-slate-200">
+                Verifica tu Cédula en el Ministerio de Salud (SACS)
+              </span>
+            </div>
+
+            <div className="flex gap-2">
+              <select
+                value={sacsNacionalidad}
+                onChange={(e) => setSacsNacionalidad(e.target.value as "V" | "E")}
+                disabled={isSacsVerified}
+                className="bg-slate-800 border-slate-700 text-white font-bold rounded-md px-2.5 text-xs"
+              >
+                <option value="V">V</option>
+                <option value="E">E</option>
+              </select>
+
+              <Input
+                type="text"
+                placeholder="Ingresa tu cédula (ej. 12345678)"
+                value={sacsCedula}
+                onChange={(e) => setSacsCedula(e.target.value.replace(/\D/g, ""))}
+                disabled={isSacsVerified || verifySacsMutation.isPending}
+                className="bg-slate-800 border-slate-700 text-white text-sm font-mono"
+              />
+
+              <Button
+                type="button"
+                onClick={handleVerifySacsClick}
+                disabled={!sacsCedula || isSacsVerified || verifySacsMutation.isPending}
+                className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold shrink-0 text-xs px-3"
+              >
+                {verifySacsMutation.isPending ? "Verificando…" : isSacsVerified ? "✓ Verificado" : "Verificar SACS"}
+              </Button>
+            </div>
+
+            {sacsMessage && (
+              <div className="text-xs bg-slate-800/80 border border-slate-700 p-2.5 rounded text-slate-200 font-medium">
+                {sacsMessage}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── Step 2: Email + send code ─── */}
         <div className="space-y-3 mb-5">
           <div className="flex items-center gap-2">
             <span
@@ -383,7 +496,7 @@ export function RegisterForm() {
                 step !== "idle" ? "bg-emerald-500 text-white" : "bg-amber-500 text-slate-900"
               }`}
             >
-              1
+              {accountType !== "clinic-admin" ? "2" : "1"}
             </span>
             <span className="text-sm font-semibold text-slate-200">Verifica tu correo</span>
           </div>
@@ -421,12 +534,12 @@ export function RegisterForm() {
           )}
         </div>
 
-        {/* ─── Step 2: 6-digit code ─── */}
+        {/* ─── Step 3: 6-digit code ─── */}
         {step === "code-sent" && (
           <form onSubmit={handleVerifyCode} className="space-y-3 mb-5">
             <div className="flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-slate-900">
-                2
+                {accountType !== "clinic-admin" ? "3" : "2"}
               </span>
               <span className="text-sm font-semibold text-slate-200">Ingresa el código</span>
             </div>
@@ -473,7 +586,7 @@ export function RegisterForm() {
           </div>
         )}
 
-        {/* ─── Step 3: full registration form (only enabled after verification) ─── */}
+        {/* ─── Step 4: full registration form (only enabled after verification) ─── */}
         <form
           onSubmit={handleRegisterSubmit}
           className={`space-y-4 ${step !== "verified" ? "pointer-events-none opacity-50" : ""}`}
@@ -482,11 +595,23 @@ export function RegisterForm() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-slate-300">Nombre</Label>
-              <Input name="nombre" required className="bg-slate-800 border-slate-700 text-white" />
+              <Input
+                name="nombre"
+                value={formNombre}
+                onChange={(e) => setFormNombre(e.target.value)}
+                required
+                className="bg-slate-800 border-slate-700 text-white"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-slate-300">Apellido</Label>
-              <Input name="apellido" required className="bg-slate-800 border-slate-700 text-white" />
+              <Input
+                name="apellido"
+                value={formApellido}
+                onChange={(e) => setFormApellido(e.target.value)}
+                required
+                className="bg-slate-800 border-slate-700 text-white"
+              />
             </div>
           </div>
           {/* Cédula is required only for doctors (admin doesn't have one — they
@@ -494,7 +619,14 @@ export function RegisterForm() {
           {accountType !== "clinic-admin" && (
             <div className="space-y-1">
               <Label className="text-slate-300">Cédula</Label>
-              <Input name="cedula" placeholder="12345678" required className="bg-slate-800 border-slate-700 text-white" />
+              <Input
+                name="cedula"
+                value={formCedula || sacsCedula}
+                onChange={(e) => setFormCedula(e.target.value)}
+                placeholder="12345678"
+                required
+                className="bg-slate-800 border-slate-700 text-white"
+              />
             </div>
           )}
           <div className="space-y-1">
@@ -521,6 +653,8 @@ export function RegisterForm() {
                 <Label className="text-slate-300">Especialidad Principal</Label>
                 <select
                   name="especialidad"
+                  value={formEspecialidad}
+                  onChange={(e) => setFormEspecialidad(e.target.value)}
                   required
                   className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 text-sm"
                 >
