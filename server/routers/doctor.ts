@@ -10,6 +10,7 @@ import { loadAllLegalDocs } from "@/lib/legal/load-legal"
 import { encryptField } from "@/lib/field-crypto"
 import { verifyVerifiedToken } from "@/lib/otp"
 import { ESPECIALIDADES_VE } from "@/lib/venezuela-specialties"
+import { scrapeSacsMpps } from "@/server/utils/sacs-scraper"
 
 // LOPDP Art. 25 — consentimiento expreso. All three required checkboxes
 // must be true; we persist a ConsentAcceptance row for each so the doctor
@@ -294,6 +295,53 @@ export const doctorRouter = router({
     }),
 
   especialidades: publicProcedure.query(() => ESPECIALIDADES_VE),
+
+  verifySacs: publicProcedure
+    .input(
+      z.object({
+        cedula: z.string().min(4).max(12),
+        nacionalidad: z.enum(["V", "E"]).default("V"),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const result = await scrapeSacsMpps(input.cedula, input.nacionalidad)
+      return result
+    }),
+
+  completeOnboarding: doctorProcedure
+    .input(
+      z.object({
+        nacionalidad: z.enum(["V", "E"]).default("V"),
+        rif: z.string().regex(/^[VJEGvjeg]-?\d{7,9}-?\d$|^[VJEGvjeg]\d{8,9}$/, "Formato de RIF no válido (ej: V-12345678-0)"),
+        mppsMatricula: z.string().min(3, "Ingresa tu número de Matrícula MPPS"),
+        especialidadPrincipal: z.string().min(2, "Selecciona tu especialidad principal"),
+        subEspecialidades: z.array(z.string()).default([]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const doctorId = ctx.session.doctorId
+      const cleanRif = input.rif.trim().toUpperCase()
+
+      const updated = await ctx.db.doctor.update({
+        where: { id: doctorId },
+        data: {
+          nacionalidad: input.nacionalidad,
+          rif: cleanRif,
+          rifCifrado: encryptField(cleanRif),
+          mppsMatricula: input.mppsMatricula.trim(),
+          especialidadPrincipal: input.especialidadPrincipal,
+          subEspecialidades: input.subEspecialidades,
+          isSacsVerified: true,
+          isOnboardingComplete: true,
+        },
+      })
+
+      return {
+        success: true,
+        doctorId: updated.id,
+        isOnboardingComplete: updated.isOnboardingComplete,
+      }
+    }),
 
   searchPublicClinics: publicProcedure
     .input(

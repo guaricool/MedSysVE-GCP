@@ -73,6 +73,10 @@ model Doctor {
   subEspecialidades      String[]                  @default([])
   bio                    String?                   @db.Text
   idiomas                String[]                  @default([])
+  nacionalidad           String                    @default("V")
+  mppsMatricula          String?
+  isSacsVerified         Boolean                   @default(false)
+  isOnboardingComplete   Boolean                   @default(false)
   rif                    String?
   /// Encrypted (AES-256-GCM).
   rifCifrado             String?

@@ -34,7 +34,7 @@ export default async function DashboardLayout({
   if (user.role === "DOCTOR") {
     const fullDoctor = await db.doctor.findUnique({
       where: { id: user.doctorId },
-      select: { currentLegalVersion: true },
+      select: { currentLegalVersion: true, isOnboardingComplete: true },
     })
     legalAcceptanceChildren = await requireLegalAcceptance({
       doctorId: user.doctorId,
