@@ -188,7 +188,7 @@ export async function POST(req: NextRequest) {
       channel: "API",
       metadata: {
         provider: "gemini",
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         feature: "plan-suggestion",
         hasMotivo: !!cleanBody.motivo,
         hasHistoriaClinica: !!cleanBody.historiaClinica,
@@ -213,7 +213,7 @@ export async function POST(req: NextRequest) {
   ].join("\n")
 
   const response = await ai.models.generateContent({
-    model: "gemini-3.5-flash",
+    model: "gemini-2.5-flash",
     contents: userContent,
     config: {
       systemInstruction: buildSafeSystemPrompt("plan-suggestion"),
