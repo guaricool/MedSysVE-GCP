@@ -10,6 +10,12 @@ import { safeLog } from "./log-sanitizer"
 import { BCRYPT_COST } from "@/lib/password-policy"
 import { hmacIndex } from "./field-crypto"
 
+if (process.env.NODE_ENV === "production") {
+  if (!process.env.AUTH_URL) process.env.AUTH_URL = "https://www.medsysve.com"
+  if (!process.env.NEXTAUTH_URL) process.env.NEXTAUTH_URL = "https://www.medsysve.com"
+  if (!process.env.AUTH_TRUST_HOST) process.env.AUTH_TRUST_HOST = "true"
+}
+
 const credentialsSchema = z.object({
   email: z.string().email().max(254),
   password: z.string().min(1).max(128),

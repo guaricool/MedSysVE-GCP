@@ -1,6 +1,12 @@
 import NextAuth from "next-auth"
 import type { NextAuthConfig } from "next-auth"
 
+if (process.env.NODE_ENV === "production") {
+  if (!process.env.AUTH_URL) process.env.AUTH_URL = "https://www.medsysve.com"
+  if (!process.env.NEXTAUTH_URL) process.env.NEXTAUTH_URL = "https://www.medsysve.com"
+  if (!process.env.AUTH_TRUST_HOST) process.env.AUTH_TRUST_HOST = "true"
+}
+
 /**
  * Edge-runtime-compatible Auth.js configuration.
  *
