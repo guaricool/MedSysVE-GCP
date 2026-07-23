@@ -37,31 +37,31 @@ const PRESET_TOPICS = [
     topic: "Historias Clínicas SOAP",
     caption: "🏥 Reconcilia tu práctica médica con MedSysVE. Registra tus consultas en formato SOAP, adjunta exámenes de laboratorio e imprime récipes oficiales al instante con tu firma y código QR.",
     hashtags: "#MedSysVE #HistoriaClinica #MedicinaVenezuela #SaludVenezuela #DoctorVenezolano #SOAP",
-    imageUrl: "/uploads/marketing/soap-demo.png",
+    imageUrl: "/marketing/soap-demo.png",
   },
   {
     topic: "Visor DICOM / PACS Inactivo",
     caption: "🔬 ¡Revisa tomografías y resonancias en HD directo en el expediente de tu paciente! MedSysVE cuenta con visor DICOM 100% web con herramientas de zoom, CINE multiframe y densidad HU.",
     hashtags: "#MedSysVE #DICOM #PACS #RadiologiaVenezuela #Traumatologia #Cardiologia #SaludDigital",
-    imageUrl: "/uploads/marketing/dicom-demo.png",
+    imageUrl: "/marketing/dicom-demo.png",
   },
   {
     topic: "Facturación Dual USD / Bs (BCV)",
     caption: "💵 Evita dolores de cabeza contables. MedSysVE actualiza automáticamente la tasa oficial del Banco Central de Venezuela (BCV) diariamente para emitir recibos y facturas en USD y Bolívares.",
     hashtags: "#MedSysVE #FacturacionSENIAT #BCV #SaaSMedico #ConsultorioMedico #Venezuela",
-    imageUrl: "/uploads/marketing/soap-demo.png",
+    imageUrl: "/marketing/soap-demo.png",
   },
   {
     topic: "Red de Referidos entre Doctores",
     caption: "🤝 Interconecta tu consultorio con especialistas de todo el país. Remite pacientes en segundos manteniendo la trazabilidad completa del expediente clínico sin fugas de información.",
     hashtags: "#MedSysVE #RedDeReferidos #DoctoresVenezuela #SaludDigital #EspecialistasMedicos",
-    imageUrl: "/uploads/marketing/dicom-demo.png",
+    imageUrl: "/marketing/dicom-demo.png",
   },
   {
     topic: "Verificación Oficial SACS MPPS",
     caption: "🛡️ En MedSysVE cuidamos la salud de Venezuela. Todos los médicos en nuestra plataforma son validados oficialmente ante el Registro de Profesionales del Ministerio de Salud (SACS MPPS). ¡Consultas seguras con profesionales 100% verificados! 🩺🇻🇪",
     hashtags: "#MedSysVE #SACS #MPPS #DoctorVerificado #SaludVenezuela #MedicinaVenezuela #ConsultasSeguras #Venezuela",
-    imageUrl: "/uploads/marketing/sacs-demo.png",
+    imageUrl: "/marketing/sacs-demo.png",
   },
 ];
 
