@@ -5,6 +5,7 @@ import { router, portalProcedure } from "../trpc"
 import { portalPasswordSchema, BCRYPT_COST } from "@/lib/password-policy"
 import { safeLog } from "@/lib/log-sanitizer"
 import { readPatientCedula } from "@/lib/patient-crypto"
+import { formatDoctorName } from "@/lib/doctor-utils"
 
 async function getPatientIdsForPortalUser(ctx: any) {
   const portalUser = await ctx.db.portalUser.findUnique({
@@ -115,7 +116,7 @@ export const portalRouter = router({
       workspaceNombre: e.patientRegistration.workspace.nombre,
       doctorNombre: (() => {
         const doc = e.patientRegistration.workspace.doctor
-        return doc ? `Dr. ${doc.nombre} ${doc.apellido}` : ""
+        return doc ? formatDoctorName(doc) : ""
       })(),
     }))
   }),
@@ -337,7 +338,7 @@ export const portalRouter = router({
       workspaceNombre: regMap[v.patientRegistrationId]?.workspace.nombre ?? "",
       doctorNombre: (() => {
         const doc = regMap[v.patientRegistrationId]?.workspace.doctor
-        return doc ? `Dr. ${doc.nombre} ${doc.apellido}` : ""
+        return doc ? formatDoctorName(doc) : ""
       })(),
     }))
   }),
@@ -401,7 +402,7 @@ export const portalRouter = router({
                 workspace: {
                   select: {
                     nombre: true,
-                    doctor: { select: { nombre: true, apellido: true } }
+                    doctor: { select: { prefijo: true, nombre: true, apellido: true } }
                   }
                 }
               }
@@ -420,7 +421,7 @@ export const portalRouter = router({
       workspaceNombre: p.encounter.patientRegistration.workspace.nombre,
       doctorNombre: (() => {
         const doc = p.encounter.patientRegistration.workspace.doctor
-        return doc ? `Dr. ${doc.nombre} ${doc.apellido}` : ""
+        return doc ? formatDoctorName(doc) : ""
       })(),
       items: p.items.map((it) => ({
         nombreGenerico: it.medication.nombreGenerico,

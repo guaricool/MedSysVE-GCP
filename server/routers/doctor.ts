@@ -492,6 +492,7 @@ export const doctorRouter = router({
       where: { id: ctx.session.doctorId },
       select: {
         id: true,
+        prefijo: true,
         nombre: true,
         segundoNombre: true,
         apellido: true,
@@ -530,6 +531,7 @@ export const doctorRouter = router({
 
   updateProfile: doctorProcedure
     .input(z.object({
+      prefijo: z.enum(["Dr.", "Dra."]).optional(),
       bio: z.string().max(2000).optional(),
       idiomas: z.array(z.string()).optional(),
       fotoUrl: z.string().optional(),
@@ -538,6 +540,7 @@ export const doctorRouter = router({
       return ctx.db.doctor.update({
         where: { id: ctx.session.doctorId },
         data: {
+          prefijo: input.prefijo,
           bio: input.bio,
           idiomas: input.idiomas,
           fotoUrl: input.fotoUrl,

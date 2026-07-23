@@ -4,6 +4,7 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { sendAppointmentReminder } from "@/lib/email"
 import { notifyAppointmentReminder } from "@/lib/whatsapp"
+import { formatDoctorName } from "@/lib/doctor-utils"
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization")
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
     if (diffHours < 0 || diffHours > horas + 1) continue
 
     const fechaHoraStr = format(appt.fechaHora, "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })
-    const doctorName = `Dr. ${appt.workspace.doctor.nombre} ${appt.workspace.doctor.apellido}`
+    const doctorName = formatDoctorName(appt.workspace.doctor)
     const patientName = `${pat.nombre} ${pat.apellido}`
 
     try {

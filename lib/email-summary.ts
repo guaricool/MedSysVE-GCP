@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { decryptField } from "@/lib/field-crypto"
 import { sendEncounterSummary } from "@/lib/email"
 import { pdfFilename } from "@/lib/pdf/filename"
+import { formatDoctorName } from "@/lib/doctor-utils"
 
 export async function generateAndSendEncounterSummary(encounterId: string) {
   // 1. Fetch encounter to know what documents exist
@@ -86,7 +87,7 @@ export async function generateAndSendEncounterSummary(encounterId: string) {
   
   // Send email
   if (attachments.length > 0) {
-    const doctorName = `Dr. ${enc.workspace.doctor.nombre} ${enc.workspace.doctor.apellido}`
+    const doctorName = formatDoctorName(enc.workspace.doctor)
     await sendEncounterSummary({
       to: email,
       patientName: `${nombre} ${apellido}`.trim(),

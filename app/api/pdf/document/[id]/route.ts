@@ -9,6 +9,7 @@ import { pdfFilename } from "@/lib/pdf/filename"
 import React from "react"
 import type { SessionUser } from "@/types"
 import { auditFromHeaders } from "@/lib/audit"
+import { formatDoctorName } from "@/lib/doctor-utils"
 import { readPatientCedula } from "@/lib/patient-crypto"
 
 const TIPO_SLUG: Record<string, string> = {
@@ -88,7 +89,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     React.createElement(DocumentPdf, {
       branding: buildPdfBranding({ doctor: ws.doctor, clinic: ws.clinic, workspace: ws }),
       doctor: {
-        nombre: `Dr. ${ws.doctor.nombre} ${ws.doctor.apellido}`,
+        prefijo: ws.doctor.prefijo,
+        nombre: formatDoctorName(ws.doctor),
         especialidad: ws.doctor.especialidadPrincipal ?? undefined,
         cedula: ws.doctor.cedula ?? undefined,
         email: ws.doctor.email ?? undefined,

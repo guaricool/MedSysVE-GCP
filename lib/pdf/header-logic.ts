@@ -1,9 +1,12 @@
 import { join, resolve } from "path"
 import { existsSync } from "fs"
+import { formatDoctorName } from "@/lib/doctor-utils"
 
 export interface DoctorInfo {
+  prefijo?: string
   nombre: string
   segundoNombre?: string
+  apellido?: string
   segundoApellido?: string
   especialidad?: string
   cedula?: string
@@ -57,6 +60,7 @@ export interface PdfHeader {
 }
 
 export function buildPdfHeader(doctor: DoctorInfo, clinic?: ClinicInfo | null): PdfHeader {
+  const formattedDoctorName = formatDoctorName(doctor)
   const mappedEspecialidad = (doctor.especialidad === "Traumatología" || doctor.especialidad === "Ortopedia") ? "Traumatología y ortopedia" : doctor.especialidad
   const mappedSub = (doctor.subEspecialidades ?? []).map(s => (s === "Traumatología" || s === "Ortopedia") ? "Traumatología y ortopedia" : s)
 
@@ -64,7 +68,7 @@ export function buildPdfHeader(doctor: DoctorInfo, clinic?: ClinicInfo | null): 
     return {
       modo: "clinic",
       titulo: clinic.nombre,
-      subtitulo: `${doctor.nombre}${mappedEspecialidad ? " — " + mappedEspecialidad : ""}`,
+      subtitulo: `${formattedDoctorName}${mappedEspecialidad ? " — " + mappedEspecialidad : ""}`,
       lineas: [
         clinic.direccion ?? "",
         clinic.telefono ? `Tel: ${clinic.telefono}` : "",
@@ -75,7 +79,7 @@ export function buildPdfHeader(doctor: DoctorInfo, clinic?: ClinicInfo | null): 
   }
   return {
     modo: "doctor",
-    titulo: doctor.nombre,
+    titulo: formattedDoctorName,
     subtitulo: mappedEspecialidad ?? "",
     lineas: [doctor.cedula ? `C.I.: ${doctor.cedula}` : ""].filter(Boolean),
     subEspecialidades: mappedSub,
@@ -84,7 +88,8 @@ export function buildPdfHeader(doctor: DoctorInfo, clinic?: ClinicInfo | null): 
 
 export function buildFooterLines(doctor: DoctorInfo, clinic?: ClinicInfo | null): string[] {
   const lines: string[] = []
-  const docLine = [doctor.nombre, doctor.especialidad].filter(Boolean).join("  •  ")
+  const formattedDoc = formatDoctorName(doctor)
+  const docLine = [formattedDoc, doctor.especialidad].filter(Boolean).join("  •  ")
   if (doctor.cedula) lines.push(`${docLine}  •  C.I.: ${doctor.cedula}`)
   else lines.push(docLine)
 

@@ -5,8 +5,9 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { router, doctorProcedure, protectedProcedure, portalProcedure } from "../trpc"
 import { notifyAppointmentCreated, notifyAppointmentConfirmed } from "../../lib/whatsapp"
-import { sendAppointmentConfirmed } from "../../lib/email"
-import { decryptField } from "../../lib/field-crypto"
+import { sendAppointmentCreated, sendAppointmentConfirmed } from "../../lib/email"
+import { decryptField } from "@/lib/field-crypto"
+import { formatDoctorName } from "@/lib/doctor-utils"
 
 export const appointmentRouter = router({
   create: doctorProcedure
@@ -63,7 +64,7 @@ export const appointmentRouter = router({
       const pat = appt.patientRegistration?.patient
       if (pat) {
         const fechaHoraStr = format(new Date(input.fechaHora), "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })
-        const doctorName = `Dr. ${appt.workspace.doctor.nombre} ${appt.workspace.doctor.apellido}`
+        const doctorName = formatDoctorName(appt.workspace.doctor)
         const email = pat.email || (pat.emailCifrado ? decryptField(pat.emailCifrado) : null)
         const nombre = pat.nombre || (pat.nombreCifrado ? decryptField(pat.nombreCifrado) : "") || ""
         const apellido = pat.apellido || (pat.apellidoCifrado ? decryptField(pat.apellidoCifrado) : "") || ""
@@ -126,7 +127,7 @@ export const appointmentRouter = router({
             where: { id: ctx.session.workspaceId },
             include: { doctor: true },
           })
-          const doctorName = ws ? `Dr. ${ws.doctor.nombre} ${ws.doctor.apellido}` : ""
+          const doctorName = ws ? formatDoctorName(ws.doctor) : ""
           
           const email = pat.email || (pat.emailCifrado ? decryptField(pat.emailCifrado) : null)
           const nombre = pat.nombre || (pat.nombreCifrado ? decryptField(pat.nombreCifrado) : "") || ""
@@ -411,7 +412,7 @@ export const appointmentRouter = router({
 
       const { notifyAppointmentReminder } = await import("../../lib/whatsapp")
       const fechaHoraStr = format(appt.fechaHora, "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })
-      const doctorName = `Dr. ${appt.workspace.doctor.nombre} ${appt.workspace.doctor.apellido}`
+      const doctorName = formatDoctorName(appt.workspace.doctor)
 
       // WhatsApp temporalmente desactivado
       // const result = await notifyAppointmentReminder({

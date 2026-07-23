@@ -158,11 +158,13 @@ export function FirmaBloque({ doctor, clinic, branding, omitSello, disclaimer }:
  * and the per-PDF generators can drop the explicit footer line map.
  * If you change one, change the other.
  */
+import { formatDoctorName } from "@/lib/doctor-utils"
+
 function buildFooterLinesLocal(
-  doctor: { nombre: string; apellido?: string; especialidad?: string; cedula?: string; telefono?: string; email?: string },
+  doctor: { prefijo?: string; nombre: string; apellido?: string; especialidad?: string; cedula?: string; telefono?: string; email?: string },
   clinic?: { nombre?: string; direccionFiscal?: string; telefono?: string; email?: string } | null,
 ): string[] {
-  const line1 = ["Dr.", doctor.nombre, doctor.apellido].filter(Boolean).join(" ").trim()
+  const line1 = formatDoctorName(doctor)
   const parts: string[] = []
   if (line1) parts.push(line1)
   if (doctor.especialidad) parts.push(doctor.especialidad)

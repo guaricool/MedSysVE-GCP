@@ -8,6 +8,8 @@ import { StaffNotesBoard } from "@/components/dashboard/staff-notes-board"
 import { ChronicsPanel } from "@/components/dashboard/chronics-panel"
 import { urlToFsPath } from "@/lib/pdf/header-logic"
 
+import { formatDoctorName } from "@/lib/doctor-utils"
+
 export default async function DoctorDashboard() {
   const session = await auth()
   if (!session?.user) redirect("/login")
@@ -127,7 +129,7 @@ export default async function DoctorDashboard() {
               {greeting}
             </p>
             <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
-              Dr. {user.nombre} {user.apellido}
+              {formatDoctorName(doctorFull || user)}
             </h1>
             <p className="text-slate-300 text-sm mt-1">
               {doctorFull?.especialidadPrincipal}

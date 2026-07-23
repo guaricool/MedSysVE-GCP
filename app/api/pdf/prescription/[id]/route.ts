@@ -11,6 +11,8 @@ import type { SessionUser } from "@/types"
 import { auditFromHeaders } from "@/lib/audit"
 import { readPatientCedula } from "@/lib/patient-crypto"
 
+import { formatDoctorName } from "@/lib/doctor-utils"
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -69,7 +71,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     React.createElement(PrescriptionPdf, {
       branding: buildPdfBranding({ doctor: ws.doctor, clinic: ws.clinic, workspace: ws }),
       doctor: {
-        nombre: `Dr. ${ws.doctor.nombre} ${ws.doctor.apellido}`,
+        prefijo: ws.doctor.prefijo,
+        nombre: formatDoctorName(ws.doctor),
         especialidad: ws.doctor.especialidadPrincipal ?? undefined,
         cedula: ws.doctor.cedula ?? undefined,
         email: ws.doctor.email ?? undefined,

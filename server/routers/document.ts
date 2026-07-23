@@ -9,6 +9,7 @@ import { hmacIndex, encryptField } from "../../lib/field-crypto"
 import { readEncounterMotivo } from "../../lib/encounter-crypto"
 import { audit } from "../../lib/audit"
 import { DEFAULT_REPORT_SECCIONES, isReportOverride, resolveReportSections } from "@/types/report"
+import { formatDoctorName } from "@/lib/doctor-utils"
 
 const TIPO_LABEL: Record<string, string> = {
   INFORME: "Informe médico",
@@ -939,7 +940,7 @@ async function finalizeReferral(
         workspaceId: receivingWs.id,
         tipo: "REFERRAL_RECEIVED",
         titulo: "Nuevo referido pendiente",
-        mensaje: `Dr. ${ws.doctor.nombre} ${ws.doctor.apellido} te refirió a ${patientName} para ${doc.referidoAEspecialidad ?? "evaluación"}.`,
+        mensaje: `${formatDoctorName(ws.doctor)} te refirió a ${patientName} para ${doc.referidoAEspecialidad ?? "evaluación"}.`,
         referenciaId: doc.id,
       },
     })

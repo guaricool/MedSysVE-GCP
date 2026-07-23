@@ -57,6 +57,7 @@ model Doctor {
   cedula                 String                    @unique
   /// Encrypted (AES-256-GCM).
   cedulaCifrada          String?
+  prefijo                String                    @default("Dr.")
   nombre                 String
   segundoNombre          String?
   /// Encrypted (AES-256-GCM). NULL until backfill completes; readers should

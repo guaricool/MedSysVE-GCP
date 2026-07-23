@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc-client"
 import { MapPin, Search, Building2, Stethoscope, X } from "lucide-react"
 import { ESTADOS_VENEZUELA, getCiudadesByEstado } from "@/lib/venezuela-locations"
 import { useUnsaved } from "@/components/providers/unsaved-changes-provider"
+import { formatDoctorName } from "@/lib/doctor-utils"
 
 interface ReferidoFormProps {
   encounterId: string
@@ -132,7 +133,7 @@ export function ReferidoForm({ encounterId, patientRegistrationId, disabled }: R
   // en `showDoctorList` lo oculta).
   function handleSelectDoctor(d: ReferidoDoctor) {
     setSelectedDoctor(d)
-    setQuery(`Dr. ${d.nombre} ${d.apellido}`)
+    setQuery(formatDoctorName(d))
     setDebouncedQuery("")
   }
 
@@ -162,7 +163,7 @@ export function ReferidoForm({ encounterId, patientRegistrationId, disabled }: R
   async function handleCreate() {
     if (!selectedDoctor) return
 
-    let contenidoHtml = `<p>Se refiere al Dr. ${selectedDoctor.nombre} ${selectedDoctor.apellido}, ${selectedDoctor.especialidadPrincipal}.</p>`
+    let contenidoHtml = `<p>Se refiere al ${formatDoctorName(selectedDoctor)}, ${selectedDoctor.especialidadPrincipal}.</p>`
     if (motivo) contenidoHtml += `<p><strong>Motivo:</strong> ${motivo}</p>`
 
     await saveMut.mutateAsync({
@@ -348,7 +349,7 @@ export function ReferidoForm({ encounterId, patientRegistrationId, disabled }: R
                   onClick={() => handleSelectDoctor(d)}
                 >
                   <span className="text-sm font-medium text-white">
-                    Dr. {d.nombre} {d.apellido}
+                    {formatDoctorName(d)}
                   </span>
                   <span className="flex flex-wrap items-center gap-1 text-xs text-slate-400">
                     <Stethoscope size={11} className="text-slate-500" />
@@ -385,7 +386,7 @@ export function ReferidoForm({ encounterId, patientRegistrationId, disabled }: R
             <X size={14} />
           </button>
           <p className="pr-6 font-semibold text-white">
-            Dr. {selectedDoctor.nombre} {selectedDoctor.apellido}
+            {formatDoctorName(selectedDoctor)}
           </p>
           <p className="flex items-center gap-1 text-slate-300">
             <Stethoscope size={12} className="text-slate-500" />

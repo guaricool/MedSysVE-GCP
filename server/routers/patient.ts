@@ -11,6 +11,7 @@ import { encryptField } from "@/lib/field-crypto"
 import { packPatientCedula, readPatientCedula } from "@/lib/patient-crypto"
 import { audit } from "@/lib/audit"
 import { safeLog } from "@/lib/log-sanitizer"
+import { formatDoctorName } from "@/lib/doctor-utils"
 
 /**
  * Generate a portal password that satisfies portalPasswordSchema:
@@ -734,7 +735,7 @@ export const patientRouter = router({
       void sendPortalReminderEmail({
         to: reg.patient.email,
         nombre: reg.patient.nombre,
-        doctorName: `Dr. ${reg.workspace.doctor.nombre} ${reg.workspace.doctor.apellido}`,
+        doctorName: formatDoctorName(reg.workspace.doctor),
       }).catch((err) => safeLog("error", "portal.reminder_email_failed", { error: err }))
       
       safeLog("info", "portal.reminder_sent", {

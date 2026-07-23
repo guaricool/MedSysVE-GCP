@@ -6,6 +6,7 @@ import { ClinicCard, LocationForm } from "@/components/clinic/clinic-card"
 import { JoinClinicForm } from "@/components/clinic/join-clinic-form"
 import { SubscriptionCard } from "@/components/workspace/subscription-card"
 import { Lock, ShieldCheck, FileText, Building2, User, Stethoscope, CheckCircle2 } from "lucide-react"
+import { getDoctorPrefix } from "@/lib/doctor-utils"
 
 interface WorkspaceData {
   id: string
@@ -279,12 +280,14 @@ export function WorkspaceSettingsClient({ workspace }: Props) {
 
 function DoctorProfileSection() {
   const { data: profile } = trpc.doctor.myProfile.useQuery()
+  const [prefijo, setPrefijo] = useState<"Dr." | "Dra.">("Dr.")
   const [bio, setBio] = useState("")
   const [idiomas, setIdiomas] = useState<string[]>([])
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (profile) {
+      setPrefijo(getDoctorPrefix(profile))
       setBio(profile.bio ?? "")
       setIdiomas(profile.idiomas ?? [])
     }
@@ -414,6 +417,39 @@ function DoctorProfileSection() {
           Esta información puede aparecer en la página pública de la clínica.
         </p>
         <div className="space-y-4">
+          {/* Trato u Honorífico Profesional */}
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-300">
+              Trato / Honorífico Profesional (Aparece en recetas, sellos e informes)
+            </label>
+            <div className="flex items-center gap-3 max-w-sm">
+              <button
+                type="button"
+                onClick={() => { setPrefijo("Dr."); setSaved(false); }}
+                className={`flex-1 rounded-md border py-2 px-3 text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  prefijo === "Dr."
+                    ? "border-amber-500 bg-amber-500/15 text-amber-300 shadow-sm"
+                    : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700"
+                }`}
+              >
+                <span>Dr.</span>
+                <span className="text-[10px] font-normal opacity-80">(Doctor)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPrefijo("Dra."); setSaved(false); }}
+                className={`flex-1 rounded-md border py-2 px-3 text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  prefijo === "Dra."
+                    ? "border-amber-500 bg-amber-500/15 text-amber-300 shadow-sm"
+                    : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700"
+                }`}
+              >
+                <span>Dra.</span>
+                <span className="text-[10px] font-normal opacity-80">(Doctora)</span>
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="mb-1 block text-xs text-slate-400">Biografía profesional</label>
             <textarea
@@ -447,7 +483,7 @@ function DoctorProfileSection() {
             <button
               type="button"
               disabled={update.isPending}
-              onClick={() => update.mutate({ bio: bio || undefined, idiomas })}
+              onClick={() => update.mutate({ prefijo, bio: bio || undefined, idiomas })}
               className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
             >
               {update.isPending ? "Guardando..." : "Guardar perfil"}

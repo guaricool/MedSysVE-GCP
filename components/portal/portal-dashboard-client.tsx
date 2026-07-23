@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { formatDoctorName } from "@/lib/doctor-utils"
 import { PortalMensajesClient } from "./portal-mensajes-client"
 import { PortalAppointmentsClient } from "./portal-appointments-client"
 import { UserCircle, Syringe, Microscope, FileText, Calendar, MessageSquare, Pill } from "lucide-react"
@@ -58,7 +59,7 @@ export function PortalDashboardClient({
               <div className="p-3 rounded-full bg-slate-800 group-hover:bg-blue-600 group-hover:text-white text-slate-400 transition-colors mb-4">
                 <UserCircle size={28} />
               </div>
-              <h3 className="text-lg font-bold text-white mb-1">Dr. {w.doctor.nombre} {w.doctor.apellido}</h3>
+              <h3 className="text-lg font-bold text-white mb-1">{formatDoctorName(w.doctor)}</h3>
               <p className="text-sm text-slate-400">{w.doctor.especialidadPrincipal}</p>
               <p className="text-xs text-slate-500 mt-2">{w.workspaceNombre}</p>
             </button>
@@ -104,7 +105,7 @@ export function PortalDashboardClient({
                   <UserCircle size={20} />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-semibold text-sm truncate">Dr. {w.doctor.nombre} {w.doctor.apellido}</p>
+                  <p className="font-semibold text-sm truncate">{formatDoctorName(w.doctor)}</p>
                   <p className={`text-[11px] truncate ${isActive ? "text-blue-200" : "text-slate-500"}`}>
                     {w.doctor.especialidadPrincipal}
                   </p>
@@ -120,7 +121,7 @@ export function PortalDashboardClient({
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-800 pb-4">
             <div>
               <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                Dr. {activeWorkspace?.doctor.nombre} {activeWorkspace?.doctor.apellido}
+                {formatDoctorName(activeWorkspace?.doctor)}
               </h1>
               <p className="text-sm text-slate-400 mt-1">{activeWorkspace?.workspaceNombre}</p>
             </div>
