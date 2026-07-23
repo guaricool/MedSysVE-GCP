@@ -11,13 +11,29 @@ export interface SacsVerificationResult {
   cedula: string;
   nombreCompleto?: string;
   nombre?: string;
+  segundoNombre?: string;
   apellido?: string;
+  segundoApellido?: string;
   matriculaMpps?: string;
   profesion?: string;
   fechaRegistro?: string;
   especialidades?: string[];
   origen: "SACS_MPPS" | "MOCK_FALLBACK";
   error?: string;
+}
+
+/**
+ * Separa inteligente de nombres y apellidos en primer y segundo componente.
+ * Ejemplo: "CARLOS EDUARDO" -> { primer: "CARLOS", segundo: "EDUARDO" }
+ */
+function splitNameParts(str: string): { primer: string; segundo: string } {
+  const parts = str.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { primer: "", segundo: "" };
+  if (parts.length === 1) return { primer: parts[0], segundo: "" };
+  return {
+    primer: parts[0],
+    segundo: parts.slice(1).join(" "),
+  };
 }
 
 /**
@@ -140,6 +156,9 @@ export async function scrapeSacsMpps(
           .replace(/&Ntilde;/g, "Ñ")
       : undefined;
 
+    const nameParts = splitNameParts(rawNombre);
+    const surnameParts = splitNameParts(rawApellido);
+
     const encontrado = Boolean(rawNombre || matriculaMpps);
 
     return {
@@ -147,8 +166,10 @@ export async function scrapeSacsMpps(
       nacionalidad,
       cedula: cleanCedula,
       nombreCompleto: nombreCompleto || undefined,
-      nombre: rawNombre || undefined,
-      apellido: rawApellido || undefined,
+      nombre: nameParts.primer || rawNombre || undefined,
+      segundoNombre: nameParts.segundo || undefined,
+      apellido: surnameParts.primer || rawApellido || undefined,
+      segundoApellido: surnameParts.segundo || undefined,
       matriculaMpps,
       profesion: rawProfesion,
       fechaRegistro: profList[0]?.fecha_registro || undefined,

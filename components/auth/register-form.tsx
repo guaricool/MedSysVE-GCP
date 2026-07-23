@@ -112,7 +112,9 @@ export function RegisterForm() {
       if (data.encontrado) {
         setIsSacsVerified(true)
         if (data.nombre) setFormNombre(data.nombre)
+        if (data.segundoNombre) setFormSegundoNombre(data.segundoNombre)
         if (data.apellido) setFormApellido(data.apellido)
+        if (data.segundoApellido) setFormSegundoApellido(data.segundoApellido)
         if (data.matriculaMpps) setFormMppsMatricula(data.matriculaMpps)
         setFormCedula(data.cedula)
         if (data.especialidades && data.especialidades.length > 0) {
@@ -121,7 +123,7 @@ export function RegisterForm() {
           )
           if (matchedSpec) setFormEspecialidad(matchedSpec)
         }
-        setSacsMessage(`✅ Credenciales verificadas en SACS MPPS: Dr(a). ${data.nombreCompleto || data.nombre || ''} ${data.matriculaMpps ? `(Matrícula MPPS: ${data.matriculaMpps})` : ''}`)
+        setSacsMessage(`✅ Credenciales verificadas en SACS MPPS: Dr(a). ${data.nombre} ${data.segundoNombre || ''} ${data.apellido} ${data.segundoApellido || ''} ${data.matriculaMpps ? `(Matrícula MPPS: ${data.matriculaMpps})` : ''}`)
         setError("")
       } else if (data.origen === "MOCK_FALLBACK") {
         setIsSacsVerified(true)

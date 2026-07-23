@@ -42,6 +42,8 @@ export default function CompleteProfilePage() {
     onSuccess: (data) => {
       if (data.encontrado) {
         setIsSacsVerified(true);
+        if (data.segundoNombre) setSegundoNombre(data.segundoNombre);
+        if (data.segundoApellido) setSegundoApellido(data.segundoApellido);
         if (data.matriculaMpps) setMppsMatricula(data.matriculaMpps);
         if (data.nombreCompleto) setNombreCompletoSacs(data.nombreCompleto);
         if (data.especialidades && data.especialidades.length > 0) {
