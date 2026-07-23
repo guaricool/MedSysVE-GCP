@@ -18,6 +18,7 @@ import {
   Award,
   FileDown,
 } from "lucide-react";
+import { VaccineManager } from "@/components/patients/vaccine-manager";
 
 interface Props {
   encounterId: string;
@@ -570,46 +571,10 @@ export function PediatriaForm({ encounterId, disabled, initialData = {}, patient
         </div>
       )}
 
-      {/* Tab 4: Carnet de Vacunas PAI */}
+      {/* Tab 4: Carnet de Vacunas PAI (Unificado con la ficha del paciente) */}
       {activeTab === "VACUNAS" && (
         <div className="space-y-4 pt-2">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h4 className="text-xs font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Syringe className="w-4 h-4" /> Esquema Ampliado de Inmunizaciones (PAI Venezuela)
-            </h4>
-            {patientRegistrationId && patientRegistrationId !== "sandbox-demo-pat" && (
-              <a
-                href={`/api/pdf/vaccine-carnet/${patientRegistrationId}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all shadow-sm"
-              >
-                <FileDown size={13} />
-                Ver / Descargar Carné PDF (con QR)
-              </a>
-            )}
-          </div>
-
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-            {VACUNAS_PAI.map((vacuna) => {
-              const checked = vacunasColocadas.includes(vacuna);
-              return (
-                <button
-                  key={vacuna}
-                  type="button"
-                  onClick={() => toggleVacuna(vacuna)}
-                  className={`p-2.5 rounded-lg border text-left flex items-center justify-between transition-all ${
-                    checked
-                      ? "bg-emerald-500/20 border-emerald-500 text-emerald-300 font-semibold"
-                      : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
-                  }`}
-                >
-                  <span>{vacuna}</span>
-                  {checked && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
-                </button>
-              );
-            })}
-          </div>
+          <VaccineManager patientRegistrationId={patientRegistrationId} />
         </div>
       )}
     </div>

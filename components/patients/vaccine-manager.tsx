@@ -36,7 +36,22 @@ interface Props {
 
 export function VaccineManager({ patientRegistrationId }: Props) {
   const utils = trpc.useUtils()
-  const { data: vaccines, isLoading } = (trpc.vaccine as any).list.useQuery({ patientRegistrationId })
+  const isSandbox = patientRegistrationId === "sandbox-demo-pat"
+  const { data: dbVaccines, isLoading } = (trpc.vaccine as any).list.useQuery(
+    { patientRegistrationId },
+    { enabled: !isSandbox }
+  )
+
+  const mockVaccines = [
+    { id: "v1", vacuna: "BCG", fechaAplicacion: new Date("2021-05-16"), dosis: "1ra Dosis", lote: "BCG-99", aplicadoPor: "Hospital Pediátrico", notas: "Cicatriz normal" },
+    { id: "v2", vacuna: "Hepatitis B", fechaAplicacion: new Date("2021-05-16"), dosis: "1ra Dosis", lote: "HB-01", aplicadoPor: "Hospital Pediátrico" },
+    { id: "v3", vacuna: "Pentavalente (DPT + HepB + Hib)", fechaAplicacion: new Date("2021-07-15"), dosis: "1ra Dosis", lote: "PENTA-44", aplicadoPor: "Clínica Demo" },
+    { id: "v4", vacuna: "Polio (IPV)", fechaAplicacion: new Date("2021-07-15"), dosis: "1ra Dosis", lote: "POL-12", aplicadoPor: "Clínica Demo" },
+    { id: "v5", vacuna: "Rotavirus", fechaAplicacion: new Date("2021-07-15"), dosis: "1ra Dosis", lote: "ROTA-88", aplicadoPor: "Clínica Demo" },
+    { id: "v6", vacuna: "SRP (Sarampión, Rubéola, Paperas)", fechaAplicacion: new Date("2022-05-15"), dosis: "1ra Dosis", lote: "SRP-77", aplicadoPor: "Consultorio Pediátrico" },
+  ]
+
+  const vaccines = isSandbox ? mockVaccines : dbVaccines
 
   const [showForm, setShowForm] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
