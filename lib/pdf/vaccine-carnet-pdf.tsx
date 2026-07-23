@@ -58,9 +58,10 @@ interface Props {
   vaccines: VaccineEntry[]
   generadoEl: string
   branding?: PdfBranding
+  qrCodeDataUrl?: string
 }
 
-export function VaccineCarnetPdf({ doctor, clinic, patient, vaccines, generadoEl, branding }: Props) {
+export function VaccineCarnetPdf({ doctor, clinic, patient, vaccines, generadoEl, branding, qrCodeDataUrl }: Props) {
   const pending = vaccines.filter((v) => v.proximaDosis)
 
   return (
@@ -79,10 +80,18 @@ export function VaccineCarnetPdf({ doctor, clinic, patient, vaccines, generadoEl
               <Text style={styles.doctorText}>C.I. {doctor.cedula}</Text>
             </View>
           </View>
-          <View style={styles.headerRight}>
-            <Text style={styles.docTitle}>CARNÉ DE VACUNACIÓN</Text>
-            <Text style={styles.docSubtitle}>Registro Oficial de Inmunizaciones</Text>
-            <Text style={styles.docSubtitle}>Emitido: {generadoEl}</Text>
+          <View style={[styles.headerRight, { flexDirection: "row", gap: 10, alignItems: "center" }]}>
+            {qrCodeDataUrl ? (
+              <View style={{ alignItems: "center" }}>
+                <Image src={qrCodeDataUrl} style={{ width: 44, height: 44 }} />
+                <Text style={{ fontSize: 6, color: "#64748b", marginTop: 2 }}>Verificación QR</Text>
+              </View>
+            ) : null}
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={styles.docTitle}>CARNÉ DE VACUNACIÓN</Text>
+              <Text style={styles.docSubtitle}>Registro Oficial de Inmunizaciones</Text>
+              <Text style={styles.docSubtitle}>Emitido: {generadoEl}</Text>
+            </View>
           </View>
         </View>
 

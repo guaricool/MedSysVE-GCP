@@ -49,6 +49,10 @@ export async function GET(
 
   const edad = differenceInYears(new Date(), new Date(reg.patient.fechaNacimiento))
 
+  const QRCode = (await import("qrcode")).default
+  const verificationUrl = `${process.env.NEXTAUTH_URL || "https://www.medsysve.com"}/api/pdf/vaccine-carnet/${patientRegId}`
+  const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, { margin: 1, width: 100 })
+
   const { renderToBuffer } = await import("@react-pdf/renderer")
   const { VaccineCarnetPdf } = await import("@/lib/pdf/vaccine-carnet-pdf")
   const { createElement } = await import("react")
@@ -56,6 +60,7 @@ export async function GET(
   const buffer = await renderToBuffer(
     createElement(VaccineCarnetPdf, {
       branding,
+      qrCodeDataUrl,
       doctor: {
         nombre: `${ws.doctor.nombre} ${ws.doctor.apellido}`,
         especialidad: ws.doctor.especialidadPrincipal ?? undefined,
