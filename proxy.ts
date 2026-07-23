@@ -18,6 +18,8 @@ const PORTAL_AUTH_PAGES = ["/portal/login", "/portal/register"]
 const PUBLIC_PREFIXES = [
   "/clinica",
   "/portal/schedule",
+  "/portal/verify",
+  "/api/pdf/vaccine-carnet",
   "/legal",
   "/forgot-password",
   "/reset-password",

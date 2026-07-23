@@ -13,6 +13,10 @@ const NAV = [
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
+  if (pathname.startsWith("/portal/verify")) {
+    return <>{children}</>
+  }
+
   return (
     <div className="min-h-screen bg-slate-950">
       <header className="border-b border-slate-800 bg-slate-900 px-4 py-3">
