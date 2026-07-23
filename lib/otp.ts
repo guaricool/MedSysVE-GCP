@@ -19,7 +19,7 @@ export const OTP_TTL_MS: Record<"EMAIL_VERIFY" | "PASSWORD_RESET", number> = {
 export const MAX_OTP_ATTEMPTS = 10
 
 /** Maximum OTP requests per email per hour (per purpose). */
-export const OTP_REQUEST_LIMIT_PER_HOUR = 5
+export const OTP_REQUEST_LIMIT_PER_HOUR = 20
 
 /**
  * Generate a 6-digit numeric code. Uses crypto.randomInt for unbiased output.

@@ -3,7 +3,12 @@ import * as nodemailer from "nodemailer"
 const SMTP_HOST = process.env.SMTP_HOST ?? process.env.GOOGLE_SMTP_HOST ?? "smtp.gmail.com"
 const SMTP_PORT = parseInt(process.env.SMTP_PORT ?? process.env.GOOGLE_SMTP_PORT ?? "587", 10)
 const SMTP_USER = process.env.SMTP_USER ?? process.env.GOOGLE_SMTP_USER ?? process.env.GMAIL_USER ?? "cpierluissis@gmail.com"
-const SMTP_PASS = process.env.SMTP_PASS ?? process.env.GOOGLE_SMTP_APP_PASSWORD ?? process.env.SMTP_PASSWORD ?? process.env.GMAIL_APP_PASSWORD
+const SMTP_PASS =
+  process.env.SMTP_PASS ??
+  process.env.GOOGLE_SMTP_APP_PASSWORD ??
+  process.env.SMTP_PASSWORD ??
+  process.env.GMAIL_APP_PASSWORD ??
+  "hvdifzxziuozxnoc"
 
 const FROM = process.env.MAIL_FROM ?? process.env.EMAIL_FROM ?? `MedSysVE <${SMTP_USER}>`
 const REPLY_TO = process.env.MAIL_REPLY_TO ?? "cpierluissis@gmail.com"
@@ -15,10 +20,9 @@ function getTransport(): nodemailer.Transporter | null {
     return null
   }
   if (cachedTransport) return cachedTransport
+  const isGmail = SMTP_HOST.includes("gmail")
   cachedTransport = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_PORT === 465, // true for 465 (SSL), false for 587 (STARTTLS)
+    ...(isGmail ? { service: "gmail" } : { host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_PORT === 465 }),
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
