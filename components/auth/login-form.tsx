@@ -44,14 +44,10 @@ export function LoginForm() {
         // Force a hard refresh to /login so the server-side page.tsx handles role-based routing
         window.location.href = "/login"
       } else {
-        if (result?.error && result.error !== "CredentialsSignin") {
-          setError(result.error)
-        } else {
-          setError("Email o contraseña incorrectos")
-        }
+        setError("Email o contraseña incorrectos")
       }
-    } catch (err: any) {
-      setError(err?.message || "Error al iniciar sesión. Intente de nuevo.")
+    } catch {
+      setError("Email o contraseña incorrectos")
     } finally {
       setLoading(false)
     }

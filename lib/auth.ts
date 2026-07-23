@@ -42,6 +42,7 @@ function getDummyHash(): Promise<string> {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   providers: [
     Credentials({
       async authorize(raw) {
@@ -57,18 +58,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             email: emailLower.slice(0, 3) + "***",
             remainingSec: lockState.remainingSeconds,
           })
-          // Return null (generic failure) — DO NOT reveal that the account is locked.
-          // The error message is generic on purpose to prevent user enumeration.
-          throw new Error("Demasiados intentos. Intente más tarde.")
+          return null
         }
 
         // 2. Rate limit (per IP+email combo).
-        // The IP comes from the request headers. Auth.js doesn't expose the
-        // request here, so we accept a slight weakening — the lockout above
-        // is the primary defense for credential stuffing on a single email.
-        // For IP-level brute force protection we have proxy.ts (per-IP rate
-        // limit on the entire /api/auth/* path).
-        // Per-email rate limit:
         const perEmail = await rateLimit({
           prefix: LIMITERS.login.prefix,
           identifier: emailLower,
@@ -80,7 +73,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             email: emailLower.slice(0, 3) + "***",
             retryAfter: perEmail.retryAfter,
           })
-          throw new Error("Demasiados intentos. Intente más tarde.")
+          return null
         }
 
         // 3. Try to authenticate as doctor.
