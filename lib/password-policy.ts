@@ -42,10 +42,6 @@ export const strongPasswordSchema = z
   .refine((v) => /[A-Z]/.test(v), "Debe incluir al menos una mayúscula")
   .refine((v) => /\d/.test(v), "Debe incluir al menos un número")
   .refine(
-    (v) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(v),
-    "Debe incluir al menos un símbolo (!@#$%^&* etc.)",
-  )
-  .refine(
     (v) => !COMMON_PASSWORDS.has(v.toLowerCase().trim()),
     "Contraseña demasiado común. Elija otra.",
   );

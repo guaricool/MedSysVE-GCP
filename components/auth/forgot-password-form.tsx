@@ -15,6 +15,18 @@ import {
 
 type Step = "request" | "verify" | "reset" | "done"
 
+function parseTRPCError(message: string): string {
+  try {
+    const parsed = JSON.parse(message)
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].message) {
+      return parsed.map((e: any) => e.message).join(", ")
+    }
+  } catch {
+    // not JSON
+  }
+  return message
+}
+
 export function ForgotPasswordForm() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
@@ -41,7 +53,7 @@ export function ForgotPasswordForm() {
       setResendCooldown(60)
       setError("")
     },
-    onError: (e) => setError(e.message),
+    onError: (e) => setError(parseTRPCError(e.message)),
   })
 
   const verifyOtp = trpc.auth.verifyPasswordResetOtp.useMutation({
@@ -50,7 +62,7 @@ export function ForgotPasswordForm() {
       setStep("reset")
       setError("")
     },
-    onError: (e) => setError(e.message),
+    onError: (e) => setError(parseTRPCError(e.message)),
   })
 
   const confirmReset = trpc.auth.confirmPasswordReset.useMutation({
@@ -58,7 +70,7 @@ export function ForgotPasswordForm() {
       setSuccess(true)
       setStep("done")
     },
-    onError: (e) => setError(e.message),
+    onError: (e) => setError(parseTRPCError(e.message)),
   })
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
