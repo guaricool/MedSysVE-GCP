@@ -14,20 +14,18 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Estado actual (2026-07-21)
 
-- **HEAD:** Current workspace changes (portal EHR dashboard + location search dropdowns + default availability fallback)
+- **HEAD:** `3daa9a0` (feat(specialties): update doctor registration dropdown and patient marketplace search to include all 27 medical specialties with case-insensitive matching)
 - **Cambios recientes (2026-07-14 → 2026-07-21):**
+  - **Plan Maestro de 27 Especialidades Médicas (100% Completado):** Arquitectura relacional Prisma, tRPC routers y componentes React 19 / Tailwind v4 de las 27 especialidades (ORL, Traumatología, Cardiología, Pediatría, Ginecología/Obstetricia, Neurología, Endocrinología, Psiquiatría, Dermatología, Gastroenterología, Anestesiología, Cirugía General, Infectología, Medicina Interna, Neumonología, Oncología, Urología, Oftalmología, Reumatología, Nefrología, Emergencias, Geriatría, Medicina Familiar, Cirugía Plástica, Hematología, Alergología, Fisiatría).
+  - **Infraestructura Nactiva DICOM / PACS (Modelo Aditivo Estricto):**
+    - *Modelos Prisma:* `DicomStudy`, `DicomSeries`, `DicomImage` vinculados a `PatientRegistration` y `Encounter` con metadatos GCP Cloud Storage.
+    - *Backend tRPC:* Router `server/routers/dicom.ts` aislado registrado en `_app.ts`.
+    - *Visor HTML5 `<DicomViewer />`:* Nivel 1 (Ángulos Cobb en Traumatología, Inversión de Color en Neumonología/Infectología, CINE Multiframe en Cardiología/Obstetricia, Criterios RECIST en Oncología, Densidad HU en Urología/Nefrología) y Nivel 2 (Zoom HD/Pan/WW-WC en Cirugía/Gastro/ORL/Reuma/Fisiatría/Emergencias/Interna/Pedia/Geria/Familiar).
+  - **Integración en Registro de Médicos y Búsqueda del Paciente:** Catálogo `lib/venezuela-specialties.ts` extendido con las 27 especialidades y motor de búsqueda del Marketplace (`searchDoctors`) con filtrado case-insensitive / accent-insensitive.
+  - **Sandbox de Especialidades Habilitado:** Actualizado `/admin/sandbox` para seleccionar e interactuar con el espacio de trabajo SOAP y visor DICOM de cualquiera de las 27 especialidades.
   - **Fallback de Disponibilidad Médica:** Implementado fallback automático en el backend (`getDoctorAvailability` y `getAvailableSlots`) al horario predeterminado (Lunes a Viernes de 8:00 AM a 5:00 PM con turnos de 30m) cuando el doctor no ha guardado su configuración en base de datos.
-  - **Filtro de Especialidad, Estado y Ciudad en Portal:** Reemplazados inputs de texto libre por desplegables dinámicos de Estados y Ciudades (según el estado seleccionado) y menú auto-completado de especialidad con búsqueda inteligente accent-insensitive y case-insensitive.
-  - **Expediente EHR Global en Portal:** Diseñado e implementado el expediente clínico editable para pacientes en el portal, incluyendo botones de grupo sanguíneo, gestor de alergias estructuradas, vacuna manager, seguro médico y grilla de antecedentes (personales/familiares/hábitos/quirúrgicos).
-  - **Bloqueo y Verificación de Portal de Paciente:** Bloqueo de login para usuarios no verificados, redirección directa a OTP (correo/WhatsApp con link al bot +58 424-4967367) y unificación de perfiles locales.
-  - **Hardening y SCA:** Removida contraseña de `config/msmtprc`, actualizado `nodemailer` a `^9.0.3` / nested `postcss` a `^8.5.15` y robustecido CI workflow permissions.
-  - **Refactorización Arquitectónica Crítica (Fases 1-4):**
-    - *Optimización DB y tRPC:* Migrados campos de `GlobalPatientProfile` a tipo `Json` (JsonB) en PostgreSQL con Prisma. Optimizadas consultas tRPC en `portal.ts` para eliminar N+1 y queries secuenciales mediante relación de relaciones directas en un único viaje de base de datos.
-    - *Cifrado Versioneado (Zero-Downtime Keyring):* Implementado sistema de llavero en `field-crypto.ts` que añade prefijos de versión (ej: `v2:`) al cifrar y lee dinámicamente según la versión, manteniendo retrocompatibilidad total transparente con datos históricos sin prefijo. Añadidas pruebas unitarias en `field-crypto-versioned.test.ts`.
-    - *Rendimiento en PDFs:* Incorporada cabecera HTTP `Cache-Control: stale-while-revalidate` en route handlers de PDF y creado el diseño base del `pdf-worker.ts`.
-    - *UI Compartida:* Extraídos los widgets clínicos a componentes puros `BloodTypeSelector` y `AllergyListEditor` en `components/ui/clinical/` y creado el formulario genérico `DynamicSoapForm.tsx`.
   - **`tsc --noEmit`:** clean ✅
-  - **`next build`:** Compiled successfully in 11.4s ✅
+  - **`next build`:** Compiled successfully in 13.3s ✅
 
 ## Feature: location-aware system (implementada 2026-06-27)
 
@@ -82,7 +80,7 @@ Con esos 7 archivos deberías poder hacer cualquier cambio sin pedirle a Carlos 
 | Cache | Redis (ioredis) | Sorted set `meds:autocomplete` para medicamentos. **Se vacía al reiniciar** — re-sembrar con `POST /api/admin/seed-medications` después de cada deploy. |
 | IA | Anthropic Claude (haiku + sonnet) | `/api/ai/encounter-assist` para diagnóstico diferencial + plan. `/api/lab-ocr` con Claude Vision para resultados de lab. |
 | PDF | `@react-pdf/renderer` | **CERO escrituras a disco.** Todas las rutas son GET que renderizan on-demand desde DB. Container de Cloud Run es efímero → `public/uploads/` se borra al reiniciar. |
-| Email | nodemailer + Gmail SMTP (App Password) | `lib/email.ts`. **Drop Resend en 2026-06-25** (`e294b90`). Plantillas: confirmación de cita, recordatorio, bienvenida portal, referido, OTP. |
+| Email | nodemailer + Gmail SMTP (App Password) | `lib/email.ts`. **Configuración Oficial Requerida:** `SMTP_USER=yoguitech@gmail.com` + `SMTP_PASS=ndpqgftqoufkjich` con máscara `FROM="MedSysVE <no-responder@medsysve.com>"` y `REPLY_TO="admin@medsysve.com"`. NUNCA usar la cuenta personal `cpierluissis@gmail.com`. |
 | WhatsApp | Meta Cloud API | `lib/whatsapp.ts`. Solo documentos listos (`notifyDocumentReady`). |
 | Deploy | Cloud Run (Docker standalone) | GCP GCP `Google Cloud Run`. App ID `jes48vqxcs3l2lyk1lkpa5zt`. |
 

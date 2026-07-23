@@ -156,7 +156,7 @@ El `CRON_SECRET` está en las env vars de Cloud Run.
 | `STRIPE_SECRET_KEY` | string | Stripe dashboard | `sk_live_*` = producción, `sk_test_*` = test. Auto-detectado por `isStripeLiveMode()`. |
 | `STRIPE_WEBHOOK_SECRET` | string | Stripe dashboard | `whsec_*` para verificar firmas de webhook. |
 | `ANTHROPIC_API_KEY` | string | console.anthropic.com | Para AI features (dose-suggestion, drug-interactions, etc.). |
-| `GOOGLE_SMTP_USER` + `GOOGLE_SMTP_APP_PASSWORD` | creds | Google App Passwords | Para emails transaccionales. |
+| `GOOGLE_SMTP_USER` + `GOOGLE_SMTP_APP_PASSWORD` | creds | Google App Passwords | Para emails transaccionales. Emisor oficial: `yoguitech@gmail.com` (`ndpqgftqoufkjich`), máscara `MedSysVE <no-responder@medsysve.com>`. |
 | `NEXTAUTH_SECRET` | string | `openssl rand -base64 32` | Auth.js v5 secret. |
 | `NEXTAUTH_URL` | URL | `https://www.medsysve.com` | Para Auth.js callbacks. |
 
