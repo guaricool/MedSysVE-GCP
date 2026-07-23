@@ -1,12 +1,12 @@
 import * as nodemailer from "nodemailer"
 
-const FROM = process.env.MAIL_FROM ?? process.env.EMAIL_FROM ?? "MedSysVE <no-responder@medsysve.com>"
-const REPLY_TO = process.env.MAIL_REPLY_TO ?? "admin@medsysve.com"
+const SMTP_HOST = process.env.SMTP_HOST ?? process.env.GOOGLE_SMTP_HOST ?? "smtp.gmail.com"
+const SMTP_PORT = parseInt(process.env.SMTP_PORT ?? process.env.GOOGLE_SMTP_PORT ?? "587", 10)
+const SMTP_USER = process.env.SMTP_USER ?? process.env.GOOGLE_SMTP_USER ?? process.env.GMAIL_USER ?? "cpierluissis@gmail.com"
+const SMTP_PASS = process.env.SMTP_PASS ?? process.env.GOOGLE_SMTP_APP_PASSWORD ?? process.env.SMTP_PASSWORD ?? process.env.GMAIL_APP_PASSWORD
 
-const SMTP_HOST = process.env.SMTP_HOST
-const SMTP_PORT = parseInt(process.env.SMTP_PORT ?? "587", 10)
-const SMTP_USER = process.env.SMTP_USER
-const SMTP_PASS = process.env.SMTP_PASS
+const FROM = process.env.MAIL_FROM ?? process.env.EMAIL_FROM ?? `MedSysVE <${SMTP_USER}>`
+const REPLY_TO = process.env.MAIL_REPLY_TO ?? "cpierluissis@gmail.com"
 
 let cachedTransport: nodemailer.Transporter | null = null
 
