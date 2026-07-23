@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc-client"
 import { ClinicCard, LocationForm } from "@/components/clinic/clinic-card"
 import { JoinClinicForm } from "@/components/clinic/join-clinic-form"
 import { SubscriptionCard } from "@/components/workspace/subscription-card"
+import { Lock, ShieldCheck, FileText, Building2, User, Stethoscope, CheckCircle2 } from "lucide-react"
 
 interface WorkspaceData {
   id: string
@@ -301,57 +302,162 @@ function DoctorProfileSection() {
   }
 
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900 p-5 space-y-4">
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-        Perfil público del médico
-      </h2>
-      <p className="text-xs text-slate-500">
-        Esta información puede aparecer en la página pública de la clínica.
-      </p>
-      <div className="space-y-4">
-        <div>
-          <label className="mb-1 block text-xs text-slate-400">Biografía profesional</label>
-          <textarea
-            value={bio}
-            onChange={(e) => { setBio(e.target.value); setSaved(false) }}
-            rows={4}
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 focus:outline-none resize-none"
-            placeholder="Describe tu formación, experiencia y especialidades..."
-          />
+    <div className="space-y-6">
+      {/* Credenciales Sanitarias e Identificación Médica Oficial (Protegidas) */}
+      <section className="rounded-lg border border-slate-800 bg-slate-900 p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-300 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
+              Credenciales Sanitarias & Identificación Oficial (MPPS)
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Información oficial validada ante el Ministerio de Salud. Protegida e inmutable.
+            </p>
+          </div>
+          {profile?.isSacsVerified ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-xs font-bold text-emerald-400 shrink-0 self-start sm:self-auto">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Verificado SACS MPPS
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 border border-slate-700 px-3 py-1 text-xs font-medium text-slate-400 shrink-0 self-start sm:self-auto">
+              Registro Oficial
+            </span>
+          )}
         </div>
-        <div>
-          <label className="mb-2 block text-xs text-slate-400">Idiomas</label>
-          <div className="flex flex-wrap gap-2">
-            {LANGS.map((l) => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => toggleLang(l)}
-                className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                  idiomas.includes(l)
-                    ? "border-blue-600 bg-blue-600/20 text-blue-300"
-                    : "border-slate-700 text-slate-400 hover:border-slate-500"
-                }`}
-              >
-                {l}
-              </button>
-            ))}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Cédula de Identidad */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-400 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-slate-400" /> Cédula de Identidad
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-amber-400 font-mono">
+                <Lock className="w-3 h-3 text-amber-400" /> Protegido
+              </span>
+            </label>
+            <input
+              type="text"
+              readOnly
+              disabled
+              value={profile?.cedula ? `${profile.nacionalidad ?? "V"}-${profile.cedula}` : "Sin registrar"}
+              className="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-300 font-mono cursor-not-allowed select-none opacity-85"
+            />
+          </div>
+
+          {/* Matrícula MPPS */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-400 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-amber-400" /> Matrícula MPPS (Ministerio de Salud)
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-amber-400 font-mono">
+                <Lock className="w-3 h-3 text-amber-400" /> Protegido
+              </span>
+            </label>
+            <input
+              type="text"
+              readOnly
+              disabled
+              value={profile?.mppsMatricula ? profile.mppsMatricula : "Sin registrar"}
+              className="w-full rounded-md border border-amber-500/30 bg-slate-950 px-3 py-2 text-sm text-amber-300 font-mono font-bold cursor-not-allowed select-none opacity-90 shadow-inner"
+            />
+          </div>
+
+          {/* Especialidad Médica Principal */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-400 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Stethoscope className="w-3.5 h-3.5 text-slate-400" /> Especialidad Principal MPPS
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-amber-400 font-mono">
+                <Lock className="w-3 h-3 text-amber-400" /> Protegido
+              </span>
+            </label>
+            <input
+              type="text"
+              readOnly
+              disabled
+              value={profile?.especialidadPrincipal ?? "Medicina General"}
+              className="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-300 cursor-not-allowed select-none opacity-85"
+            />
+          </div>
+
+          {/* RIF Fiscal */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-400 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-slate-400" /> RIF Fiscal
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-amber-400 font-mono">
+                <Lock className="w-3 h-3 text-amber-400" /> Protegido
+              </span>
+            </label>
+            <input
+              type="text"
+              readOnly
+              disabled
+              value={profile?.rif ?? "Sin registrar"}
+              className="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-300 font-mono cursor-not-allowed select-none opacity-85"
+            />
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            disabled={update.isPending}
-            onClick={() => update.mutate({ bio: bio || undefined, idiomas })}
-            className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-          >
-            {update.isPending ? "Guardando..." : "Guardar perfil"}
-          </button>
-          {saved && <span className="text-sm text-emerald-400">Guardado.</span>}
-          {update.error && <span className="text-sm text-red-400">{update.error.message}</span>}
+      </section>
+
+      {/* Perfil público editable */}
+      <section className="rounded-lg border border-slate-800 bg-slate-900 p-5 space-y-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          Perfil público del médico
+        </h2>
+        <p className="text-xs text-slate-500">
+          Esta información puede aparecer en la página pública de la clínica.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Biografía profesional</label>
+            <textarea
+              value={bio}
+              onChange={(e) => { setBio(e.target.value); setSaved(false) }}
+              rows={4}
+              className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 focus:outline-none resize-none"
+              placeholder="Describe tu formación, experiencia y especialidades..."
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-xs text-slate-400">Idiomas</label>
+            <div className="flex flex-wrap gap-2">
+              {LANGS.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => toggleLang(l)}
+                  className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                    idiomas.includes(l)
+                      ? "border-blue-600 bg-blue-600/20 text-blue-300"
+                      : "border-slate-700 text-slate-400 hover:border-slate-500"
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={update.isPending}
+              onClick={() => update.mutate({ bio: bio || undefined, idiomas })}
+              className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            >
+              {update.isPending ? "Guardando..." : "Guardar perfil"}
+            </button>
+            {saved && <span className="text-sm text-emerald-400">Guardado.</span>}
+            {update.error && <span className="text-sm text-red-400">{update.error.message}</span>}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   )
 }
 

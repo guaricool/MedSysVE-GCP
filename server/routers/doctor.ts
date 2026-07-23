@@ -7,7 +7,7 @@ import { rateLimit, getRequestIdentifier, LIMITERS } from "@/lib/rate-limit"
 import { safeLog } from "@/lib/log-sanitizer"
 import { headers } from "next/headers"
 import { loadAllLegalDocs } from "@/lib/legal/load-legal"
-import { encryptField } from "@/lib/field-crypto"
+import { encryptField, decryptField } from "@/lib/field-crypto"
 import { verifyVerifiedToken } from "@/lib/otp"
 import { ESPECIALIDADES_VE } from "@/lib/venezuela-specialties"
 import { scrapeSacsMpps } from "@/server/utils/sacs-scraper"
@@ -488,18 +488,28 @@ export const doctorRouter = router({
     }),
 
   myProfile: doctorProcedure.query(async ({ ctx }) => {
-    return ctx.db.doctor.findUnique({
+    const doc = await ctx.db.doctor.findUnique({
       where: { id: ctx.session.doctorId },
       select: {
         id: true,
         nombre: true,
+        segundoNombre: true,
         apellido: true,
+        segundoApellido: true,
+        cedula: true,
+        cedulaCifrada: true,
+        nacionalidad: true,
+        mppsMatricula: true,
+        isSacsVerified: true,
+        isOnboardingComplete: true,
         especialidadPrincipal: true,
         subEspecialidades: true,
         bio: true,
         idiomas: true,
         fotoUrl: true,
         selloUrl: true,
+        rif: true,
+        rifCifrado: true,
         // Subscription state — read by SubscriptionCard to show Premium vs Free.
         // The Stripe webhook writes stripeSubscriptionId on
         // checkout.session.completed; checking that field (instead of a
@@ -510,6 +520,12 @@ export const doctorRouter = router({
         plan: true,
       },
     })
+    if (!doc) return null
+    return {
+      ...doc,
+      cedula: doc.cedula || (doc.cedulaCifrada ? decryptField(doc.cedulaCifrada) : null),
+      rif: doc.rif || (doc.rifCifrado ? decryptField(doc.rifCifrado) : null),
+    }
   }),
 
   updateProfile: doctorProcedure
