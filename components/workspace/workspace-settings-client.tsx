@@ -7,6 +7,7 @@ import { JoinClinicForm } from "@/components/clinic/join-clinic-form"
 import { SubscriptionCard } from "@/components/workspace/subscription-card"
 import { Lock, ShieldCheck, FileText, Building2, User, Stethoscope, CheckCircle2 } from "lucide-react"
 import { getDoctorPrefix } from "@/lib/doctor-utils"
+import { ESPECIALIDADES_VE } from "@/lib/venezuela-specialties"
 
 interface WorkspaceData {
   id: string
@@ -281,6 +282,7 @@ export function WorkspaceSettingsClient({ workspace }: Props) {
 function DoctorProfileSection() {
   const { data: profile } = trpc.doctor.myProfile.useQuery()
   const [prefijo, setPrefijo] = useState<"Dr." | "Dra.">("Dr.")
+  const [especialidadPrincipal, setEspecialidadPrincipal] = useState<string>("")
   const [bio, setBio] = useState("")
   const [idiomas, setIdiomas] = useState<string[]>([])
   const [saved, setSaved] = useState(false)
@@ -288,6 +290,7 @@ function DoctorProfileSection() {
   useEffect(() => {
     if (profile) {
       setPrefijo(getDoctorPrefix(profile))
+      setEspecialidadPrincipal(profile.especialidadPrincipal ?? "")
       setBio(profile.bio ?? "")
       setIdiomas(profile.idiomas ?? [])
     }
@@ -450,6 +453,28 @@ function DoctorProfileSection() {
             </div>
           </div>
 
+          {/* Especialidad Médica Principal */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-300 flex items-center gap-1.5">
+              <Stethoscope className="w-3.5 h-3.5 text-blue-400" /> Especialidad Médica Principal
+            </label>
+            <p className="text-[11px] text-slate-500 mb-1.5">
+              Puedes seleccionar o modificar libremente tu especialidad médica o posgrado.
+            </p>
+            <select
+              value={especialidadPrincipal}
+              onChange={(e) => { setEspecialidadPrincipal(e.target.value); setSaved(false); }}
+              className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none font-medium"
+            >
+              <option value="" disabled>Seleccione una especialidad...</option>
+              {ESPECIALIDADES_VE.map((esp) => (
+                <option key={esp} value={esp}>
+                  {esp}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="mb-1 block text-xs text-slate-400">Biografía profesional</label>
             <textarea
@@ -483,7 +508,7 @@ function DoctorProfileSection() {
             <button
               type="button"
               disabled={update.isPending}
-              onClick={() => update.mutate({ prefijo, bio: bio || undefined, idiomas })}
+              onClick={() => update.mutate({ prefijo, especialidadPrincipal, bio: bio || undefined, idiomas })}
               className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
             >
               {update.isPending ? "Guardando..." : "Guardar perfil"}
