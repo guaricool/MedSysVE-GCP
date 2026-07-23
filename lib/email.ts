@@ -2,7 +2,7 @@ import * as nodemailer from "nodemailer"
 
 const SMTP_HOST = process.env.SMTP_HOST ?? process.env.GOOGLE_SMTP_HOST ?? "smtp.gmail.com"
 const SMTP_PORT = parseInt(process.env.SMTP_PORT ?? process.env.GOOGLE_SMTP_PORT ?? "587", 10)
-const SMTP_USER = process.env.SMTP_USER ?? process.env.GOOGLE_SMTP_USER ?? process.env.GMAIL_USER ?? "yoguitech@gmail.com"
+const SMTP_USER = process.env.SMTP_USER ?? process.env.GOOGLE_SMTP_USER ?? process.env.GMAIL_USER ?? "cpierluissis@gmail.com"
 const SMTP_PASS =
   process.env.SMTP_PASS ??
   process.env.GOOGLE_SMTP_APP_PASSWORD ??
