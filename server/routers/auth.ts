@@ -148,11 +148,43 @@ export const authRouter = router({
       // it's safe to expose because it doesn't reveal anything: an attacker
       // can't tell the difference between "email not registered" and
       // "rate limited" because both surface the same generic response.
-      const doctor = await ctx.db.doctor.findUnique({
-        where: { email: input.email.toLowerCase().trim() },
+      const emailLower = input.email.toLowerCase().trim()
+      let userExists = await ctx.db.doctor.findUnique({
+        where: { email: emailLower },
         select: { id: true },
       })
-      if (!doctor) {
+      if (!userExists) {
+        userExists = await ctx.db.doctor.findFirst({
+          where: { email: { equals: emailLower, mode: "insensitive" } },
+          select: { id: true },
+        })
+      }
+      if (!userExists) {
+        userExists = await ctx.db.clinicAdmin.findUnique({
+          where: { email: emailLower },
+          select: { id: true },
+        })
+      }
+      if (!userExists) {
+        userExists = await ctx.db.clinicAdmin.findFirst({
+          where: { email: { equals: emailLower, mode: "insensitive" } },
+          select: { id: true },
+        })
+      }
+      if (!userExists) {
+        userExists = await ctx.db.portalUser.findFirst({
+          where: { email: emailLower },
+          select: { id: true },
+        })
+      }
+      if (!userExists) {
+        userExists = await ctx.db.portalUser.findFirst({
+          where: { email: { equals: emailLower, mode: "insensitive" } },
+          select: { id: true },
+        })
+      }
+
+      if (!userExists) {
         safeLog("info", "auth.password_reset_request_unknown_email", {
           email: input.email.slice(0, 3) + "***",
           ip: ip.slice(0, 8) + "***",
@@ -241,50 +273,108 @@ export const authRouter = router({
         }
 
         const emailLower = claims.email.toLowerCase().trim()
-        const doctor = await ctx.db.doctor.findUnique({
+
+        // 1. Try Doctor
+        let doctor = await ctx.db.doctor.findUnique({
           where: { email: emailLower },
           select: { id: true },
         })
         if (!doctor) {
+          doctor = await ctx.db.doctor.findFirst({
+            where: { email: { equals: emailLower, mode: "insensitive" } },
+            select: { id: true },
+          })
+        }
+
+        // 2. Try ClinicAdmin
+        let clinicAdmin = null
+        if (!doctor) {
+          clinicAdmin = await ctx.db.clinicAdmin.findUnique({
+            where: { email: emailLower },
+            select: { id: true },
+          })
+          if (!clinicAdmin) {
+            clinicAdmin = await ctx.db.clinicAdmin.findFirst({
+              where: { email: { equals: emailLower, mode: "insensitive" } },
+              select: { id: true },
+            })
+          }
+        }
+
+        // 3. Try PortalUser (Patient)
+        let portalUser = null
+        if (!doctor && !clinicAdmin) {
+          portalUser = await ctx.db.portalUser.findFirst({
+            where: { email: emailLower },
+            select: { id: true },
+          })
+          if (!portalUser) {
+            portalUser = await ctx.db.portalUser.findFirst({
+              where: { email: { equals: emailLower, mode: "insensitive" } },
+              select: { id: true },
+            })
+          }
+        }
+
+        if (!doctor && !clinicAdmin && !portalUser) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Cuenta no encontrada.",
           })
         }
 
-        const workspace = await ctx.db.workspace.findFirst({
-          where: { doctorId: doctor.id },
-          select: { id: true },
-        })
-
         const newHash = await hashPassword(input.newPassword)
-        await ctx.db.doctor.update({
-          where: { id: doctor.id },
-          data: { passwordHash: newHash },
-        })
 
-        if (workspace) {
-          try {
-            await ctx.db.auditEvent.create({
-              data: {
-                workspaceId: workspace.id,
-                actorId: doctor.id,
-                actorRole: "DOCTOR",
-                action: "PASSWORD_RESET_COMPLETED",
-                resourceType: "Doctor",
-                resourceId: doctor.id,
-                outcome: "ALLOWED",
-                channel: "API",
-              },
-            })
-          } catch (auditErr) {
-            console.warn("[confirmPasswordReset] Audit log warning:", auditErr)
+        if (doctor) {
+          await ctx.db.doctor.update({
+            where: { id: doctor.id },
+            data: { passwordHash: newHash, email: emailLower },
+          })
+
+          const workspace = await ctx.db.workspace.findFirst({
+            where: { doctorId: doctor.id },
+            select: { id: true },
+          })
+
+          if (workspace) {
+            try {
+              await ctx.db.auditEvent.create({
+                data: {
+                  workspaceId: workspace.id,
+                  actorId: doctor.id,
+                  actorRole: "DOCTOR",
+                  action: "PASSWORD_RESET_COMPLETED",
+                  resourceType: "Doctor",
+                  resourceId: doctor.id,
+                  outcome: "ALLOWED",
+                  channel: "API",
+                },
+              })
+            } catch (auditErr) {
+              console.warn("[confirmPasswordReset] Audit log warning:", auditErr)
+            }
           }
-        }
 
-        safeLog("info", "auth.password_reset_completed", {
-          doctorId: doctor.id,
-        })
+          safeLog("info", "auth.password_reset_completed", {
+            doctorId: doctor.id,
+          })
+        } else if (clinicAdmin) {
+          await ctx.db.clinicAdmin.update({
+            where: { id: clinicAdmin.id },
+            data: { passwordHash: newHash, email: emailLower },
+          })
+          safeLog("info", "auth.password_reset_completed_clinic_admin", {
+            clinicAdminId: clinicAdmin.id,
+          })
+        } else if (portalUser) {
+          await ctx.db.portalUser.update({
+            where: { id: portalUser.id },
+            data: { passwordHash: newHash, email: emailLower },
+          })
+          safeLog("info", "auth.password_reset_completed_portal_user", {
+            portalUserId: portalUser.id,
+          })
+        }
 
         return { ok: true as const }
       } catch (err) {

@@ -58,10 +58,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const emailLower = email.toLowerCase().trim()
 
         // 1. Try to authenticate as doctor first.
-        const doctor = await db.doctor.findUnique({
+        let doctor = await db.doctor.findUnique({
           where: { email: emailLower },
           include: { workspaces: { take: 1, orderBy: { createdAt: "asc" } } },
         })
+        if (!doctor) {
+          doctor = await db.doctor.findFirst({
+            where: { email: { equals: emailLower, mode: "insensitive" } },
+            include: { workspaces: { take: 1, orderBy: { createdAt: "asc" } } },
+          })
+          if (doctor && doctor.email !== emailLower) {
+            try {
+              await db.doctor.update({
+                where: { id: doctor.id },
+                data: { email: emailLower },
+              })
+            } catch {
+              // ignore
+            }
+          }
+        }
 
         // Always run bcrypt to prevent timing-based user enumeration.
         const doctorValid = doctor
@@ -100,10 +116,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         // 4. Try to authenticate as staff.
-        const staff = await db.staff.findFirst({
+        let staff = await db.staff.findFirst({
           where: { email: emailLower, activo: true },
           include: { workspace: true },
         })
+        if (!staff) {
+          staff = await db.staff.findFirst({
+            where: { email: { equals: emailLower, mode: "insensitive" }, activo: true },
+            include: { workspace: true },
+          })
+        }
         const staffValid =
           staff && staff.pinAccesoHash
             ? await bcrypt.compare(password, staff.pinAccesoHash)
@@ -127,10 +149,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         // 4.5. Try to authenticate as a clinic admin (non-doctor).
-        const clinicAdmin = await db.clinicAdmin.findUnique({
+        let clinicAdmin = await db.clinicAdmin.findUnique({
           where: { email: emailLower },
           include: { clinic: true },
         })
+        if (!clinicAdmin) {
+          clinicAdmin = await db.clinicAdmin.findFirst({
+            where: { email: { equals: emailLower, mode: "insensitive" } },
+            include: { clinic: true },
+          })
+        }
         const clinicAdminValid =
           clinicAdmin && clinicAdmin.activo
             ? await bcrypt.compare(password, clinicAdmin.passwordHash)

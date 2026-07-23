@@ -1,10 +1,6 @@
 import crypto from "crypto"
-import { PrismaClient } from "@prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
+import { db as prisma } from "./db"
 import { sendOtpEmail } from "./email"
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
-const prisma = new PrismaClient({ adapter })
 
 /**
  * Lifetime of a fresh OTP. Email verification codes expire in 10 min;
@@ -227,40 +223,46 @@ export type VerifyTokenResult =
  * the client beyond a generic boolean.
  */
 export function verifyVerifiedToken(token: string): VerifyTokenResult {
-  const parts = token.split(".")
-  if (parts.length !== 2) return { ok: false, reason: "malformed" }
-  const [encoded, sig] = parts
-
-  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "medsysve-gcp-production-auth-secret-key-2026-carlos-pierluissi-secret"
-  const expected = crypto
-    .createHmac("sha256", secret)
-    .update(encoded)
-    .digest("base64url")
-
-  // Length check first (returns bad_signature without leaking detail).
-  const a = Buffer.from(expected)
-  const b = Buffer.from(sig)
-  if (a.length !== b.length) return { ok: false, reason: "bad_signature" }
-  if (!crypto.timingSafeEqual(a, b)) return { ok: false, reason: "bad_signature" }
-
-  let payload: { o?: unknown; e?: unknown; p?: unknown; x?: unknown }
   try {
-    payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf-8"))
+    if (!token || typeof token !== "string") return { ok: false, reason: "malformed" }
+    const parts = token.split(".")
+    if (parts.length !== 2) return { ok: false, reason: "malformed" }
+    const [encoded, sig] = parts
+    if (!encoded || !sig) return { ok: false, reason: "malformed" }
+
+    const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "medsysve-gcp-production-auth-secret-key-2026-carlos-pierluissi-secret"
+    const expected = crypto
+      .createHmac("sha256", secret)
+      .update(encoded)
+      .digest("base64url")
+
+    // Length check first (returns bad_signature without leaking detail).
+    const a = Buffer.from(expected)
+    const b = Buffer.from(sig)
+    if (a.length !== b.length) return { ok: false, reason: "bad_signature" }
+    if (!crypto.timingSafeEqual(a, b)) return { ok: false, reason: "bad_signature" }
+
+    let payload: { o?: unknown; e?: unknown; p?: unknown; x?: unknown }
+    try {
+      payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf-8"))
+    } catch {
+      return { ok: false, reason: "malformed" }
+    }
+
+    const otpId = typeof payload.o === "string" ? payload.o : null
+    const email = typeof payload.e === "string" ? payload.e : null
+    const purpose = payload.p === "EMAIL_VERIFY" || payload.p === "PASSWORD_RESET" ? payload.p : null
+    const exp = typeof payload.x === "number" ? payload.x : NaN
+    if (!otpId || !email || !purpose || !Number.isFinite(exp)) {
+      return { ok: false, reason: "malformed" }
+    }
+    if (exp <= Date.now()) return { ok: false, reason: "expired" }
+
+    return {
+      ok: true,
+      claims: { otpId, email: email.toLowerCase(), purpose, expiresAt: exp },
+    }
   } catch {
     return { ok: false, reason: "malformed" }
-  }
-
-  const otpId = typeof payload.o === "string" ? payload.o : null
-  const email = typeof payload.e === "string" ? payload.e : null
-  const purpose = payload.p === "EMAIL_VERIFY" || payload.p === "PASSWORD_RESET" ? payload.p : null
-  const exp = typeof payload.x === "number" ? payload.x : NaN
-  if (!otpId || !email || !purpose || !Number.isFinite(exp)) {
-    return { ok: false, reason: "malformed" }
-  }
-  if (exp <= Date.now()) return { ok: false, reason: "expired" }
-
-  return {
-    ok: true,
-    claims: { otpId, email: email.toLowerCase(), purpose, expiresAt: exp },
   }
 }
