@@ -267,6 +267,17 @@ export default async function proxy(req: NextRequest) {
   // /api/auth/csrf endpoint is to bootstrap a login. Bypass the session
   // check (per-IP rate limiting above still applies).
   if (pathname.startsWith("/api/auth/")) {
+    if (process.env.NODE_ENV === "production") {
+      const requestHeaders = new Headers(req.headers)
+      requestHeaders.set("host", "www.medsysve.com")
+      requestHeaders.set("x-forwarded-host", "www.medsysve.com")
+      requestHeaders.set("x-forwarded-proto", "https")
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      })
+    }
     return NextResponse.next()
   }
 
