@@ -68,12 +68,15 @@ const PRESET_TOPICS = [
 export default function MarketingDashboard() {
   const { data: posts, isLoading, refetch } = trpc.marketing.listPosts.useQuery();
 
+  const [activeTab, setActiveTab] = useState<"PENDING" | "PUBLISHED" | "ALL">("PENDING");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingPost, setEditingPost] = useState<any | null>(null);
+
   const [style, setStyle] = useState<"hyperrealistic" | "cartoon" | "screenshot" | "marketing">("hyperrealistic");
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("#MedSysVE #SaludVenezuela #DoctoresVenezuela #SoftwareMedico");
   const [imageUrl, setImageUrl] = useState("");
-  const [publishNow, setPublishNow] = useState(true);
+  const [publishNow, setPublishNow] = useState(false);
 
   const republish = trpc.marketing.republishPost.useMutation({
     onSuccess: () => {
@@ -87,7 +90,7 @@ export default function MarketingDashboard() {
 
   const createPost = trpc.marketing.createPost.useMutation({
     onSuccess: () => {
-      toast.success("¡Publicación creada exitosamente!");
+      toast.success("¡Publicación enviada a la bandeja de aprobación!");
       setShowCreateModal(false);
       setCaption("");
       setImageUrl("");
@@ -95,6 +98,17 @@ export default function MarketingDashboard() {
     },
     onError: (err: any) => {
       toast.error(`Error al crear publicación: ${err.message}`);
+    },
+  });
+
+  const updatePost = trpc.marketing.updatePost.useMutation({
+    onSuccess: () => {
+      toast.success("Publicación actualizada.");
+      setEditingPost(null);
+      refetch();
+    },
+    onError: (err: any) => {
+      toast.error(`Error al actualizar: ${err.message}`);
     },
   });
 
@@ -108,11 +122,11 @@ export default function MarketingDashboard() {
     },
   });
 
-  const handleRepublish = (postId: string) => {
+  const handleApproveAndPublish = (postId: string) => {
     toast.promise(republish.mutateAsync({ postId }), {
-      loading: "Enviando a Instagram & Facebook...",
-      success: "¡Publicado en redes sociales!",
-      error: "Error al publicar.",
+      loading: "Aprobando y enviando a Instagram & Facebook...",
+      success: "¡Aprobado y publicado exitosamente!",
+      error: "Error al publicar en redes sociales.",
     });
   };
 
@@ -133,10 +147,19 @@ export default function MarketingDashboard() {
       caption: caption.trim(),
       hashtags: hashtags.trim(),
       style,
-      status: publishNow ? "PUBLISHED" : "DRAFT",
+      status: publishNow ? "PUBLISHED" : "PENDING_APPROVAL",
       publishNow,
     });
   };
+
+  const pendingCount = posts?.filter((p) => p.status === "PENDING_APPROVAL" || p.status === "DRAFT").length || 0;
+  const publishedCount = posts?.filter((p) => p.status === "PUBLISHED").length || 0;
+
+  const filteredPosts = posts?.filter((post) => {
+    if (activeTab === "PENDING") return post.status === "PENDING_APPROVAL" || post.status === "DRAFT";
+    if (activeTab === "PUBLISHED") return post.status === "PUBLISHED";
+    return true;
+  });
 
   if (isLoading) {
     return (
@@ -152,10 +175,10 @@ export default function MarketingDashboard() {
         <div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 flex items-center gap-3">
             <Camera className="w-8 h-8 text-amber-500" />
-            Dashboard de Marketing Social & Bot IA
+            Bandeja de Aprobación & Marketing Bot
           </h1>
           <p className="text-slate-400 mt-2">
-            Gestión centralizada de publicaciones automáticas y creadas para Instagram y Facebook con el bot de MedSysVE (<span className="text-amber-300 font-semibold">marketing@medsysve.com</span>).
+            Revisa, edita, aprueba y gestiona publicaciones generadas por el Bot IA (<span className="text-amber-300 font-semibold">marketing@medsysve.com</span>) antes de enviarlas a Instagram y Facebook.
           </p>
         </div>
 
@@ -164,8 +187,55 @@ export default function MarketingDashboard() {
           className="bg-amber-500 text-slate-950 hover:bg-amber-400 font-bold flex items-center gap-2 self-start md:self-auto shadow-lg shadow-amber-500/10"
         >
           <Plus className="w-4 h-4" />
-          {showCreateModal ? "Cerrar Creador" : "Crear / Generar Publicación"}
+          {showCreateModal ? "Cerrar Creador" : "Crear / Sugerir Publicación"}
         </Button>
+      </div>
+
+      {/* Tabs de Selección y Estado */}
+      <div className="flex items-center gap-3 border-b border-slate-800 pb-4 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab("PENDING")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            activeTab === "PENDING"
+              ? "bg-amber-500/20 border border-amber-500/40 text-amber-300 shadow-sm"
+              : "border border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700"
+          }`}
+        >
+          <AlertCircle className="w-4 h-4 text-amber-400" />
+          <span>Pendientes de Aprobación</span>
+          {pendingCount > 0 && (
+            <span className="rounded-full bg-amber-500 text-slate-950 px-2 py-0.5 text-[10px] font-bold">
+              {pendingCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("PUBLISHED")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            activeTab === "PUBLISHED"
+              ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shadow-sm"
+              : "border border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700"
+          }`}
+        >
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>Publicados en Redes</span>
+          <span className="rounded-full bg-slate-800 text-slate-300 px-2 py-0.5 text-[10px]">
+            {publishedCount}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("ALL")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            activeTab === "ALL"
+              ? "bg-slate-800 border border-slate-700 text-white shadow-sm"
+              : "border border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700"
+          }`}
+        >
+          <Layers className="w-4 h-4 text-slate-400" />
+          <span>Todos ({posts?.length || 0})</span>
+        </button>
       </div>
 
       {/* Creador Interactivo de Posts */}
@@ -174,10 +244,10 @@ export default function MarketingDashboard() {
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
             <h2 className="text-lg font-bold text-amber-300 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-amber-400" />
-              Generador de Publicación Social para MedSysVE
+              Sugerir / Crear Publicación Social para MedSysVE
             </h2>
             <Badge variant="outline" className="bg-amber-500/10 text-amber-300 border-amber-500/30">
-              Bot Autorizado Read-Only
+              Requiere Aprobación Super Admin
             </Badge>
           </div>
 
@@ -186,7 +256,7 @@ export default function MarketingDashboard() {
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 block flex items-center gap-1.5">
               <Bot className="w-4 h-4 text-amber-400" /> Plantillas y Sugerencias de Campañas
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {PRESET_TOPICS.map((preset, idx) => (
                 <button
                   key={idx}
@@ -288,7 +358,7 @@ export default function MarketingDashboard() {
                   onChange={(e) => setPublishNow(e.target.checked)}
                   className="rounded border-slate-800 bg-slate-950 text-amber-500 focus:ring-amber-500 h-4 w-4"
                 />
-                <span>Publicar inmediatamente en el Feed de Instagram / Facebook</span>
+                <span>Aprobar y Publicar inmediatamente en Instagram / Facebook ahora</span>
               </label>
 
               <div className="flex items-center gap-3">
@@ -306,7 +376,7 @@ export default function MarketingDashboard() {
                   className="bg-amber-500 text-slate-950 hover:bg-amber-400 font-bold flex items-center gap-2"
                 >
                   <Send className="w-4 h-4" />
-                  {createPost.isPending ? "Guardando..." : publishNow ? "Guardar y Publicar en Redes" : "Guardar como Borrador"}
+                  {createPost.isPending ? "Guardando..." : publishNow ? "Aprobar y Publicar en Redes" : "Enviar a Bandeja de Pendientes"}
                 </Button>
               </div>
             </div>
@@ -314,19 +384,95 @@ export default function MarketingDashboard() {
         </div>
       )}
 
-      {/* Grid de Publicaciones Existentes */}
-      {!posts || posts.length === 0 ? (
+      {/* Modal de Edición Inline de Post */}
+      {editingPost && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-xl p-6 max-w-xl w-full space-y-4 shadow-2xl">
+            <h3 className="text-lg font-bold text-amber-300 flex items-center gap-2">
+              <Sparkles className="w-5 h-5" /> Editar Publicación antes de Aprobar
+            </h3>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Leyenda / Texto</label>
+                <textarea
+                  rows={4}
+                  value={editingPost.caption}
+                  onChange={(e) => setEditingPost({ ...editingPost, caption: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Hashtags</label>
+                <input
+                  type="text"
+                  value={editingPost.hashtags}
+                  onChange={(e) => setEditingPost({ ...editingPost, hashtags: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-amber-300 font-mono focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">URL de Imagen</label>
+                <input
+                  type="url"
+                  value={editingPost.imageUrl}
+                  onChange={(e) => setEditingPost({ ...editingPost, imageUrl: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <Button
+                variant="outline"
+                onClick={() => setEditingPost(null)}
+                className="border-slate-800 text-slate-400"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  updatePost.mutate({
+                    postId: editingPost.id,
+                    caption: editingPost.caption,
+                    hashtags: editingPost.hashtags,
+                    style: editingPost.style,
+                    imageUrl: editingPost.imageUrl,
+                  });
+                }}
+                disabled={updatePost.isPending}
+                className="bg-amber-500 text-slate-950 font-bold hover:bg-amber-400"
+              >
+                {updatePost.isPending ? "Guardando..." : "Guardar Cambios"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Grid de Publicaciones Filtradas */}
+      {!filteredPosts || filteredPosts.length === 0 ? (
         <div className="text-center py-20 border border-slate-800 rounded-xl bg-slate-900/50">
           <ImageIcon className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-300">No hay publicaciones en el historial</h3>
-          <p className="text-slate-500">Crea tu primera publicación con el botón superior o ejecuta el bot autónomo.</p>
+          <h3 className="text-lg font-medium text-slate-300">No hay publicaciones en esta pestaña</h3>
+          <p className="text-slate-500">
+            {activeTab === "PENDING"
+              ? "¡Excelente! No hay publicaciones pendientes por revisar en este momento."
+              : "No hay publicaciones registradas en esta sección."}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts.map((post: any) => {
+          {filteredPosts.map((post: any) => {
             const styleConfig = POST_STYLES.find((s) => s.id === post.style);
+            const isPending = post.status === "PENDING_APPROVAL" || post.status === "DRAFT";
+
             return (
-              <Card key={post.id} className="bg-slate-900 border-slate-800 overflow-hidden flex flex-col group hover:border-amber-500/50 transition-all shadow-lg">
+              <Card key={post.id} className={`bg-slate-900 overflow-hidden flex flex-col group transition-all shadow-lg ${
+                isPending ? "border-amber-500/50 ring-1 ring-amber-500/20" : "border-slate-800 hover:border-slate-700"
+              }`}>
                 <div className="relative aspect-square w-full bg-slate-950">
                   {post.imageUrl ? (
                     <img
@@ -341,10 +487,19 @@ export default function MarketingDashboard() {
                   )}
 
                   <div className="absolute top-3 right-3 flex gap-2 flex-wrap">
-                    <Badge className={post.status === "PUBLISHED" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-amber-500/10 text-amber-400 border-amber-500/30"}>
-                      {post.status === "PUBLISHED" ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <AlertCircle className="w-3 h-3 mr-1" />}
-                      {post.status}
-                    </Badge>
+                    {isPending ? (
+                      <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm animate-pulse">
+                        <AlertCircle className="w-3 h-3 mr-1" /> Pendiente Aprobación
+                      </Badge>
+                    ) : post.status === "PUBLISHED" ? (
+                      <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                        <CheckCircle2 className="w-3 h-3 mr-1" /> Publicado
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-500/10 text-red-400 border-red-500/30">
+                        {post.status}
+                      </Badge>
+                    )}
                     <Badge variant="outline" className={`backdrop-blur ${styleConfig?.badgeColor || "bg-slate-950/80 text-slate-300"}`}>
                       {styleConfig?.name || post.style}
                     </Badge>
@@ -375,28 +530,62 @@ export default function MarketingDashboard() {
                   </div>
                 </CardContent>
 
-                <CardFooter className="p-5 pt-0 mt-auto flex items-center gap-2">
-                  <Button
-                    onClick={() => handleRepublish(post.id)}
-                    disabled={republish.isPending}
-                    className="flex-1 bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-all border border-slate-700 hover:border-amber-500 text-xs font-bold"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${republish.isPending ? "animate-spin" : "group-hover:-rotate-180 transition-transform duration-500"}`} />
-                    Publicar en Redes
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      if (confirm("¿Seguro que deseas eliminar esta publicación?")) {
-                        deletePost.mutate({ postId: post.id });
-                      }
-                    }}
-                    className="border-slate-800 text-slate-500 hover:text-red-400 hover:bg-red-500/10 p-2.5"
-                    title="Eliminar publicación"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                <CardFooter className="p-5 pt-0 mt-auto flex flex-col gap-2">
+                  {isPending ? (
+                    <div className="w-full flex items-center gap-2">
+                      <Button
+                        onClick={() => handleApproveAndPublish(post.id)}
+                        disabled={republish.isPending}
+                        className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        Aprobar y Publicar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setEditingPost(post)}
+                        className="border-slate-700 text-slate-300 hover:bg-slate-800 text-xs px-2.5"
+                        title="Editar post"
+                      >
+                        ✏️
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          if (confirm("¿Rechazar y eliminar esta publicación pendiente?")) {
+                            deletePost.mutate({ postId: post.id });
+                          }
+                        }}
+                        className="border-slate-800 text-slate-500 hover:text-red-400 hover:bg-red-500/10 px-2.5"
+                        title="Rechazar y eliminar"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="w-full flex items-center gap-2">
+                      <Button
+                        onClick={() => handleApproveAndPublish(post.id)}
+                        disabled={republish.isPending}
+                        className="flex-1 bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-all border border-slate-700 hover:border-amber-500 text-xs font-bold"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${republish.isPending ? "animate-spin" : ""}`} />
+                        Republicar en Redes
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          if (confirm("¿Seguro que deseas eliminar esta publicación?")) {
+                            deletePost.mutate({ postId: post.id });
+                          }
+                        }}
+                        className="border-slate-800 text-slate-500 hover:text-red-400 hover:bg-red-500/10 p-2.5"
+                        title="Eliminar publicación"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
                 </CardFooter>
               </Card>
             );

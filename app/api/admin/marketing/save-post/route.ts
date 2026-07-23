@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
         caption,
         hashtags: hashtags || "",
         style,
-        status,
+        status: status || "PENDING_APPROVAL",
         igMediaId
       }
     });

@@ -49,12 +49,12 @@ export const marketingRouter = router({
       caption: z.string().min(1),
       hashtags: z.string(),
       style: z.enum(["hyperrealistic", "cartoon", "screenshot", "marketing"]),
-      status: z.enum(["PUBLISHED", "DRAFT", "FAILED"]).default("DRAFT"),
+      status: z.enum(["PUBLISHED", "PENDING_APPROVAL", "DRAFT", "FAILED"]).default("PENDING_APPROVAL"),
       publishNow: z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       let igMediaId: string | null = null;
-      let postStatus = input.status;
+      let postStatus = input.publishNow ? "PUBLISHED" : input.status;
 
       if (input.publishNow) {
         const igToken = await getSecret("IG_ACCESS_TOKEN");
@@ -102,6 +102,26 @@ export const marketingRouter = router({
           style: input.style,
           status: postStatus,
           igMediaId: igMediaId,
+        }
+      });
+    }),
+
+  updatePost: adminProcedure
+    .input(z.object({
+      postId: z.string(),
+      caption: z.string().min(1),
+      hashtags: z.string(),
+      style: z.string(),
+      imageUrl: z.string().url(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.marketingPost.update({
+        where: { id: input.postId },
+        data: {
+          caption: input.caption,
+          hashtags: input.hashtags,
+          style: input.style,
+          imageUrl: input.imageUrl,
         }
       });
     }),
