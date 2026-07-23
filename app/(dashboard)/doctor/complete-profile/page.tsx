@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc-client";
 import { ESPECIALIDADES_VE } from "@/lib/venezuela-specialties";
@@ -20,6 +20,7 @@ import {
 
 export default function CompleteProfilePage() {
   const router = useRouter();
+  const { data: profile } = trpc.doctor.myProfile.useQuery();
 
   // State
   const [nacionalidad, setNacionalidad] = useState<"V" | "E">("V");
@@ -36,6 +37,19 @@ export default function CompleteProfilePage() {
   const [sacsMessage, setSacsMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (profile) {
+      if (profile.cedula) setCedula(profile.cedula);
+      if (profile.nacionalidad) setNacionalidad((profile.nacionalidad as "V" | "E") || "V");
+      if (profile.segundoNombre) setSegundoNombre(profile.segundoNombre);
+      if (profile.segundoApellido) setSegundoApellido(profile.segundoApellido);
+      if (profile.rif) setRif(profile.rif);
+      if (profile.mppsMatricula) setMppsMatricula(profile.mppsMatricula);
+      if (profile.especialidadPrincipal) setEspecialidadPrincipal(profile.especialidadPrincipal);
+      if (profile.isSacsVerified) setIsSacsVerified(profile.isSacsVerified);
+    }
+  }, [profile]);
 
   // tRPC Mutations
   const verifySacsMutation = trpc.doctor.verifySacs.useMutation({

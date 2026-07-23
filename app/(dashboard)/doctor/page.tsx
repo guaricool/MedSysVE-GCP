@@ -6,6 +6,7 @@ import type { SessionUser } from "@/types"
 import { DashboardAlerts } from "@/components/dashboard/dashboard-alerts"
 import { StaffNotesBoard } from "@/components/dashboard/staff-notes-board"
 import { ChronicsPanel } from "@/components/dashboard/chronics-panel"
+import { ShieldAlert, ShieldCheck, ArrowRight } from "lucide-react"
 import { urlToFsPath } from "@/lib/pdf/header-logic"
 
 import { formatDoctorName } from "@/lib/doctor-utils"
@@ -27,6 +28,8 @@ export default async function DoctorDashboard() {
         prefijo: true,
         nombre: true,
         apellido: true,
+        isSacsVerified: true,
+        mppsMatricula: true,
         fotoUrl: true,
         especialidadPrincipal: true,
         subEspecialidades: true,
@@ -178,6 +181,36 @@ export default async function DoctorDashboard() {
           </div>
         </div>
       </section>
+
+      {!doctorFull?.isSacsVerified || !doctorFull?.mppsMatricula ? (
+        <div className="rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-950/40 via-amber-900/20 to-slate-900 p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 mt-0.5 sm:mt-0">
+              <ShieldAlert size={24} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-amber-200 flex items-center gap-2 flex-wrap">
+                Verificación Sanitaria MPPS Requerida
+                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300 border border-amber-500/30">
+                  Acción requerida
+                </span>
+              </h3>
+              <p className="text-xs text-amber-300/80 mt-1 max-w-2xl leading-relaxed">
+                Tu perfil médico aún no cuenta con la <strong>Matrícula Oficial del Ministerio de Salud (SACS MPPS)</strong>. 
+                Verifica tu Cédula con el SACS para habilitar la validez legal de tus recetas e informes.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/doctor/complete-profile"
+            className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 shadow-md hover:bg-amber-400 transition-all shrink-0 self-stretch sm:self-auto justify-center"
+          >
+            <ShieldCheck size={16} />
+            <span>Verificar SACS MPPS</span>
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+      ) : null}
 
       <DashboardAlerts />
 
