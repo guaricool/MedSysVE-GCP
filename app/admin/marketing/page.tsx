@@ -108,6 +108,14 @@ function PostImagePreview({ src, style, isPending, status, styleConfig }: any) {
           {styleConfig?.name || style}
         </Badge>
       </div>
+
+      {/* Official MedSysVE Brand Logo Watermark Overlay */}
+      <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-amber-500/40 shadow-lg">
+        <img src="/logo-clean-preview.png" alt="MedSysVE Official Logo" className="h-4.5 w-auto object-contain shrink-0" />
+        <span className="text-[10px] font-black text-amber-300 tracking-wider uppercase font-mono">
+          MedSysVE®
+        </span>
+      </div>
     </div>
   );
 }
