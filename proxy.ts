@@ -24,6 +24,8 @@ const PUBLIC_PREFIXES = [
   "/sitemap.xml",
   "/robots.txt",
   "/api/webhooks",
+  "/api/uploads/marketing",
+  "/marketing",
 ]
 
 // ============================================================================
