@@ -5,7 +5,8 @@ import { TRPCError } from "@trpc/server";
 const ADMIN_EMAIL = "cpierluissis@gmail.com";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.session.email !== ADMIN_EMAIL) {
+  const isAdmin = (ctx.session as any)?.isAdmin || ctx.session?.email === ADMIN_EMAIL;
+  if (!isAdmin) {
     throw new TRPCError({ code: "FORBIDDEN" });
   }
   return next({ ctx });
@@ -41,6 +42,77 @@ export const marketingRouter = router({
     });
     return posts;
   }),
+
+  createPost: adminProcedure
+    .input(z.object({
+      imageUrl: z.string().url(),
+      caption: z.string().min(1),
+      hashtags: z.string(),
+      style: z.enum(["hyperrealistic", "cartoon", "screenshot", "marketing"]),
+      status: z.enum(["PUBLISHED", "DRAFT", "FAILED"]).default("DRAFT"),
+      publishNow: z.boolean().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      let igMediaId: string | null = null;
+      let postStatus = input.status;
+
+      if (input.publishNow) {
+        const igToken = await getSecret("IG_ACCESS_TOKEN");
+        const igAccountId = await getSecret("IG_ACCOUNT_ID");
+        if (igToken && igAccountId) {
+          try {
+            const fullText = `${input.caption}\n\n${input.hashtags}`;
+            const containerRes = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}/media`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                image_url: input.imageUrl,
+                caption: fullText,
+                access_token: igToken
+              })
+            });
+            const containerData = await containerRes.json();
+            if (containerData.id) {
+              await new Promise(r => setTimeout(r, 4000));
+              const publishRes = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}/media_publish`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  creation_id: containerData.id,
+                  access_token: igToken
+                })
+              });
+              const publishData = await publishRes.json();
+              if (publishData.id) {
+                igMediaId = publishData.id;
+                postStatus = "PUBLISHED";
+              }
+            }
+          } catch (e) {
+            console.error("Auto-publish failed:", e);
+          }
+        }
+      }
+
+      return ctx.db.marketingPost.create({
+        data: {
+          imageUrl: input.imageUrl,
+          caption: input.caption,
+          hashtags: input.hashtags,
+          style: input.style,
+          status: postStatus,
+          igMediaId: igMediaId,
+        }
+      });
+    }),
+
+  deletePost: adminProcedure
+    .input(z.object({ postId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.marketingPost.delete({
+        where: { id: input.postId }
+      });
+    }),
 
   republishPost: adminProcedure
     .input(z.object({ postId: z.string() }))
@@ -104,6 +176,7 @@ export const marketingRouter = router({
         where: { id: input.postId },
         data: {
           publishedAt: new Date(),
+          status: "PUBLISHED",
           igMediaId: publishData.id
         }
       });

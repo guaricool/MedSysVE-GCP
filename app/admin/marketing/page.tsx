@@ -1,36 +1,135 @@
 "use client";
 
+import { useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Camera, ImageIcon, Hash, Clock, CheckCircle2, AlertCircle } from "lucide-react";
-import Image from "next/image";
+import {
+  RefreshCw,
+  Camera,
+  ImageIcon,
+  Hash,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Plus,
+  Sparkles,
+  Share2,
+  Trash2,
+  Bot,
+  Layers,
+  Send,
+} from "lucide-react";
 import { toast } from "sonner";
+
+const POST_STYLES = [
+  { id: "hyperrealistic", name: "Hiperrealista 3D", desc: "Fotografía/render ultra realista médico", badgeColor: "bg-purple-500/15 text-purple-300 border-purple-500/30" },
+  { id: "cartoon", name: "Cartoon / Ilustración", desc: "Ilustración 2D/3D amigable y colorida", badgeColor: "bg-pink-500/15 text-pink-300 border-pink-500/30" },
+  { id: "screenshot", name: "Captura de Pantalla", desc: "Captura en vivo de la plataforma MedSysVE", badgeColor: "bg-blue-500/15 text-blue-300 border-blue-500/30" },
+  { id: "marketing", name: "Promocional Marketing", desc: "Banner corporativo de características", badgeColor: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" },
+];
+
+const PRESET_TOPICS = [
+  {
+    topic: "Historias Clínicas SOAP",
+    caption: "🏥 Reconcilia tu práctica médica con MedSysVE. Registra tus consultas en formato SOAP, adjunta exámenes de laboratorio e imprime récipes oficiales al instante con tu firma y código QR.",
+    hashtags: "#MedSysVE #HistoriaClinica #MedicinaVenezuela #SaludVenezuela #DoctorVenezolano #SOAP",
+    imageUrl: "https://storage.googleapis.com/medsysve-bot-temp/soap-demo.png",
+  },
+  {
+    topic: "Visor DICOM / PACS Inactivo",
+    caption: "🔬 ¡Revisa tomografías y resonancias en HD directo en el expediente de tu paciente! MedSysVE cuenta con visor DICOM 100% web con herramientas de zoom, CINE multiframe y densidad HU.",
+    hashtags: "#MedSysVE #DICOM #PACS #RadiologiaVenezuela #Traumatologia #Cardiologia #SaludDigital",
+    imageUrl: "https://storage.googleapis.com/medsysve-bot-temp/dicom-demo.png",
+  },
+  {
+    topic: "Facturación Dual USD / Bs (BCV)",
+    caption: "💵 Evita dolores de cabeza contables. MedSysVE actualiza automáticamente la tasa oficial del Banco Central de Venezuela (BCV) diariamente para emitir recibos y facturas en USD y Bolívares.",
+    hashtags: "#MedSysVE #FacturacionSENIAT #BCV #SaaSMedico #ConsultorioMedico #Venezuela",
+    imageUrl: "https://storage.googleapis.com/medsysve-bot-temp/billing-demo.png",
+  },
+  {
+    topic: "Red de Referidos entre Doctores",
+    caption: "🤝 Interconecta tu consultorio con especialistas de todo el país. Remite pacientes en segundos manteniendo la trazabilidad completa del expediente clínico sin fugas de información.",
+    hashtags: "#MedSysVE #RedDeReferidos #DoctoresVenezuela #SaludDigital #EspecialistasMedicos",
+    imageUrl: "https://storage.googleapis.com/medsysve-bot-temp/referrals-demo.png",
+  },
+];
 
 export default function MarketingDashboard() {
   const { data: posts, isLoading, refetch } = trpc.marketing.listPosts.useQuery();
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [style, setStyle] = useState<"hyperrealistic" | "cartoon" | "screenshot" | "marketing">("hyperrealistic");
+  const [caption, setCaption] = useState("");
+  const [hashtags, setHashtags] = useState("#MedSysVE #SaludVenezuela #DoctoresVenezuela #SoftwareMedico");
+  const [imageUrl, setImageUrl] = useState("");
+  const [publishNow, setPublishNow] = useState(true);
+
   const republish = trpc.marketing.republishPost.useMutation({
     onSuccess: () => {
-      toast.success("¡Post republicado con éxito!");
+      toast.success("¡Publicado en Instagram y Facebook exitosamente!");
       refetch();
     },
     onError: (err: any) => {
-      toast.error(`Error al republicar: ${err.message}`);
-    }
+      toast.error(`Error al publicar: ${err.message}`);
+    },
+  });
+
+  const createPost = trpc.marketing.createPost.useMutation({
+    onSuccess: () => {
+      toast.success("¡Publicación creada exitosamente!");
+      setShowCreateModal(false);
+      setCaption("");
+      setImageUrl("");
+      refetch();
+    },
+    onError: (err: any) => {
+      toast.error(`Error al crear publicación: ${err.message}`);
+    },
+  });
+
+  const deletePost = trpc.marketing.deletePost.useMutation({
+    onSuccess: () => {
+      toast.success("Publicación eliminada.");
+      refetch();
+    },
+    onError: (err: any) => {
+      toast.error(`Error al eliminar: ${err.message}`);
+    },
   });
 
   const handleRepublish = (postId: string) => {
-    toast.promise(
-      republish.mutateAsync({ postId }),
-      {
-        loading: 'Enviando a Instagram...',
-        success: '¡Publicado!',
-        error: 'Ocurrió un error.'
-      }
-    );
+    toast.promise(republish.mutateAsync({ postId }), {
+      loading: "Enviando a Instagram & Facebook...",
+      success: "¡Publicado en redes sociales!",
+      error: "Error al publicar.",
+    });
+  };
+
+  const handleSelectPreset = (preset: typeof PRESET_TOPICS[0]) => {
+    setCaption(preset.caption);
+    setHashtags(preset.hashtags);
+    setImageUrl(preset.imageUrl);
+  };
+
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!caption.trim() || !imageUrl.trim()) {
+      toast.error("Por favor completa la imagen y la leyenda del post.");
+      return;
+    }
+    createPost.mutate({
+      imageUrl: imageUrl.trim(),
+      caption: caption.trim(),
+      hashtags: hashtags.trim(),
+      style,
+      status: publishNow ? "PUBLISHED" : "DRAFT",
+      publishNow,
+    });
   };
 
   if (isLoading) {
@@ -42,80 +141,260 @@ export default function MarketingDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-orange-500 flex items-center gap-3">
-          <Camera className="w-8 h-8 text-amber-500" />
-          Dashboard de Marketing
-        </h1>
-        <p className="text-slate-400 mt-2">
-          Historial de publicaciones generadas por IA. Administra y republica contenido.
-        </p>
+    <div className="max-w-7xl mx-auto space-y-8 pb-16">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <div>
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 flex items-center gap-3">
+            <Camera className="w-8 h-8 text-amber-500" />
+            Dashboard de Marketing Social & Bot IA
+          </h1>
+          <p className="text-slate-400 mt-2">
+            Gestión centralizada de publicaciones automáticas y creadas para Instagram y Facebook con el bot de MedSysVE (<span className="text-amber-300 font-semibold">marketing@medsysve.com</span>).
+          </p>
+        </div>
+
+        <Button
+          onClick={() => setShowCreateModal(!showCreateModal)}
+          className="bg-amber-500 text-slate-950 hover:bg-amber-400 font-bold flex items-center gap-2 self-start md:self-auto shadow-lg shadow-amber-500/10"
+        >
+          <Plus className="w-4 h-4" />
+          {showCreateModal ? "Cerrar Creador" : "Crear / Generar Publicación"}
+        </Button>
       </div>
 
-      {!posts || posts.length === 0 ? (
-        <div className="text-center py-20 border border-slate-800 rounded-xl bg-slate-900/50">
-          <ImageIcon className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-300">No hay posts generados</h3>
-          <p className="text-slate-500">Los posts creados por el bot aparecerán aquí.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts.map((post: any) => (
-            <Card key={post.id} className="bg-slate-900 border-slate-800 overflow-hidden flex flex-col group hover:border-amber-500/50 transition-colors">
-              <div className="relative aspect-square w-full bg-slate-800">
-                {post.imageUrl ? (
-                  <img
-                    src={post.imageUrl}
-                    alt={post.caption}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-slate-600">
-                    <ImageIcon className="w-8 h-8" />
-                  </div>
-                )}
-                
-                <div className="absolute top-3 right-3 flex gap-2">
-                  <Badge className={post.status === "PUBLISHED" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"}>
-                    {post.status === "PUBLISHED" ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <AlertCircle className="w-3 h-3 mr-1" />}
-                    {post.status}
-                  </Badge>
-                  <Badge variant="outline" className="bg-slate-950/80 backdrop-blur border-slate-700 text-slate-300">
-                    {post.style}
-                  </Badge>
+      {/* Creador Interactivo de Posts */}
+      {showCreateModal && (
+        <div className="rounded-xl border border-amber-500/30 bg-slate-900/90 p-6 shadow-2xl space-y-6 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <h2 className="text-lg font-bold text-amber-300 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-400" />
+              Generador de Publicación Social para MedSysVE
+            </h2>
+            <Badge variant="outline" className="bg-amber-500/10 text-amber-300 border-amber-500/30">
+              Bot Autorizado Read-Only
+            </Badge>
+          </div>
+
+          {/* Selector de Presets Inteligentes */}
+          <div>
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 block flex items-center gap-1.5">
+              <Bot className="w-4 h-4 text-amber-400" /> Plantillas y Sugerencias de Campañas
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {PRESET_TOPICS.map((preset, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSelectPreset(preset)}
+                  className="p-3 text-left rounded-lg border border-slate-800 bg-slate-950/60 hover:border-amber-500/50 transition-all space-y-1.5 group"
+                >
+                  <span className="text-xs font-bold text-amber-300 group-hover:text-amber-200 block">
+                    {preset.topic}
+                  </span>
+                  <p className="text-[11px] text-slate-400 line-clamp-2">
+                    {preset.caption}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <form onSubmit={handleCreateSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Estilo Visual */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 mb-1.5 block flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-amber-400" /> Estilo del Arte / Publicación
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {POST_STYLES.map((st) => (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => setStyle(st.id as any)}
+                      className={`p-2.5 rounded-lg border text-left text-xs font-medium transition-all ${
+                        style === st.id
+                          ? "border-amber-500 bg-amber-500/15 text-amber-300"
+                          : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700"
+                      }`}
+                    >
+                      <div className="font-bold text-slate-200">{st.name}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{st.desc}</div>
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <CardContent className="flex-1 p-5 space-y-4">
-                <div className="text-xs text-slate-500 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" />
-                  {format(new Date(post.publishedAt), "PPpp", { locale: es })}
-                </div>
-                
-                <div className="space-y-2">
-                  <p className="text-sm text-slate-300 line-clamp-3 leading-relaxed">
-                    {post.caption}
-                  </p>
-                  <p className="text-xs font-medium text-amber-500/80 flex items-start gap-1 line-clamp-2">
-                    <Hash className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                    <span>{post.hashtags}</span>
-                  </p>
-                </div>
-              </CardContent>
+              {/* URL de Imagen */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 mb-1.5 block flex items-center gap-1.5">
+                  <ImageIcon className="w-4 h-4 text-amber-400" /> URL de la Imagen (GCS / CDN)
+                </label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://storage.googleapis.com/medsysve-bot-temp/imagen.png"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 font-mono"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Recomendado: Imágenes 1:1 (1080x1080px) con el logo oficial de MedSysVE incorporado.
+                </p>
+              </div>
+            </div>
 
-              <CardFooter className="p-5 pt-0 mt-auto">
-                <Button 
-                  onClick={() => handleRepublish(post.id)}
-                  disabled={republish.isPending}
-                  className="w-full bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-all border border-slate-700 hover:border-amber-500"
+            {/* Texto y Leyenda del Post */}
+            <div>
+              <label className="text-xs font-semibold text-slate-300 mb-1.5 block flex items-center justify-between">
+                <span>Leyenda / Texto del Post (Instagram & Facebook)</span>
+                <span className="text-[11px] text-amber-400 font-normal">Incluye emojicraft y llamado a la acción</span>
+              </label>
+              <textarea
+                rows={3}
+                required
+                placeholder="Escribe el texto de la publicación..."
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 leading-relaxed"
+              />
+            </div>
+
+            {/* Hashtags */}
+            <div>
+              <label className="text-xs font-semibold text-slate-300 mb-1.5 block flex items-center gap-1.5">
+                <Hash className="w-4 h-4 text-amber-400" /> Hashtags Destacados
+              </label>
+              <input
+                type="text"
+                value={hashtags}
+                onChange={(e) => setHashtags(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-amber-300 focus:outline-none focus:border-amber-500 font-mono"
+              />
+            </div>
+
+            {/* Opciones de Publicación */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-slate-800">
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={publishNow}
+                  onChange={(e) => setPublishNow(e.target.checked)}
+                  className="rounded border-slate-800 bg-slate-950 text-amber-500 focus:ring-amber-500 h-4 w-4"
+                />
+                <span>Publicar inmediatamente en el Feed de Instagram / Facebook</span>
+              </label>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCreateModal(false)}
+                  className="border-slate-800 text-slate-400 hover:bg-slate-900"
                 >
-                  <RefreshCw className={`w-4 h-4 mr-2 ${republish.isPending ? "animate-spin" : "group-hover:-rotate-180 transition-transform duration-500"}`} />
-                  Republicar en Instagram
+                  Cancelar
                 </Button>
-              </CardFooter>
-            </Card>
-          ))}
+                <Button
+                  type="submit"
+                  disabled={createPost.isPending}
+                  className="bg-amber-500 text-slate-950 hover:bg-amber-400 font-bold flex items-center gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  {createPost.isPending ? "Guardando..." : publishNow ? "Guardar y Publicar en Redes" : "Guardar como Borrador"}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Grid de Publicaciones Existentes */}
+      {!posts || posts.length === 0 ? (
+        <div className="text-center py-20 border border-slate-800 rounded-xl bg-slate-900/50">
+          <ImageIcon className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-300">No hay publicaciones en el historial</h3>
+          <p className="text-slate-500">Crea tu primera publicación con el botón superior o ejecuta el bot autónomo.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {posts.map((post: any) => {
+            const styleConfig = POST_STYLES.find((s) => s.id === post.style);
+            return (
+              <Card key={post.id} className="bg-slate-900 border-slate-800 overflow-hidden flex flex-col group hover:border-amber-500/50 transition-all shadow-lg">
+                <div className="relative aspect-square w-full bg-slate-950">
+                  {post.imageUrl ? (
+                    <img
+                      src={post.imageUrl}
+                      alt={post.caption}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-slate-600">
+                      <ImageIcon className="w-8 h-8" />
+                    </div>
+                  )}
+
+                  <div className="absolute top-3 right-3 flex gap-2 flex-wrap">
+                    <Badge className={post.status === "PUBLISHED" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-amber-500/10 text-amber-400 border-amber-500/30"}>
+                      {post.status === "PUBLISHED" ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <AlertCircle className="w-3 h-3 mr-1" />}
+                      {post.status}
+                    </Badge>
+                    <Badge variant="outline" className={`backdrop-blur ${styleConfig?.badgeColor || "bg-slate-950/80 text-slate-300"}`}>
+                      {styleConfig?.name || post.style}
+                    </Badge>
+                  </div>
+                </div>
+
+                <CardContent className="flex-1 p-5 space-y-4">
+                  <div className="text-xs text-slate-500 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      {format(new Date(post.publishedAt), "PPpp", { locale: es })}
+                    </span>
+                    {post.igMediaId && (
+                      <span className="font-mono text-[10px] text-emerald-400/80">
+                        ID: {post.igMediaId.slice(-6)}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm text-slate-300 line-clamp-3 leading-relaxed">
+                      {post.caption}
+                    </p>
+                    <p className="text-xs font-medium text-amber-400/90 flex items-start gap-1 line-clamp-2 font-mono">
+                      <Hash className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      <span>{post.hashtags}</span>
+                    </p>
+                  </div>
+                </CardContent>
+
+                <CardFooter className="p-5 pt-0 mt-auto flex items-center gap-2">
+                  <Button
+                    onClick={() => handleRepublish(post.id)}
+                    disabled={republish.isPending}
+                    className="flex-1 bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-all border border-slate-700 hover:border-amber-500 text-xs font-bold"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${republish.isPending ? "animate-spin" : "group-hover:-rotate-180 transition-transform duration-500"}`} />
+                    Publicar en Redes
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (confirm("¿Seguro que deseas eliminar esta publicación?")) {
+                        deletePost.mutate({ postId: post.id });
+                      }
+                    }}
+                    className="border-slate-800 text-slate-500 hover:text-red-400 hover:bg-red-500/10 p-2.5"
+                    title="Eliminar publicación"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
