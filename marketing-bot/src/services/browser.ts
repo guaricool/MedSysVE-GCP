@@ -14,22 +14,34 @@ export async function takeScreenshot(user: string, pass: string): Promise<{ buff
   
   const targetModules = [
     {
-      url: "https://www.medsysve.com/",
-      description: "Landing Page principal de MedSysVE, mostrando los beneficios del software para médicos en Venezuela.",
-      requiresAuth: false,
-      waitForSelector: "h1" // Esperar al título principal
-    },
-    {
       url: "https://www.medsysve.com/doctor",
-      description: "Dashboard principal del Doctor, donde se ven las métricas diarias, citas programadas de hoy y estado de los pacientes.",
+      description: "Dashboard principal de MedSysVE, mostrando la agenda médica, resumen de pacientes de hoy y métricas clínicas en tiempo real.",
       requiresAuth: true,
       waitForSelector: "body"
     },
     {
       url: "https://www.medsysve.com/doctor/patients",
-      description: "Módulo de gestión de pacientes, donde el médico administra su base de datos de pacientes, historiales clínicos e información de contacto.",
+      description: "Módulo de gestión de expediente clínico electrónico, base de datos de pacientes e historial de consultas.",
       requiresAuth: true,
-      waitForSelector: "body" // Use body to support empty states without tables
+      waitForSelector: "body"
+    },
+    {
+      url: "https://www.medsysve.com/admin/sandbox",
+      description: "Espacio interactivo de consulta SOAP y visor DICOM / PACS web para las 27 especialidades médicas de Venezuela.",
+      requiresAuth: true,
+      waitForSelector: "body"
+    },
+    {
+      url: "https://www.medsysve.com/doctor/analytics",
+      description: "Módulo de analíticas clínicas, ingresos acumulados y facturación dual USD / Bolívares con tasa oficial BCV.",
+      requiresAuth: true,
+      waitForSelector: "body"
+    },
+    {
+      url: "https://www.medsysve.com/doctor/express",
+      description: "Módulo de consulta exprés y emisión inmediata de récipes oficiales con código QR y vademécum inteligente.",
+      requiresAuth: true,
+      waitForSelector: "body"
     }
   ];
 
