@@ -24,6 +24,9 @@ export default async function DoctorDashboard() {
     db.doctor.findUnique({
       where: { id: user.doctorId },
       select: {
+        prefijo: true,
+        nombre: true,
+        apellido: true,
         fotoUrl: true,
         especialidadPrincipal: true,
         subEspecialidades: true,

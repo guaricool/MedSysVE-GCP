@@ -2,6 +2,7 @@ export interface DoctorNameInput {
   prefijo?: string | null
   nombre?: string | null
   apellido?: string | null
+  [key: string]: any
 }
 
 const COMMON_FEMALE_FIRST_NAMES = new Set([
