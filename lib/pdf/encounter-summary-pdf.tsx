@@ -183,6 +183,42 @@ const SPECIALTY_PDF_LABELS: Record<string, string> = {
   tabiqueNasal: "Tabique Nasal", cornetes: "Cornetes Nasales", brodskyAmigdalas: "Grado Amigdalino (Brodsky)", mallampatiScore: "Mallampati",
   sintomasOtologicos: "Síntomas Otológicos", sintomasRinologicos: "Síntomas Rinológicos", sintomasLaringologicos: "Síntomas Laringológicos",
   procedimientosRealizados: "Procedimientos ORL", observacionesORL: "Observaciones ORL",
+  // Psiquiatría
+  hamiltonDepresion: "Escala Hamilton (Depresión)", panssScore: "Escala PANSS", estadoAnimo: "Estado de Ánimo",
+  pensamiento: "Curso del Pensamiento", percepcion: "Percepción / Alucinaciones", riesgoSuicida: "Riesgo Suicida",
+  // Infectología
+  esquemaAntibiotico: "Esquema Antibiótico", bacteriologia: "Bacteriología", cultivo: "Resultado de Cultivo",
+  antibiograma: "Antibiograma / Sensibilidad", aislamiento: "Medidas de Aislamiento",
+  // Oftalmología
+  agudezaVisualOD: "Agudeza Visual OD", agudezaVisualOI: "Agudeza Visual OI", presionIntraocularOD: "PIO OD (mmHg)",
+  presionIntraocularOI: "PIO OI (mmHg)", fondoOjo: "Fondo de Ojo", biomicroscopia: "Biomicroscopía",
+  // Reumatología
+  das28Score: "Puntaje DAS28", conteoArticulaciones: "Articulaciones Dolorosas/Tumefactas", rigidezMatutina: "Rigidez Matutina (min)",
+  factorReumatoide: "Factor Reumatoide", antiCcp: "Anti-CCP",
+  // Nefrología
+  tfgCalculada: "TFG (mL/min/1.73m²)", proteinuria: "Proteinuria (g/24h)", sedimentoUrinario: "Sedimento Urinario",
+  estadioCkd: "Estadio CKD", accesoVascular: "Acceso Vascular",
+  // Emergencias
+  triageColor: "Clasificación Triage", mewsScore: "Puntaje MEWS", fastProtocol: "Protocolo FAST / Ecografía",
+  traumaScore: "Riesgo / Trauma Score",
+  // Geriatría
+  katzIndex: "Índice de Katz (ABVD)", lawtonIndex: "Índice de Lawton (AIVD)", gdsDepresion: "Escala Yesavage (GDS)",
+  pfeifferTest: "Test de Pfeiffer (SPMSQ)",
+  // Medicina Familiar
+  familiograma: "Genograma / Familiograma", apgarFamiliar: "APGAR Familiar", cicloVital: "Fase Ciclo Vital Familiar",
+  factoresRiesgoFamilia: "Riesgo Biopsicosocial",
+  // Cirugía Plástica
+  planQuirurgico: "Plan Quirúrgico", areaZonificacion: "Zonificación Cutánea", injertoColgajo: "Técnica Injerto/Colgajo",
+  fotografiaPreop: "Registro Fotográfico Preop",
+  // Hematología
+  frotisSangre: "Frotis de Sangre Periférica", biopsiaMedula: "Biopsia de Médula Ósea", coagulograma: "Perfil de Coagulación",
+  ferritina: "Ferritina Sérica",
+  // Alergología
+  prickTest: "Prick Test / Pruebas Cutáneas", igeEspecifica: "IgE Específica", alergenosIdentificados: "Alérgenos Identificados",
+  desensibilizacion: "Inmunoterapia Alérgeno-Específica",
+  // Fisiatría
+  fimScore: "Medida FIM (Independencia Funcional)", balanceMuscular: "Balance Muscular (Daniels)", goniometria: "Goniometría / Rango Articular",
+  planRehabilitacion: "Plan de Fisioterapia y Rehabilitación",
 }
 
 const SPECIALTY_SIGNATURES_PDF: { name: string; keys: string[] }[] = [
@@ -197,10 +233,22 @@ const SPECIALTY_SIGNATURES_PDF: { name: string; keys: string[] }[] = [
   { name: "Dermatología", keys: ["fitzpatrick", "glogau", "lesionMorfologia"] },
   { name: "Cirugía General", keys: ["tipoHerida", "alvaradoAnswers", "omsListChecked"] },
   { name: "Medicina Interna", keys: ["wellsAnswers", "charlsonAnswers", "tfgeCalculada"] },
-  { name: "Obstetricia", keys: ["fpp", "semanasGestacion", "alturaUterina"] },
+  { name: "Obstetricia y Ginecología", keys: ["fpp", "semanasGestacion", "alturaUterina"] },
   { name: "Neumología", keys: ["fev1FvcRatio", "mmrcDyspnea", "auscultacionPulmonar"] },
   { name: "Oncología", keys: ["t", "n", "m", "estadio", "esquemaQuimio"] },
   { name: "Otorrinolaringología", keys: ["otoscopiaOD", "otoscopiaOI", "weberTest", "tabiqueNasal"] },
+  { name: "Psiquiatría", keys: ["hamiltonDepresion", "panssScore", "estadoAnimo"] },
+  { name: "Infectología", keys: ["esquemaAntibiotico", "bacteriologia", "cultivo"] },
+  { name: "Oftalmología", keys: ["agudezaVisualOD", "presionIntraocularOD", "fondoOjo"] },
+  { name: "Reumatología", keys: ["das28Score", "conteoArticulaciones", "rigidezMatutina"] },
+  { name: "Nefrología", keys: ["tfgCalculada", "proteinuria", "sedimentoUrinario"] },
+  { name: "Medicina de Emergencias", keys: ["triageColor", "mewsScore", "fastProtocol"] },
+  { name: "Geriatría", keys: ["katzIndex", "lawtonIndex", "gdsDepresion"] },
+  { name: "Medicina Familiar", keys: ["familiograma", "apgarFamiliar", "cicloVital"] },
+  { name: "Cirugía Plástica", keys: ["planQuirurgico", "areaZonificacion", "injertoColgajo"] },
+  { name: "Hematología", keys: ["frotisSangre", "biopsiaMedula", "coagulograma"] },
+  { name: "Alergología e Inmunología", keys: ["prickTest", "igeEspecifica", "alergenosIdentificados"] },
+  { name: "Fisiatría y Rehabilitación", keys: ["fimScore", "balanceMuscular", "goniometria"] },
 ]
 
 function getSpecialtyRows(datos: Record<string, unknown> | null | undefined): { label: string; value: string }[] {

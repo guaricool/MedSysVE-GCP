@@ -23,15 +23,19 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function SignBar({ encounterId, patientRegId, status }: Props) {
   const router = useRouter()
-  const sign = trpc.encounter.sign.useMutation({
-    onSuccess: () => router.refresh(),
+  const sign = (trpc.encounter.sign as any).useMutation({
+    onSuccess: () => {
+      toast.success("Consulta firmada exitosamente. Documentos PDF listos para ver, imprimir o compartir.")
+      router.refresh()
+    },
+    onError: (err: any) => toast.error(err.message),
   })
-  const reopen = trpc.encounter.reopen.useMutation({
+  const reopen = (trpc.encounter.reopen as any).useMutation({
     onSuccess: () => {
       toast.success("Consulta reabierta")
       router.refresh()
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err: any) => toast.error(err.message),
   })
 
   return (
