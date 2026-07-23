@@ -46,6 +46,7 @@ next-env.d.ts
 
 # uploaded files (runtime assets, not source)
 /public/uploads/
+!/public/uploads/marketing/
 
 # playwright QA session artifacts
 .playwright-mcp/

@@ -92,33 +92,32 @@ export async function GET(
   }
 
   try {
-    const info = await stat(full)
+    let targetPath = full
+    let info: any = null
+    try {
+      info = await stat(targetPath)
+    } catch {
+      // Fallback check in tracked public/ directory (e.g., public/marketing/soap-demo.png or public/uploads/marketing/)
+      const fallbackPath = resolve(process.cwd(), "public", prefix, ...rest)
+      info = await stat(fallbackPath)
+      targetPath = fallbackPath
+    }
+
     if (!info.isFile()) {
       return NextResponse.json({ error: "Not found" }, { status: 404 })
     }
 
-    const ext = normalize(full).toLowerCase().match(/\.[a-z0-9]+$/)?.[0]
+    const ext = normalize(targetPath).toLowerCase().match(/\.[a-z0-9]+$/)?.[0]
     const contentType = ext ? MIME_BY_EXT[ext] ?? "application/octet-stream" : "application/octet-stream"
 
-    // Why readFile instead of streaming: Next.js 16 standalone's HTTP/2
-    // response layer does not flush Node.js ReadableStream chunks promptly
-    // for small files — Traefik sees 0 bytes and the connection times out
-    // before any data lands. For uploads (logos, membretes, PDFs, imaging)
-    // the typical size is <2 MB, so reading into memory is cheap and
-    // eliminates the streaming race entirely. If we ever serve large video
-    // files, switch to a Web ReadableStream backed by `createReadStream`
-    // AND make sure to call `.resume()` immediately after wiring the listeners.
     const { readFile } = await import("fs/promises")
-    const bytes = await readFile(full)
+    const bytes = await readFile(targetPath)
     return new NextResponse(new Uint8Array(bytes), {
       status: 200,
       headers: {
         "Content-Type": contentType,
         "Content-Length": info.size.toString(),
-        // Logos rarely change — cache aggressively but allow revalidation.
-        "Cache-Control": "private, max-age=300, must-revalidate",
-        // Allow the browser to load these as images (we already have CSP
-        // allowing img-src 'self').
+        "Cache-Control": "public, max-age=86400, must-revalidate",
         "X-Content-Type-Options": "nosniff",
       },
     })
