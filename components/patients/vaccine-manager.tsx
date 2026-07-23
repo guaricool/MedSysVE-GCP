@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { trpc } from "@/lib/trpc-client"
-import { Plus, Trash2, FileDown } from "lucide-react"
+import { Plus, Trash2, FileDown, Camera, Sparkles, Loader2, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
 
 const VACUNAS_VE = [
   "BCG",
@@ -38,6 +39,9 @@ export function VaccineManager({ patientRegistrationId }: Props) {
   const { data: vaccines, isLoading } = (trpc.vaccine as any).list.useQuery({ patientRegistrationId })
 
   const [showForm, setShowForm] = useState(false)
+  const [isScanning, setIsScanning] = useState(false)
+  const [ocrResults, setOcrResults] = useState<any[] | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [form, setForm] = useState({
     vacuna: "",
@@ -54,6 +58,7 @@ export function VaccineManager({ patientRegistrationId }: Props) {
     onSuccess: () => {
       ;(utils.vaccine as any).list.invalidate({ patientRegistrationId })
       setShowForm(false)
+      toast.success("Vacuna registrada exitosamente")
       setForm({
         vacuna: "",
         otraVacuna: "",
@@ -67,16 +72,60 @@ export function VaccineManager({ patientRegistrationId }: Props) {
     },
   })
 
+  const addManyVaccines = (trpc.vaccine as any).addMany.useMutation({
+    onSuccess: (res: any) => {
+      ;(utils.vaccine as any).list.invalidate({ patientRegistrationId })
+      setOcrResults(null)
+      toast.success("Vacunas extraídas guardadas exitosamente")
+    },
+    onError: (err: any) => {
+      toast.error(`Error al guardar vacunas: ${err.message}`)
+    }
+  })
+
   const removeVaccine = (trpc.vaccine as any).remove.useMutation({
     onSuccess: () => (utils.vaccine as any).list.invalidate({ patientRegistrationId }),
   })
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsScanning(true)
+    const formData = new FormData()
+    formData.append("file", file)
+
+    try {
+      const res = await fetch("/api/ai/vaccine-ocr", {
+        method: "POST",
+        body: formData,
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || "Fallo el procesamiento OCR")
+      }
+
+      if (data.data?.vacunas?.length > 0) {
+        setOcrResults(data.data.vacunas)
+        toast.success(`IA detectó ${data.data.vacunas.length} vacunas en la imagen`)
+      } else {
+        toast.error("No se detectaron vacunas en la imagen. Intenta con una foto más clara.")
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Error al analizar tarjeta de vacunas")
+    } finally {
+      setIsScanning(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
 
   const vacunaFinal = form.vacuna === "Otra" ? form.otraVacuna : form.vacuna
   const canSubmit = vacunaFinal.trim().length >= 2 && form.fechaAplicacion
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         <Button
           size="sm"
           variant="outline"
@@ -86,18 +135,138 @@ export function VaccineManager({ patientRegistrationId }: Props) {
           <Plus size={13} className="mr-1" />
           Registrar vacuna
         </Button>
-        {!!((vaccines as any[]) ?? []).length && (
-          <a
-            href={`/api/pdf/vaccine-carnet/${patientRegistrationId}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 rounded border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
-          >
-            <FileDown size={13} />
-            Descargar carné PDF
-          </a>
-        )}
+
+        {/* AI Scanner Button */}
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isScanning}
+          onClick={() => fileInputRef.current?.click()}
+          className="border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 shadow-sm"
+        >
+          {isScanning ? (
+            <>
+              <Loader2 size={13} className="mr-1.5 animate-spin text-amber-400" />
+              Analizando cartilla con IA...
+            </>
+          ) : (
+            <>
+              <Camera size={13} className="mr-1.5 text-amber-400" />
+              <Sparkles size={11} className="mr-1 text-amber-300" />
+              Escanear cartilla con IA
+            </>
+          )}
+        </Button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
+        {/* PDF Carnet Download Button - Always Visible */}
+        <a
+          href={`/api/pdf/vaccine-carnet/${patientRegistrationId}`}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-1.5 rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-colors shadow-sm"
+        >
+          <FileDown size={13} />
+          Ver / Descargar Carné PDF (con QR)
+        </a>
       </div>
+
+      {/* AI OCR Extracted Vaccines Preview Modal / Section */}
+      {ocrResults && (
+        <div className="rounded-xl border border-amber-500/40 bg-slate-900/90 p-4 space-y-3 shadow-xl backdrop-blur-md">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <h4 className="text-sm font-bold text-amber-300">Vacunas Detectadas por IA ({ocrResults.length})</h4>
+            </div>
+            <Button size="sm" variant="ghost" className="text-slate-400 text-xs h-7" onClick={() => setOcrResults(null)}>
+              Descartar
+            </Button>
+          </div>
+
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            {ocrResults.map((item, idx) => (
+              <div key={idx} className="flex flex-col gap-1 p-2.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <Input
+                    className="h-7 text-xs font-bold text-white bg-slate-700 border-slate-600"
+                    value={item.vacuna}
+                    onChange={(e) => {
+                      const updated = [...ocrResults]
+                      updated[idx].vacuna = e.target.value
+                      setOcrResults(updated)
+                    }}
+                  />
+                  <Input
+                    type="date"
+                    className="h-7 w-36 text-xs text-slate-200 bg-slate-700 border-slate-600"
+                    value={item.fechaAplicacion}
+                    onChange={(e) => {
+                      const updated = [...ocrResults]
+                      updated[idx].fechaAplicacion = e.target.value
+                      setOcrResults(updated)
+                    }}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <Input
+                    placeholder="Dosis (ej: 1ª)"
+                    className="h-6 text-[11px] bg-slate-700 border-slate-600 text-slate-300"
+                    value={item.dosis || ""}
+                    onChange={(e) => {
+                      const updated = [...ocrResults]
+                      updated[idx].dosis = e.target.value
+                      setOcrResults(updated)
+                    }}
+                  />
+                  <Input
+                    placeholder="Lote"
+                    className="h-6 text-[11px] bg-slate-700 border-slate-600 text-slate-300"
+                    value={item.lote || ""}
+                    onChange={(e) => {
+                      const updated = [...ocrResults]
+                      updated[idx].lote = e.target.value
+                      setOcrResults(updated)
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Button
+              size="sm"
+              disabled={addManyVaccines.isPending}
+              onClick={() =>
+                addManyVaccines.mutate({
+                  patientRegistrationId,
+                  vaccines: ocrResults.map((v) => ({
+                    vacuna: v.vacuna,
+                    fechaAplicacion: v.fechaAplicacion,
+                    dosis: v.dosis || undefined,
+                    lote: v.lote || undefined,
+                    proximaDosis: v.proximaDosis || undefined,
+                    aplicadoPor: v.aplicadoPor || undefined,
+                    notas: v.notas || undefined,
+                  }))
+                })
+              }
+              className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs"
+            >
+              <CheckCircle2 size={13} className="mr-1" />
+              {addManyVaccines.isPending ? "Guardando vacunas..." : "Guardar todas las vacunas extraídas"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="rounded-lg border border-slate-700 bg-slate-800/60 p-4 space-y-3">

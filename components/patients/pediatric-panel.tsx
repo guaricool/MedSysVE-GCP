@@ -2,7 +2,7 @@
 
 import { trpc } from "@/lib/trpc-client"
 import { GrowthChart } from "./growth-chart"
-import { Baby, TrendingUp, Info } from "lucide-react"
+import { Baby, TrendingUp, Info, FileDown } from "lucide-react"
 import { differenceInYears } from "date-fns"
 
 const PAI_VENEZUELA: { edad: string; vacunas: string[] }[] = [
@@ -48,13 +48,24 @@ export function PediatricPanel({ patientRegistrationId, fechaNacimiento, sexo }:
 
   return (
     <div className="space-y-5">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-        <Baby className="h-4 w-4 text-pink-400" />
-        Módulo Pediátrico
-        <span className="ml-1 rounded-full bg-pink-900/50 px-2 py-0.5 text-[10px] font-normal text-pink-300">
-          {edad} años
-        </span>
-      </h3>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+          <Baby className="h-4 w-4 text-pink-400" />
+          Módulo Pediátrico
+          <span className="ml-1 rounded-full bg-pink-900/50 px-2 py-0.5 text-[10px] font-normal text-pink-300">
+            {edad} años
+          </span>
+        </h3>
+        <a
+          href={`/api/pdf/vaccine-carnet/${patientRegistrationId}`}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-1.5 rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-colors shadow-sm"
+        >
+          <FileDown size={13} />
+          Carné de Vacunación PDF (con QR)
+        </a>
+      </div>
 
       {/* Growth chart */}
       <div>
