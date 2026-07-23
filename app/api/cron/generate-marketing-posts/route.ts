@@ -63,6 +63,21 @@ const CAMPAIGN_TOPICS = [
   },
 ];
 
+const SPECIALTIES_LIST = [
+  "Traumatología y Ortopedia",
+  "Cardiología",
+  "Pediatría y Puericultura",
+  "Ginecología y Obstetricia",
+  "Dermatología",
+  "Neurología",
+  "Gastroenterología",
+  "Oftalmología",
+  "Otorrinolaringología",
+  "Neumonología",
+  "Endocrinología",
+  "Medicina Interna",
+];
+
 async function generateSinglePostWithSelfHealing(): Promise<{
   post: any;
   attempts: number;
@@ -70,30 +85,60 @@ async function generateSinglePostWithSelfHealing(): Promise<{
   const MAX_ATTEMPTS = 3;
   let lastError: any = null;
 
+  // 1. Fetch recent marketing posts to ensure NO duplicate captions or images
+  const existingPosts = await db.marketingPost.findMany({
+    take: 50,
+    orderBy: { publishedAt: "desc" },
+    select: { caption: true, imageUrl: true, style: true },
+  });
+
+  const existingCaptions = new Set(existingPosts.map((p) => p.caption.trim()));
+
+  // 2. Filter candidate topics to find unused topics
+  let availableTopics = CAMPAIGN_TOPICS.filter((t) => !existingCaptions.has(t.caption.trim()));
+
+  let selectedTopic: {
+    topic: string;
+    style: string;
+    caption: string;
+    hashtags: string;
+    imageUrl: string;
+  };
+
+  if (availableTopics.length > 0) {
+    // Pick an unused topic
+    const topicIndex = Math.floor(Math.random() * availableTopics.length);
+    selectedTopic = availableTopics[topicIndex];
+  } else {
+    // If all base topics have been generated, create a FRESH unique variation incorporating a specialty
+    const randomSpec = SPECIALTIES_LIST[Math.floor(Math.random() * SPECIALTIES_LIST.length)];
+    const randomBase = CAMPAIGN_TOPICS[Math.floor(Math.random() * CAMPAIGN_TOPICS.length)];
+
+    selectedTopic = {
+      topic: `${randomBase.topic} (${randomSpec})`,
+      style: randomBase.style || "hyperrealistic",
+      caption: `🩺 Atenci\u00f3n especial de ${randomSpec} en Venezuela: ${randomBase.caption} Adapta la plataforma a las necesidades particulares de tu especialidad.`,
+      hashtags: `${randomBase.hashtags} #${randomSpec.replace(/\s+/g, "")}`,
+      imageUrl: randomBase.imageUrl || "/uploads/marketing/soap-demo.png",
+    };
+  }
+
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      // Pick a random topic from our curated campaign matrix
-      const topicIndex = Math.floor(Math.random() * CAMPAIGN_TOPICS.length);
-      const selected = CAMPAIGN_TOPICS[topicIndex];
+      const validImageUrl = selectedTopic.imageUrl || "/uploads/marketing/soap-demo.png";
 
-      // Auto-fallback image check
-      const validImageUrl =
-        selected.imageUrl && selected.imageUrl.startsWith("http")
-          ? selected.imageUrl
-          : "https://storage.googleapis.com/medsysve-bot-temp/soap-demo.png";
-
-      // 1. Insert post in status PENDING_APPROVAL
+      // 3. Insert post in status PENDING_APPROVAL
       const newPost = await db.marketingPost.create({
         data: {
           imageUrl: validImageUrl,
-          caption: selected.caption,
-          hashtags: selected.hashtags,
-          style: selected.style || "hyperrealistic",
+          caption: selectedTopic.caption,
+          hashtags: selectedTopic.hashtags,
+          style: selectedTopic.style || "hyperrealistic",
           status: "PENDING_APPROVAL",
         },
       });
 
-      // 2. Self-Healing Verification Check: Verify insertion in DB
+      // 4. Self-Healing Verification Check: Verify insertion in DB
       const verifiedPost = await db.marketingPost.findUnique({
         where: { id: newPost.id },
       });
@@ -107,7 +152,6 @@ async function generateSinglePostWithSelfHealing(): Promise<{
     } catch (err: any) {
       console.error(`⚠️ Marketing Generator attempt ${attempt} failed:`, err);
       lastError = err;
-      // Exponential delay before retry
       await new Promise((res) => setTimeout(res, 1000 * attempt));
     }
   }
