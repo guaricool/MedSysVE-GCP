@@ -28,6 +28,7 @@ export default async function DoctorDashboard() {
         prefijo: true,
         nombre: true,
         apellido: true,
+        isAdmin: true,
         isSacsVerified: true,
         mppsMatricula: true,
         fotoUrl: true,
@@ -182,7 +183,7 @@ export default async function DoctorDashboard() {
         </div>
       </section>
 
-      {!doctorFull?.isSacsVerified || !doctorFull?.mppsMatricula ? (
+      {!doctorFull?.isAdmin && user.email !== "cpierluissis@gmail.com" && (!doctorFull?.isSacsVerified || !doctorFull?.mppsMatricula) ? (
         <div className="rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-950/40 via-amber-900/20 to-slate-900 p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className="p-2.5 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 mt-0.5 sm:mt-0">
