@@ -169,4 +169,6 @@ export async function clearLockout(email: string): Promise<void> {
   }
 }
 
-// adminUnlock ha sido removido como parte de la purga de deuda técnica
+export async function adminUnlock(email: string): Promise<void> {
+  await clearLockout(email.toLowerCase().trim());
+}

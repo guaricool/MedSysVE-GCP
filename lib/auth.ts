@@ -96,8 +96,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           : (await bcrypt.compare(password, await getDummyHash()), false)
 
         if (doctor && doctorValid) {
-          const ws = doctor.workspaces[0]
-          if (!ws) return null
+          let ws = doctor.workspaces[0]
+          if (!ws) {
+            ws = (await db.workspace.findFirst({
+              where: { doctorId: doctor.id },
+            })) as any
+            if (!ws) {
+              ws = await db.workspace.create({
+                data: {
+                  nombre: `Consultorio Dr(a). ${doctor.nombre} ${doctor.apellido}`,
+                  doctorId: doctor.id,
+                },
+              })
+            }
+          }
           await clearLockout(emailLower)
           safeLog("info", "auth.login_ok", {
             role: "DOCTOR",
