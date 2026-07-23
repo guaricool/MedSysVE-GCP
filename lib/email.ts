@@ -10,8 +10,8 @@ const SMTP_PASS =
   process.env.GMAIL_APP_PASSWORD ??
   "hvdifzxziuozxnoc"
 
-const FROM = process.env.MAIL_FROM ?? process.env.EMAIL_FROM ?? `MedSysVE <${SMTP_USER}>`
-const REPLY_TO = process.env.MAIL_REPLY_TO ?? "cpierluissis@gmail.com"
+const FROM = process.env.MAIL_FROM ?? process.env.EMAIL_FROM ?? "MedSysVE <no-responder@medsysve.com>"
+const REPLY_TO = process.env.MAIL_REPLY_TO ?? "admin@medsysve.com"
 
 let cachedTransport: nodemailer.Transporter | null = null
 
