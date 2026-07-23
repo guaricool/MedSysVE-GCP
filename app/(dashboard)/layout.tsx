@@ -10,6 +10,8 @@ import { InactivityGuard } from "@/components/auth/inactivityGuard"
 import { SupportBot } from "@/components/support/support-bot"
 import { requireLegalAcceptance } from "./require-legal-acceptance"
 
+import { CompleteProfileBanner } from "@/components/auth/complete-profile-banner"
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -47,9 +49,15 @@ export default async function DashboardLayout({
   const [workspace, doctor] = await Promise.all([
     db.workspace.findUnique({ where: { id: user.workspaceId }, select: { nombre: true, logoUrl: true } }),
     user.role === "DOCTOR"
-      ? db.doctor.findUnique({ where: { id: user.doctorId }, select: { isAdmin: true } })
+      ? db.doctor.findUnique({
+          where: { id: user.doctorId },
+          select: { isAdmin: true, mppsMatricula: true, rif: true, nombre: true, apellido: true },
+        })
       : null,
   ])
+
+  const hasMpps = Boolean(doctor?.mppsMatricula && doctor.mppsMatricula.trim().length > 2)
+  const hasRif = Boolean(doctor?.rif && doctor.rif.trim().length >= 8)
 
   return (
     <div className="flex min-h-screen bg-slate-950 pt-14 lg:pt-0">
@@ -63,6 +71,13 @@ export default async function DashboardLayout({
         isAdmin={doctor?.isAdmin ?? false}
       />
       <main className="min-w-0 flex-1 p-4 md:p-6 pb-24">
+        {user.role === "DOCTOR" && (!hasMpps || !hasRif) && (
+          <CompleteProfileBanner
+            doctorName={`${doctor?.nombre ?? ""} ${doctor?.apellido ?? ""}`.trim()}
+            hasMpps={hasMpps}
+            hasRif={hasRif}
+          />
+        )}
         {legalAcceptanceChildren}
         <footer className="mt-12 pt-6 border-t border-slate-800 text-center text-[11px] text-slate-500 space-y-1">
           <p>
