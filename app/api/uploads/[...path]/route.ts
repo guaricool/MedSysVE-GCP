@@ -97,10 +97,18 @@ export async function GET(
     try {
       info = await stat(targetPath)
     } catch {
-      // Fallback check in tracked public/ directory (e.g., public/marketing/soap-demo.png or public/uploads/marketing/)
-      const fallbackPath = resolve(process.cwd(), "public", prefix, ...rest)
-      info = await stat(fallbackPath)
-      targetPath = fallbackPath
+      // Fallback 1: check in process.cwd()/public/<prefix>/<...rest> (e.g., public/marketing/cartoon-pedia.png)
+      const fallback1 = resolve(process.cwd(), "public", prefix, ...rest)
+      try {
+        info = await stat(fallback1)
+        targetPath = fallback1
+      } catch {
+        // Fallback 2: check in process.cwd()/public/<...rest> (e.g., public/cartoon-pedia.png)
+        const filename = rest[rest.length - 1] || ""
+        const fallback2 = resolve(process.cwd(), "public", "marketing", filename)
+        info = await stat(fallback2)
+        targetPath = fallback2
+      }
     }
 
     if (!info.isFile()) {
