@@ -77,8 +77,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         // 3. Try to authenticate as doctor.
-        const doctor = await db.doctor.findUnique({
-          where: { email: emailLower },
+        const doctor = await db.doctor.findFirst({
+          where: { email: { equals: emailLower, mode: "insensitive" } },
           include: { workspaces: { take: 1, orderBy: { createdAt: "asc" } } },
         })
 
@@ -121,7 +121,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // 4. Try to authenticate as staff.
         const staff = await db.staff.findFirst({
-          where: { email: emailLower, activo: true },
+          where: { email: { equals: emailLower, mode: "insensitive" }, activo: true },
           include: { workspace: true },
         })
         const staffValid =
@@ -150,8 +150,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Distinct from Doctor/Staff: ClinicAdmin manages the clinic dashboard,
         // not a medical workspace. They never see clinical data and don't have
         // a medical license — they're operational admins (OWNER or MANAGER).
-        const clinicAdmin = await db.clinicAdmin.findUnique({
-          where: { email: emailLower },
+        const clinicAdmin = await db.clinicAdmin.findFirst({
+          where: { email: { equals: emailLower, mode: "insensitive" } },
           include: { clinic: true },
         })
         const clinicAdminValid =

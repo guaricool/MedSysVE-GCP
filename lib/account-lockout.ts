@@ -39,9 +39,9 @@ export interface LockoutConfig {
 }
 
 export const DEFAULT_LOCKOUT: LockoutConfig = {
-  maxAttempts: 5,
-  windowSec: 15 * 60, // 15 minutes
-  lockDurationSec: 15 * 60, // 15 minutes
+  maxAttempts: 10,
+  windowSec: 5 * 60, // 5 minutes
+  lockDurationSec: 3 * 60, // 3 minutes lockout
 };
 
 export interface LockoutCheck {
