@@ -55,16 +55,6 @@ export async function GET(
   req: NextRequest,
   ctx: { params: Promise<{ path: string[] }> },
 ) {
-  // Any authenticated user (doctor OR staff OR patient) can read uploads.
-  // Doctor's images are public-ish within the app; we already lock the
-  // application behind auth, so we don't need per-file ACLs on top of that.
-  // If you need stricter access (e.g. imaging results only visible to the
-  // ordering doctor), add an ACL layer here.
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   const { path } = await ctx.params
   if (!path || path.length < 2) {
     return NextResponse.json({ error: "Bad path" }, { status: 400 })
@@ -73,6 +63,14 @@ export async function GET(
   const [prefix, ...rest] = path
   if (!prefix || !ALLOWED_PREFIXES.has(prefix)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
+
+  // Marketing promotional assets are public so Facebook/Instagram Graph API crawler can fetch them
+  if (prefix !== "marketing") {
+    const session = await auth()
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
   }
 
   // Reconstruct the requested path inside the uploads dir.
