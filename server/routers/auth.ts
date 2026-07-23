@@ -217,10 +217,6 @@ export const authRouter = router({
   /**
    * Step 3 of password reset: exchange verifiedToken + new password for a
    * new password hash. Audit-logged with channel=PASSWORD_RESET.
-   *
-   * The verifiedToken must come from verifyPasswordResetOtp. We re-verify
-   * the HMAC + expiry on every call; nothing else proves the user is who
-   * they say they are (this is a public procedure).
    */
   confirmPasswordReset: publicProcedure
     .input(z.object({
@@ -228,78 +224,81 @@ export const authRouter = router({
       newPassword: strongPasswordSchema,
     }))
     .mutation(async ({ ctx, input }) => {
-      const claimsResult = verifyVerifiedToken(input.verifiedToken)
-      if (!claimsResult.ok) {
+      try {
+        const claimsResult = verifyVerifiedToken(input.verifiedToken)
+        if (!claimsResult.ok) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "El enlace de recuperación expiró o es inválido. Solicite uno nuevo.",
+          })
+        }
+        const claims = claimsResult.claims
+        if (claims.purpose !== "PASSWORD_RESET") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Token inválido para esta operación.",
+          })
+        }
+
+        const emailLower = claims.email.toLowerCase().trim()
+        const doctor = await ctx.db.doctor.findUnique({
+          where: { email: emailLower },
+          select: { id: true },
+        })
+        if (!doctor) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Cuenta no encontrada.",
+          })
+        }
+
+        const workspace = await ctx.db.workspace.findFirst({
+          where: { doctorId: doctor.id },
+          select: { id: true },
+        })
+
+        const newHash = await hashPassword(input.newPassword)
+        await ctx.db.doctor.update({
+          where: { id: doctor.id },
+          data: { passwordHash: newHash },
+        })
+
+        if (workspace) {
+          try {
+            await ctx.db.auditEvent.create({
+              data: {
+                workspaceId: workspace.id,
+                actorId: doctor.id,
+                actorRole: "DOCTOR",
+                action: "PASSWORD_RESET_COMPLETED",
+                resourceType: "Doctor",
+                resourceId: doctor.id,
+                outcome: "ALLOWED",
+                channel: "API",
+              },
+            })
+          } catch (auditErr) {
+            console.warn("[confirmPasswordReset] Audit log warning:", auditErr)
+          }
+        }
+
+        safeLog("info", "auth.password_reset_completed", {
+          doctorId: doctor.id,
+        })
+
+        return { ok: true as const }
+      } catch (err) {
+        if (err instanceof TRPCError) throw err
+        console.error("[confirmPasswordReset] Error:", err)
         throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "El enlace de recuperación expiró. Solicite uno nuevo.",
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No se pudo actualizar la contraseña. Intente nuevamente.",
         })
       }
-      const claims = claimsResult.claims
-      if (claims.purpose !== "PASSWORD_RESET") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Token inválido para esta operación.",
-        })
-      }
-
-      const doctor = await ctx.db.doctor.findUnique({
-        where: { email: claims.email },
-        select: { id: true },
-      })
-      if (!doctor) {
-        // Shouldn't happen — token was issued against an email that existed.
-        // But race conditions could delete the doctor. Fail closed.
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Cuenta no encontrada.",
-        })
-      }
-
-      // Look up an associated workspace for the audit row. Most doctors own
-      // at least one; if a doctor has no workspaces (e.g. legacy data) we
-      // skip the audit row rather than fail the reset.
-      const workspace = await ctx.db.workspace.findFirst({
-        where: { doctorId: doctor.id },
-        select: { id: true },
-      })
-
-      const newHash = await hashPassword(input.newPassword)
-      await ctx.db.doctor.update({
-        where: { id: doctor.id },
-        data: { passwordHash: newHash },
-      })
-
-      // Invalidate any active sessions for this doctor by rotating
-      // passwordHash alone — NextAuth v5 still requires re-login.
-      // (We don't track session tokens server-side for JWT sessions.)
-
-      if (workspace) {
-        await ctx.db.auditEvent.create({
-          data: {
-            workspaceId: workspace.id,
-            actorId: doctor.id,
-            actorRole: "DOCTOR",
-            action: "PASSWORD_RESET_COMPLETED",
-            resourceType: "Doctor",
-            resourceId: doctor.id,
-            outcome: "ALLOWED",
-            channel: "API",
-          },
-        })
-      }
-
-      safeLog("info", "auth.password_reset_completed", {
-        doctorId: doctor.id,
-      })
-
-      return { ok: true as const }
     }),
 
   /**
    * Authenticated: change password (current password + new).
-   * Different flow from reset — requires you to already be logged in.
-   * Reuses the same strongPasswordSchema.
    */
   changePassword: protectedProcedure
     .input(z.object({
@@ -330,27 +329,26 @@ export const authRouter = router({
         data: { passwordHash: newHash },
       })
       if (workspace) {
-        await ctx.db.auditEvent.create({
-          data: {
-            workspaceId: workspace.id,
-            actorId: doctorId,
-            actorRole: "DOCTOR",
-            action: "PASSWORD_CHANGED",
-            resourceType: "Doctor",
-            resourceId: doctorId,
-            outcome: "ALLOWED",
-            channel: "UI",
-          },
-        })
+        try {
+          await ctx.db.auditEvent.create({
+            data: {
+              workspaceId: workspace.id,
+              actorId: doctorId,
+              actorRole: "DOCTOR",
+              action: "PASSWORD_CHANGED",
+              resourceType: "Doctor",
+              resourceId: doctorId,
+              outcome: "ALLOWED",
+              channel: "UI",
+            },
+          })
+        } catch (auditErr) {
+          console.warn("[changePassword] Audit log warning:", auditErr)
+        }
       }
       return { ok: true as const }
     }),
 
-  /**
-   * Authenticated: send a fresh verification code to the doctor who is
-   * changing their 2FA setup, email, or anything else that needs re-proving.
-   * Useful for the "verify new email" flow if/when we add it.
-   */
   resendOtp: publicProcedure
     .input(z.object({
       email: emailSchema,
@@ -375,5 +373,3 @@ export const authRouter = router({
       }
     }),
 })
-
-// Se eliminó la exportación sin uso de verifyVerifiedToken

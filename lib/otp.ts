@@ -202,8 +202,9 @@ export function issueVerifiedToken(opts: {
     x: Date.now() + 15 * 60 * 1000,
   }
   const encoded = Buffer.from(JSON.stringify(payload), "utf-8").toString("base64url")
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "medsysve-gcp-production-auth-secret-key-2026-carlos-pierluissi-secret"
   const sig = crypto
-    .createHmac("sha256", process.env.AUTH_SECRET ?? "fallback-dev-secret")
+    .createHmac("sha256", secret)
     .update(encoded)
     .digest("base64url")
   return `${encoded}.${sig}`
@@ -230,8 +231,9 @@ export function verifyVerifiedToken(token: string): VerifyTokenResult {
   if (parts.length !== 2) return { ok: false, reason: "malformed" }
   const [encoded, sig] = parts
 
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "medsysve-gcp-production-auth-secret-key-2026-carlos-pierluissi-secret"
   const expected = crypto
-    .createHmac("sha256", process.env.AUTH_SECRET ?? "fallback-dev-secret")
+    .createHmac("sha256", secret)
     .update(encoded)
     .digest("base64url")
 
