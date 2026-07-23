@@ -37,33 +37,80 @@ const PRESET_TOPICS = [
     topic: "Historias Clínicas SOAP",
     caption: "🏥 Reconcilia tu práctica médica con MedSysVE. Registra tus consultas en formato SOAP, adjunta exámenes de laboratorio e imprime récipes oficiales al instante con tu firma y código QR.",
     hashtags: "#MedSysVE #HistoriaClinica #MedicinaVenezuela #SaludVenezuela #DoctorVenezolano #SOAP",
-    imageUrl: "https://storage.googleapis.com/medsysve-bot-temp/soap-demo.png",
+    imageUrl: "/uploads/marketing/soap-demo.png",
   },
   {
     topic: "Visor DICOM / PACS Inactivo",
     caption: "🔬 ¡Revisa tomografías y resonancias en HD directo en el expediente de tu paciente! MedSysVE cuenta con visor DICOM 100% web con herramientas de zoom, CINE multiframe y densidad HU.",
     hashtags: "#MedSysVE #DICOM #PACS #RadiologiaVenezuela #Traumatologia #Cardiologia #SaludDigital",
-    imageUrl: "https://storage.googleapis.com/medsysve-bot-temp/dicom-demo.png",
+    imageUrl: "/uploads/marketing/dicom-demo.png",
   },
   {
     topic: "Facturación Dual USD / Bs (BCV)",
     caption: "💵 Evita dolores de cabeza contables. MedSysVE actualiza automáticamente la tasa oficial del Banco Central de Venezuela (BCV) diariamente para emitir recibos y facturas en USD y Bolívares.",
     hashtags: "#MedSysVE #FacturacionSENIAT #BCV #SaaSMedico #ConsultorioMedico #Venezuela",
-    imageUrl: "https://storage.googleapis.com/medsysve-bot-temp/billing-demo.png",
+    imageUrl: "/uploads/marketing/soap-demo.png",
   },
   {
     topic: "Red de Referidos entre Doctores",
     caption: "🤝 Interconecta tu consultorio con especialistas de todo el país. Remite pacientes en segundos manteniendo la trazabilidad completa del expediente clínico sin fugas de información.",
     hashtags: "#MedSysVE #RedDeReferidos #DoctoresVenezuela #SaludDigital #EspecialistasMedicos",
-    imageUrl: "https://storage.googleapis.com/medsysve-bot-temp/referrals-demo.png",
+    imageUrl: "/uploads/marketing/dicom-demo.png",
   },
   {
     topic: "Verificación Oficial SACS MPPS",
     caption: "🛡️ En MedSysVE cuidamos la salud de Venezuela. Todos los médicos en nuestra plataforma son validados oficialmente ante el Registro de Profesionales del Ministerio de Salud (SACS MPPS). ¡Consultas seguras con profesionales 100% verificados! 🩺🇻🇪",
     hashtags: "#MedSysVE #SACS #MPPS #DoctorVerificado #SaludVenezuela #MedicinaVenezuela #ConsultasSeguras #Venezuela",
-    imageUrl: "https://storage.googleapis.com/medsysve-bot-temp/sacs-verification-demo.png",
+    imageUrl: "/uploads/marketing/sacs-demo.png",
   },
 ];
+
+function PostImagePreview({ src, style, isPending, status, styleConfig }: any) {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <div className="relative aspect-square w-full bg-slate-950 overflow-hidden group">
+      {!imageError && src ? (
+        <img
+          src={src}
+          alt="MedSysVE Post"
+          onError={() => setImageError(true)}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-amber-950/20 to-slate-950 p-6 flex flex-col items-center justify-center text-center space-y-2 select-none">
+          <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-inner">
+            <Camera className="w-8 h-8" />
+          </div>
+          <span className="text-xs font-bold text-slate-200">MedSysVE Marketing Bot</span>
+          <span className="text-[11px] text-slate-500 max-w-[200px] leading-tight">
+            Arte visual ({styleConfig?.name || style})
+          </span>
+        </div>
+      )}
+
+      {/* Badges Overlay */}
+      <div className="absolute top-3 right-3 flex gap-1.5 flex-wrap justify-end z-10 max-w-[90%]">
+        {isPending ? (
+          <Badge className="bg-amber-500/90 text-slate-950 border-amber-400 shadow-md font-bold text-[10px] backdrop-blur-md">
+            <AlertCircle className="w-3 h-3 mr-1" /> Pendiente Aprobación
+          </Badge>
+        ) : status === "PUBLISHED" ? (
+          <Badge className="bg-emerald-500/90 text-slate-950 border-emerald-400 shadow-md font-bold text-[10px] backdrop-blur-md">
+            <CheckCircle2 className="w-3 h-3 mr-1" /> Publicado
+          </Badge>
+        ) : (
+          <Badge className="bg-red-500/90 text-white border-red-400 font-bold text-[10px]">
+            {status}
+          </Badge>
+        )}
+        <Badge variant="outline" className={`backdrop-blur-md font-semibold text-[10px] ${styleConfig?.badgeColor || "bg-slate-950/80 text-slate-300 border-slate-700"}`}>
+          {styleConfig?.name || style}
+        </Badge>
+      </div>
+    </div>
+  );
+}
 
 export default function MarketingDashboard() {
   const { data: posts, isLoading, refetch } = trpc.marketing.listPosts.useQuery();
@@ -506,38 +553,13 @@ export default function MarketingDashboard() {
               <Card key={post.id} className={`bg-slate-900 overflow-hidden flex flex-col group transition-all shadow-lg ${
                 isPending ? "border-amber-500/50 ring-1 ring-amber-500/20" : "border-slate-800 hover:border-slate-700"
               }`}>
-                <div className="relative aspect-square w-full bg-slate-950">
-                  {post.imageUrl ? (
-                    <img
-                      src={post.imageUrl}
-                      alt={post.caption}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-slate-600">
-                      <ImageIcon className="w-8 h-8" />
-                    </div>
-                  )}
-
-                  <div className="absolute top-3 right-3 flex gap-2 flex-wrap">
-                    {isPending ? (
-                      <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm animate-pulse">
-                        <AlertCircle className="w-3 h-3 mr-1" /> Pendiente Aprobación
-                      </Badge>
-                    ) : post.status === "PUBLISHED" ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-                        <CheckCircle2 className="w-3 h-3 mr-1" /> Publicado
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-red-500/10 text-red-400 border-red-500/30">
-                        {post.status}
-                      </Badge>
-                    )}
-                    <Badge variant="outline" className={`backdrop-blur ${styleConfig?.badgeColor || "bg-slate-950/80 text-slate-300"}`}>
-                      {styleConfig?.name || post.style}
-                    </Badge>
-                  </div>
-                </div>
+                <PostImagePreview
+                  src={post.imageUrl}
+                  style={post.style}
+                  isPending={isPending}
+                  status={post.status}
+                  styleConfig={styleConfig}
+                />
 
                 <CardContent className="flex-1 p-5 space-y-4">
                   <div className="text-xs text-slate-500 flex items-center justify-between">
