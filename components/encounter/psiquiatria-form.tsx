@@ -15,6 +15,7 @@ import {
   Sparkles,
   Layers,
   HeartHandshake,
+  FileDown,
 } from "lucide-react";
 
 interface Props {
@@ -145,10 +146,21 @@ export function PsiquiatriaForm({ encounterId, disabled, initialData = {}, patie
             <Brain className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-base text-white">Psiquiatría y Salud Mental</h3>
-            <p className="text-xs text-slate-400">Examen del Estado Mental (EEM), Escalas PHQ-9/GAD-7 & Monitoreo de Psicofármacos</p>
+            <h3 className="font-bold text-base text-white">Evaluación de Psiquiatría & Salud Mental</h3>
+            <p className="text-xs text-slate-400">Examen del Estado Mental (MSE), Escalas PHQ-9 / GAD-7 / C-SSRS & Monitoreo de Psicofármacos</p>
           </div>
         </div>
+        {encounterId && encounterId !== "sandbox-demo-enc" && (
+          <a
+            href={`/api/pdf/encounter/${encounterId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all shadow-sm"
+          >
+            <FileDown size={14} />
+            Ver / Exportar Informe PDF (con QR)
+          </a>
+        )}
       </div>
 
       {/* Navigation Sub-Tabs */}

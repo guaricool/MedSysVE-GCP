@@ -16,6 +16,7 @@ import {
   FileCheck,
   Dumbbell,
   Compass,
+  FileDown,
 } from "lucide-react";
 
 interface Props {
@@ -168,6 +169,17 @@ export function TraumatologiaForm({ encounterId, disabled, initialData = {}, pat
         </div>
 
         <div className="flex items-center gap-2">
+          {encounterId && encounterId !== "sandbox-demo-enc" && (
+            <a
+              href={`/api/pdf/encounter/${encounterId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all shadow-sm mr-1"
+            >
+              <FileDown size={14} />
+              Ver / Exportar Informe PDF (con QR)
+            </a>
+          )}
           {saved && (
             <span className="text-xs text-emerald-400 flex items-center gap-1 font-medium bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20">
               <CheckCircle2 className="w-3.5 h-3.5" /> Guardado

@@ -14,6 +14,7 @@ import {
   Wind,
   Layers,
   Syringe,
+  FileDown,
 } from "lucide-react";
 
 interface Props {
@@ -154,6 +155,17 @@ export function AnestesiologiaForm({ encounterId, disabled, initialData = {}, pa
             <p className="text-xs text-slate-400">Valoración Preanestésica ASA, Vía Aérea Difícil (VAD) & Registro Intraoperatorio</p>
           </div>
         </div>
+        {encounterId && encounterId !== "sandbox-demo-enc" && (
+          <a
+            href={`/api/pdf/encounter/${encounterId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all shadow-sm"
+          >
+            <FileDown size={14} />
+            Ver / Exportar Informe PDF (con QR)
+          </a>
+        )}
       </div>
 
       {/* Navigation Sub-Tabs */}

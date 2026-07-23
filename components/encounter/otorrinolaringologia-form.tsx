@@ -19,6 +19,7 @@ import {
   Plus,
   BarChart3,
   Layers,
+  FileDown,
 } from "lucide-react";
 
 interface Props {
@@ -284,11 +285,21 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
             <Ear className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-base text-white">Evaluación de Otorrinolaringología (ORL)</h3>
-            <p className="text-xs text-slate-400">Otología, Audiometría, Rinología, Laringología, Diagrama Trilocalizado e Informes Endoscópicos</p>
+            <h3 className="font-bold text-base text-white">Otorrinolaringología (ORL) & Audiometría</h3>
+            <p className="text-xs text-slate-400">Audiograma Tonal Tonal, Nasofibrolaringoscopia con Fotocaptura & Mapeo Anatómico</p>
           </div>
         </div>
-
+        {encounterId && encounterId !== "sandbox-demo-enc" && (
+          <a
+            href={`/api/pdf/encounter/${encounterId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all shadow-sm"
+          >
+            <FileDown size={14} />
+            Ver / Exportar Informe PDF (con QR)
+          </a>
+        )}
         <div className="flex items-center gap-2">
           {saved && (
             <span className="text-xs text-emerald-400 flex items-center gap-1 font-medium bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20">

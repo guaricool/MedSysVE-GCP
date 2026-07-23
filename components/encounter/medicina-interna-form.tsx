@@ -13,6 +13,7 @@ import {
   HeartPulse,
   Award,
   CheckCircle2,
+  FileDown,
 } from "lucide-react";
 
 interface Props {
@@ -176,6 +177,17 @@ export function MedicinaInternaForm({ encounterId, disabled, initialData = {}, p
             <p className="text-xs text-slate-400">Índice Charlson (CCI), HIT 4T / Child-Pugh / MELD & Polifarmacia (Beers / STOPP-START)</p>
           </div>
         </div>
+        {encounterId && encounterId !== "sandbox-demo-enc" && (
+          <a
+            href={`/api/pdf/encounter/${encounterId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all shadow-sm"
+          >
+            <FileDown size={14} />
+            Ver / Exportar Informe PDF (con QR)
+          </a>
+        )}
       </div>
 
       {/* Navigation Sub-Tabs */}

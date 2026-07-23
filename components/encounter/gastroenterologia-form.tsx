@@ -14,6 +14,7 @@ import {
   Flame,
   Layers,
   Sparkles,
+  FileDown,
 } from "lucide-react";
 
 interface Props {
@@ -142,10 +143,21 @@ export function GastroenterologiaForm({ encounterId, disabled, initialData = {},
             <Database className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-base text-white">Gastroenterología & Endoscopia Digestive</h3>
+            <h3 className="font-bold text-base text-white">Gastroenterología & Endoscopia Digestiva</h3>
             <p className="text-xs text-slate-400">Reportes Endoscópicos (BBPS Boston), Clasificación Forrest / Los Ángeles & Índice Mayo EII</p>
           </div>
         </div>
+        {encounterId && encounterId !== "sandbox-demo-enc" && (
+          <a
+            href={`/api/pdf/encounter/${encounterId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all shadow-sm"
+          >
+            <FileDown size={14} />
+            Ver / Exportar Informe PDF (con QR)
+          </a>
+        )}
       </div>
 
       {/* Navigation Sub-Tabs */}
