@@ -57,6 +57,12 @@ const PRESET_TOPICS = [
     hashtags: "#MedSysVE #RedDeReferidos #DoctoresVenezuela #SaludDigital #EspecialistasMedicos",
     imageUrl: "https://storage.googleapis.com/medsysve-bot-temp/referrals-demo.png",
   },
+  {
+    topic: "Verificación Oficial SACS MPPS",
+    caption: "🛡️ En MedSysVE cuidamos la salud de Venezuela. Todos los médicos en nuestra plataforma son validados oficialmente ante el Registro de Profesionales del Ministerio de Salud (SACS MPPS). ¡Consultas seguras con profesionales 100% verificados! 🩺🇻🇪",
+    hashtags: "#MedSysVE #SACS #MPPS #DoctorVerificado #SaludVenezuela #MedicinaVenezuela #ConsultasSeguras #Venezuela",
+    imageUrl: "https://storage.googleapis.com/medsysve-bot-temp/sacs-verification-demo.png",
+  },
 ];
 
 export default function MarketingDashboard() {
