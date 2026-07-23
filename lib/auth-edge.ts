@@ -18,11 +18,26 @@ import type { NextAuthConfig } from "next-auth"
  */
 export const authConfig: NextAuthConfig = {
   trustHost: true,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   providers: [],
   session: {
     strategy: "jwt",
     maxAge: 8 * 60 * 60,
     updateAge: 60 * 60,
+  },
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-authjs.session-token"
+          : "authjs.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
   callbacks: {
     async jwt({ token }) {
