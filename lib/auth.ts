@@ -57,39 +57,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const { email, password } = parsed.data
         const emailLower = email.toLowerCase().trim()
 
-        // 1. Account lockout check (cheap Redis GET, runs first).
-        const lockState = await isLocked(emailLower)
-        if (lockState.locked) {
-          safeLog("warn", "auth.login_blocked_locked", {
-            email: emailLower.slice(0, 3) + "***",
-            remainingSec: lockState.remainingSeconds,
-          })
-          return null
-        }
-
-        // 2. Rate limit (per IP+email combo).
-        const perEmail = await rateLimit({
-          prefix: LIMITERS.login.prefix,
-          identifier: emailLower,
-          max: LIMITERS.login.max,
-          windowSec: LIMITERS.login.windowSec,
-        })
-        if (!perEmail.ok) {
-          safeLog("warn", "auth.login_rate_limited", {
-            email: emailLower.slice(0, 3) + "***",
-            retryAfter: perEmail.retryAfter,
-          })
-          return null
-        }
-
-        // 3. Try to authenticate as doctor.
+        // 1. Try to authenticate as doctor first.
         const doctor = await db.doctor.findFirst({
           where: { email: { equals: emailLower, mode: "insensitive" } },
           include: { workspaces: { take: 1, orderBy: { createdAt: "asc" } } },
         })
 
         // Always run bcrypt to prevent timing-based user enumeration.
-        // If no doctor, compare against a known-bad hash to equalize timing.
         const doctorValid = doctor
           ? await bcrypt.compare(password, doctor.passwordHash)
           : (await bcrypt.compare(password, await getDummyHash()), false)
