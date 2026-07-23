@@ -16,6 +16,7 @@ import {
   Sparkles,
   Layers,
   Award,
+  FileDown,
 } from "lucide-react";
 
 interface Props {
@@ -161,6 +162,17 @@ export function PediatriaForm({ encounterId, disabled, initialData = {}, patient
             <p className="text-xs text-slate-400">Curvas OMS/CDC, Calculadora de Dosis Ponderal & Semáforo del Desarrollo</p>
           </div>
         </div>
+        {patientRegistrationId && patientRegistrationId !== "sandbox-demo-pat" && (
+          <a
+            href={`/api/pdf/vaccine-carnet/${patientRegistrationId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all shadow-sm"
+          >
+            <FileDown size={14} />
+            Carné de Vacunación PDF (con QR)
+          </a>
+        )}
       </div>
 
       {/* Navigation Sub-Tabs */}
@@ -548,10 +560,21 @@ export function PediatriaForm({ encounterId, disabled, initialData = {}, patient
       {/* Tab 4: Carnet de Vacunas PAI */}
       {activeTab === "VACUNAS" && (
         <div className="space-y-4 pt-2">
-          <div className="border-b border-slate-800 pb-3">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h4 className="text-xs font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
               <Syringe className="w-4 h-4" /> Esquema Ampliado de Inmunizaciones (PAI Venezuela)
             </h4>
+            {patientRegistrationId && patientRegistrationId !== "sandbox-demo-pat" && (
+              <a
+                href={`/api/pdf/vaccine-carnet/${patientRegistrationId}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all shadow-sm"
+              >
+                <FileDown size={13} />
+                Ver / Descargar Carné PDF (con QR)
+              </a>
+            )}
           </div>
 
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
