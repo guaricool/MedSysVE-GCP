@@ -30,12 +30,9 @@ export function LoginForm() {
     setLoading(true)
     try {
       const fd = new FormData(e.currentTarget)
-      const email = ((fd.get("email") as string) ?? "").trim().toLowerCase()
-      const password = (fd.get("password") as string) ?? ""
-
       const result = await signIn("credentials", {
-        email,
-        password,
+        email: (fd.get("email") as string) ?? "",
+        password: (fd.get("password") as string) ?? "",
         redirect: false,
       })
       // In next-auth v5 beta, ok=true even on failure (HTTP 200 callback).
@@ -47,7 +44,7 @@ export function LoginForm() {
         setError("Email o contraseña incorrectos")
       }
     } catch {
-      setError("Email o contraseña incorrectos")
+      setError("Error al iniciar sesión. Intente de nuevo.")
     } finally {
       setLoading(false)
     }
