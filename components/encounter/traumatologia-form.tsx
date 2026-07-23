@@ -169,7 +169,7 @@ export function TraumatologiaForm({ encounterId, disabled, initialData = {}, pat
         </div>
 
         <div className="flex items-center gap-2">
-          {encounterId && encounterId !== "sandbox-demo-enc" && (
+          {encounterId && (
             <a
               href={`/api/pdf/encounter/${encounterId}`}
               target="_blank"

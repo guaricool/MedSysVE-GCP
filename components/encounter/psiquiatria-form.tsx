@@ -150,7 +150,7 @@ export function PsiquiatriaForm({ encounterId, disabled, initialData = {}, patie
             <p className="text-xs text-slate-400">Examen del Estado Mental (MSE), Escalas PHQ-9 / GAD-7 / C-SSRS & Monitoreo de Psicofármacos</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

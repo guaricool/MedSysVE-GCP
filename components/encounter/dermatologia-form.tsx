@@ -133,7 +133,7 @@ export function DermatologiaForm({ encounterId, disabled, initialData = {}, pati
             <p className="text-xs text-slate-400">Fototipo Fitzpatrick, Criterios ABCDE de Melanoma & Biopsias Cutáneas</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

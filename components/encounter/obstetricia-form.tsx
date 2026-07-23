@@ -168,7 +168,7 @@ export function ObstetriciaForm({ encounterId, disabled, initialData = {}, patie
             <p className="text-xs text-slate-400">Ficha Prenatal Matricial, Calculadora Obstétrica (Naegele) & Cribado (Bethesda/BI-RADS)</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

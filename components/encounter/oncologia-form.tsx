@@ -149,7 +149,7 @@ export function OncologiaForm({ encounterId, disabled, initialData = {}, patient
             <p className="text-xs text-slate-400">TNM AJCC, Performance Status ECOG / Karnofsky & Protocolos Quimioterápicos CTCAE</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

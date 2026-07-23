@@ -131,7 +131,7 @@ export function CirugiaGeneralForm({ encounterId, disabled, initialData = {}, pa
             <p className="text-xs text-slate-400">Seguridad OMS, Reporte Operatorio & Clasificación Clavien-Dindo</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

@@ -212,7 +212,7 @@ export function GeriatriaForm({ encounterId, disabled, initialData = {}, patient
             <p className="text-xs text-slate-400">Funcionalidad (Katz/Lawton), Fragilidad FRAIL, Caídas (TUG) & Cognición / Ánimo (Pfeiffer/GDS-15)</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

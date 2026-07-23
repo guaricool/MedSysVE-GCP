@@ -140,7 +140,7 @@ export function InfectologiaForm({ encounterId, disabled, initialData = {}, pati
             <p className="text-xs text-slate-400">Antibiograma Interactivo (MIC), Dosis Renal & Vigilancia Epidemiológica MDR</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

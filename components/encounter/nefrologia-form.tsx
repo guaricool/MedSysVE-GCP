@@ -179,7 +179,7 @@ export function NefrologiaForm({ encounterId, disabled, initialData = {}, patien
             <p className="text-xs text-slate-400">Calculadora TFG CKD-EPI (2021), Hemodiálisis / Curva de Peso Seco & Accesos Vasculares</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

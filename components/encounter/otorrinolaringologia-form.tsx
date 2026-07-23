@@ -289,7 +289,7 @@ export function OtorrinolaringologiaForm({ encounterId, disabled, initialData = 
             <p className="text-xs text-slate-400">Audiograma Tonal Tonal, Nasofibrolaringoscopia con Fotocaptura & Mapeo Anatómico</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

@@ -145,7 +145,7 @@ export function NeurologiaForm({ encounterId, disabled, initialData = {}, patien
             <p className="text-xs text-slate-400">Escalas Objetivas (Glasgow, NIHSS, EDSS), Mapa Dermatómico & Registro de Crisis</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

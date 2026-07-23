@@ -160,7 +160,7 @@ export function NeumonologiaForm({ encounterId, disabled, initialData = {}, pati
             <p className="text-xs text-slate-400">Espirometría (VEF1/CVF/BD), Guías Asma GINA & EPOC GOLD, Escala mMRC / CAT</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

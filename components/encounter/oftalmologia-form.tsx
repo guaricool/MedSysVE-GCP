@@ -202,7 +202,7 @@ export function OftalmologiaForm({ encounterId, disabled, initialData = {}, pati
             <p className="text-xs text-slate-400">Refracción Ultra-Rápida OD/OI, Control de Glaucoma / PIO & Retinopatía Diabética/Hipertensiva</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

@@ -174,7 +174,7 @@ export function FisiatriaForm({ encounterId, disabled, initialData = {}, patient
             <p className="text-xs text-slate-400">Fuerza Muscular MMT (Daniels 0-5), Espasticidad (Ashworth) & Electroterapia TENS/EMS</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

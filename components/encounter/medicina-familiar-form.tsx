@@ -187,7 +187,7 @@ export function MedicinaFamiliarForm({ encounterId, disabled, initialData = {}, 
             <p className="text-xs text-slate-400">Genograma de 3 Generaciones, APGAR Funcional Familiar & Ciclo Vital (Duvall)</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

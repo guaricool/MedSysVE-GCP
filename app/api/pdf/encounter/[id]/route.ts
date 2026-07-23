@@ -22,6 +22,85 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params
   const omitSello = user.role === "PATIENT" && req.nextUrl.searchParams.get("preview") === "1"
 
+  if (id === "sandbox-demo-enc") {
+    const doc = await db.doctor.findFirst({
+      where: { email: user.email },
+      include: { reportPreferences: true }
+    })
+    const ws = await db.workspace.findFirst({
+      where: { doctorId: doc?.id },
+      include: { clinic: true, doctor: { include: { reportPreferences: true } } }
+    })
+    
+    const mockDoctor = ws?.doctor || doc || {
+      prefijo: "Dr.",
+      nombre: (user as any).name || "Carlos Pierluissi",
+      apellido: "",
+      especialidadPrincipal: "Medicina General & Especializada",
+      cedula: "V-12345678",
+      email: user.email || "admin@medsysve.com",
+      telefono: "+58 412-1234567",
+      subEspecialidades: "Sandbox Demo",
+    }
+    
+    const buffer = await renderToBuffer(
+      React.createElement(EncounterSummaryPdf, {
+        branding: buildPdfBranding({ doctor: mockDoctor as any, clinic: ws?.clinic as any, workspace: ws as any }),
+        doctor: {
+          prefijo: mockDoctor.prefijo || "Dr.",
+          nombre: formatDoctorName(mockDoctor as any) || (user as any).name || "Doctor MedSysVE",
+          especialidad: mockDoctor.especialidadPrincipal || "Especialidad Médica",
+          cedula: mockDoctor.cedula || undefined,
+          email: mockDoctor.email || undefined,
+          telefono: mockDoctor.telefono || undefined,
+        },
+        clinic: ws?.clinic ? {
+          nombre: ws.clinic.nombre,
+          direccion: ws.clinic.direccion ?? undefined,
+          telefono: ws.clinic.telefono ?? undefined,
+          email: ws.clinic.email ?? undefined,
+          rif: ws.clinic.rif ?? undefined,
+        } : null,
+        patient: {
+          nombre: "Camila",
+          apellido: "Pérez (Demo Sandbox)",
+          edad: 26,
+          sexo: "Femenino",
+          grupoSanguineo: "O+",
+          cedula: "V-26123456",
+          telefono: "+58 414-9876543",
+        },
+        encounter: {
+          fecha: new Date().toLocaleDateString("es-VE", { year: "numeric", month: "long", day: "numeric", timeZone: 'America/Caracas' }),
+          motivo: "Evaluación Médica de Demostración en Sandbox",
+          historiaClinica: "Paciente acude para evaluación de control especializado en plataforma MedSysVE.",
+          examenFisico: "Paciente vigil, orientada en tiempo, espacio y persona. Normocéfala, cardiopulmonar sin agregados.",
+          plan: "Indicaciones médicas de prueba y seguimiento especializado.",
+          vitales: { paSistolica: 120, paDiastolica: 80, fc: 72, fr: 16, temp: 36.5, spo2: 98, peso: 62, talla: 165, imc: 22.8 },
+          diagnoses: [{ codigoCie10: "Z00.0", descripcion: "Examen médico general de control", tipo: "PRESUNTIVO" }],
+          medications: [],
+          labOrders: [],
+          imagingOrders: [],
+          datosEspecialidad: {
+            evaluacion: "Demo Sandbox MedSysVE",
+            escala: "Excelente estado clínico",
+          },
+        },
+        generadoEl: new Date().toLocaleDateString("es-VE", { timeZone: 'America/Caracas' }),
+        activeSections: undefined,
+        omitSello,
+      }) as any,
+    )
+
+    return new NextResponse(buffer as unknown as BodyInit, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename="informe-demo-sandbox.pdf"`,
+        "Content-Length": buffer.length.toString(),
+      },
+    })
+  }
+
   // Build the where clause depending on session role
   // Patients can only access encounters for their own registrations
   const signedStatuses = ["SIGNED", "AMENDED"] as ("SIGNED" | "AMENDED")[]

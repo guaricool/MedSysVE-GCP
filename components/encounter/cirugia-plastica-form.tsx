@@ -186,7 +186,7 @@ export function CirugiaPlasticaForm({ encounterId, disabled, initialData = {}, p
             <p className="text-xs text-slate-400">Mapeo Corporal Lipo HD, Carnet de Implantes Mamarios & Escala VSS de Vancouver</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

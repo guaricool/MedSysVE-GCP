@@ -162,17 +162,30 @@ export function PediatriaForm({ encounterId, disabled, initialData = {}, patient
             <p className="text-xs text-slate-400">Curvas OMS/CDC, Calculadora de Dosis Ponderal & Semáforo del Desarrollo</p>
           </div>
         </div>
-        {patientRegistrationId && patientRegistrationId !== "sandbox-demo-pat" && (
-          <a
-            href={`/api/pdf/vaccine-carnet/${patientRegistrationId}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all shadow-sm"
-          >
-            <FileDown size={14} />
-            Carné de Vacunación PDF (con QR)
-          </a>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {patientRegistrationId && (
+            <a
+              href={`/api/pdf/vaccine-carnet/${patientRegistrationId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-300 hover:bg-purple-500/20 transition-all shadow-sm"
+            >
+              <FileDown size={14} />
+              Carné de Vacunación PDF (con QR)
+            </a>
+          )}
+          {encounterId && (
+            <a
+              href={`/api/pdf/encounter/${encounterId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all shadow-sm"
+            >
+              <FileDown size={14} />
+              Ver / Exportar Informe PDF (con QR)
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Navigation Sub-Tabs */}

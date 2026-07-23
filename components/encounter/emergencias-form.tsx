@@ -173,7 +173,7 @@ export function EmergenciasForm({ encounterId, disabled, initialData = {}, patie
             <p className="text-xs text-slate-400">Triage Estructurado (ESI 1-5), Bitácora de RCP en Vivo & Protocolos Rápidos Puerta-Aguja</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

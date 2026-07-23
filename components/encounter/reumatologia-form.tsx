@@ -195,7 +195,7 @@ export function ReumatologiaForm({ encounterId, disabled, initialData = {}, pati
             <p className="text-xs text-slate-400">Homúnculo Articular 28-Joint Mapper, Índices DAS28/CDAI & Artropatías Virales Endémicas (Chikungunya/Zika)</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

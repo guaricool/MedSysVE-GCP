@@ -164,7 +164,7 @@ export function AlergologiaForm({ encounterId, disabled, initialData = {}, patie
             <p className="text-xs text-slate-400">Prick Test de Alérgenos Cutáneos, Vacunas de Inmunoterapia & Serología IgE/IgG/IgA/IgM</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

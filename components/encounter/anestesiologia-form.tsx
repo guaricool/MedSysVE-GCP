@@ -155,7 +155,7 @@ export function AnestesiologiaForm({ encounterId, disabled, initialData = {}, pa
             <p className="text-xs text-slate-400">Valoración Preanestésica ASA, Vía Aérea Difícil (VAD) & Registro Intraoperatorio</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

@@ -192,7 +192,7 @@ export function UrologiaForm({ encounterId, disabled, initialData = {}, patientR
             <p className="text-xs text-slate-400">Puntuación IPSS / QoL, Calculadora PSA / Densidad & Uroflujometría con RPM</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

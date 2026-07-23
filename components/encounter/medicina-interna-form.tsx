@@ -177,7 +177,7 @@ export function MedicinaInternaForm({ encounterId, disabled, initialData = {}, p
             <p className="text-xs text-slate-400">Índice Charlson (CCI), HIT 4T / Child-Pugh / MELD & Polifarmacia (Beers / STOPP-START)</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

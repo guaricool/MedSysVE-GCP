@@ -138,7 +138,7 @@ export function EndocrinologiaForm({ encounterId, disabled, initialData = {}, pa
             <p className="text-xs text-slate-400">Perfil Glucémico / HbA1c, Titulación Basal-Bolus & Nódulos Tiroideos (TI-RADS)</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"

@@ -152,7 +152,7 @@ export function HematologiaForm({ encounterId, disabled, initialData = {}, patie
             <p className="text-xs text-slate-400">Frotis Sangre Periférica, Módulo de Anemia Falciforme & Protocolos Transfusionales</p>
           </div>
         </div>
-        {encounterId && encounterId !== "sandbox-demo-enc" && (
+        {encounterId && (
           <a
             href={`/api/pdf/encounter/${encounterId}`}
             target="_blank"
