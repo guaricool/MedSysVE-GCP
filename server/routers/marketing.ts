@@ -45,7 +45,7 @@ export const marketingRouter = router({
 
   createPost: adminProcedure
     .input(z.object({
-      imageUrl: z.string().url(),
+      imageUrl: z.string().min(1),
       caption: z.string().min(1),
       hashtags: z.string(),
       style: z.enum(["hyperrealistic", "cartoon", "screenshot", "marketing"]),
@@ -62,11 +62,15 @@ export const marketingRouter = router({
         if (igToken && igAccountId) {
           try {
             const fullText = `${input.caption}\n\n${input.hashtags}`;
+            const fullImageUrl = input.imageUrl.startsWith("http")
+              ? input.imageUrl
+              : `https://www.medsysve.com${input.imageUrl.startsWith("/") ? "" : "/"}${input.imageUrl}`;
+
             const containerRes = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}/media`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                image_url: input.imageUrl,
+                image_url: fullImageUrl,
                 caption: fullText,
                 access_token: igToken
               })
@@ -112,7 +116,7 @@ export const marketingRouter = router({
       caption: z.string().min(1),
       hashtags: z.string(),
       style: z.string(),
-      imageUrl: z.string().url(),
+      imageUrl: z.string().min(1),
     }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.marketingPost.update({
@@ -142,7 +146,7 @@ export const marketingRouter = router({
       });
 
       if (!post) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Post no encontrado" });
       }
 
       // Fetch secrets
@@ -150,30 +154,39 @@ export const marketingRouter = router({
       const igAccountId = await getSecret("IG_ACCOUNT_ID");
 
       if (!igToken || !igAccountId) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Missing IG credentials" });
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Credenciales de Instagram no configuradas o incompletas en Secret Manager (IG_ACCESS_TOKEN / IG_ACCOUNT_ID)."
+        });
       }
 
       const fullText = `${post.caption}\n\n${post.hashtags}`;
-      
+      const fullImageUrl = post.imageUrl.startsWith("http")
+        ? post.imageUrl
+        : `https://www.medsysve.com${post.imageUrl.startsWith("/") ? "" : "/"}${post.imageUrl}`;
+
       // 1. Create a media container
       const containerRes = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}/media`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          image_url: post.imageUrl,
+          image_url: fullImageUrl,
           caption: fullText,
           access_token: igToken
         })
       });
       const containerData = await containerRes.json();
-      
+
       if (!containerData.id) {
         console.error("IG Container Error:", containerData);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create media container" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Error de la API de Instagram: ${containerData.error?.message || "No se pudo crear el contenedor multimedia en Facebook."}`
+        });
       }
 
-      // Wait 5 seconds
-      await new Promise(r => setTimeout(r, 5000));
+      // Wait 4 seconds
+      await new Promise(r => setTimeout(r, 4000));
 
       // 2. Publish
       const publishRes = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}/media_publish`, {
@@ -185,10 +198,13 @@ export const marketingRouter = router({
         })
       });
       const publishData = await publishRes.json();
-      
+
       if (!publishData.id) {
         console.error("IG Publish Error:", publishData);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to publish media" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Error al publicar en Instagram: ${publishData.error?.message || "Error al solicitar publicación."}`
+        });
       }
 
       // Mark it as PUBLISHED again and update the timestamp
