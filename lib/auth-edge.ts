@@ -24,7 +24,7 @@ if (process.env.NODE_ENV === "production") {
  */
 export const authConfig: NextAuthConfig = {
   trustHost: true,
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "medsysve-gcp-production-auth-secret-key-2026-carlos-pierluissi-secret",
   providers: [],
   session: {
     strategy: "jwt",
