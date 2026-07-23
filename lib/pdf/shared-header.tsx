@@ -39,7 +39,11 @@ export function SharedPdfHeader({
   const isClinic = !!clinic
 
   const leftTitle = doctor.nombre
-  const leftLines = [doctor.cedula ? `C.I.: ${doctor.cedula}` : ""].filter(Boolean)
+  const leftLines = [
+    doctor.cedula ? `C.I.: ${doctor.cedula}` : "",
+    doctor.mppsMatricula ? `MPPS: ${doctor.mppsMatricula}` : "",
+    doctor.rif ? `RIF: ${doctor.rif}` : "",
+  ].filter(Boolean)
 
   const centerClinicName = isClinic ? clinic.nombre : null
   const centerClinicLines = isClinic

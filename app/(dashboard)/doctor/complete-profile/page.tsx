@@ -24,6 +24,8 @@ export default function CompleteProfilePage() {
   // State
   const [nacionalidad, setNacionalidad] = useState<"V" | "E">("V");
   const [cedula, setCedula] = useState("");
+  const [segundoNombre, setSegundoNombre] = useState("");
+  const [segundoApellido, setSegundoApellido] = useState("");
   const [rif, setRif] = useState("");
   const [mppsMatricula, setMppsMatricula] = useState("");
   const [especialidadPrincipal, setEspecialidadPrincipal] = useState(ESPECIALIDADES_VE[0] || "Medicina General");
@@ -38,9 +40,9 @@ export default function CompleteProfilePage() {
   // tRPC Mutations
   const verifySacsMutation = trpc.doctor.verifySacs.useMutation({
     onSuccess: (data) => {
-      if (data.encontrado && data.matriculaMpps) {
+      if (data.encontrado) {
         setIsSacsVerified(true);
-        setMppsMatricula(data.matriculaMpps);
+        if (data.matriculaMpps) setMppsMatricula(data.matriculaMpps);
         if (data.nombreCompleto) setNombreCompletoSacs(data.nombreCompleto);
         if (data.especialidades && data.especialidades.length > 0) {
           const matchedSpec = ESPECIALIDADES_VE.find((e) =>
@@ -49,14 +51,16 @@ export default function CompleteProfilePage() {
           if (matchedSpec) setEspecialidadPrincipal(matchedSpec);
         }
         setSacsMessage(`✅ Credenciales verificadas con éxito en el SACS MPPS.`);
-      } else if (data.origen === "MOCK_FALLBACK") {
-        setSacsMessage(`⚠️ Servicio SACS fuera de línea. Puedes ingresar tu Matrícula MPPS manualmente para continuar.`);
       } else {
-        setSacsMessage(`⚠️ No se encontraron registros automáticos. Verifica el número o ingrésalo manualmente.`);
+        setIsSacsVerified(false);
+        setSacsMessage(null);
+        setFormError("⛔ Registro no permitido: La Cédula no figura en el Registro de Profesionales de la Salud del Ministerio de Salud (SACS MPPS).");
       }
     },
     onError: () => {
-      setSacsMessage(`⚠️ No se pudo conectar al SACS MPPS. Ingrese su matrícula manualmente.`);
+      setIsSacsVerified(false);
+      setSacsMessage(null);
+      setFormError("⛔ No se pudo conectar con el SACS MPPS para validar la cédula.");
     },
   });
 
@@ -76,6 +80,7 @@ export default function CompleteProfilePage() {
     }
     setFieldErrors((prev) => ({ ...prev, cedula: false }));
     setSacsMessage(null);
+    setFormError(null);
     verifySacsMutation.mutate({ cedula: cedula.trim(), nacionalidad });
   };
 
@@ -103,6 +108,8 @@ export default function CompleteProfilePage() {
     setFieldErrors({});
     completeOnboardingMutation.mutate({
       nacionalidad,
+      segundoNombre: segundoNombre.trim() || undefined,
+      segundoApellido: segundoApellido.trim() || undefined,
       rif: rif.trim().toUpperCase(),
       mppsMatricula: mppsMatricula.trim(),
       especialidadPrincipal,
@@ -182,6 +189,30 @@ export default function CompleteProfilePage() {
                 <span>Nombre Oficial SACS: <strong>{nombreCompletoSacs}</strong></span>
               </div>
             )}
+          </div>
+
+          {/* 2. Nombres Adicionales (Opcional) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300">Segundo Nombre (Opcional)</label>
+              <input
+                type="text"
+                placeholder="Ej. María"
+                value={segundoNombre}
+                onChange={(e) => setSegundoNombre(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300">Segundo Apellido (Opcional)</label>
+              <input
+                type="text"
+                placeholder="Ej. Pérez"
+                value={segundoApellido}
+                onChange={(e) => setSegundoApellido(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
+              />
+            </div>
           </div>
 
           {/* 2. Matrícula MPPS y RIF */}

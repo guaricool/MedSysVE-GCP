@@ -98,8 +98,11 @@ export function RegisterForm() {
 
   // Doctor Form controlled inputs (autocompleted by SACS)
   const [formNombre, setFormNombre] = useState("")
+  const [formSegundoNombre, setFormSegundoNombre] = useState("")
   const [formApellido, setFormApellido] = useState("")
+  const [formSegundoApellido, setFormSegundoApellido] = useState("")
   const [formCedula, setFormCedula] = useState("")
+  const [formMppsMatricula, setFormMppsMatricula] = useState("")
   const [formEspecialidad, setFormEspecialidad] = useState("")
 
   const { data: especialidades = [] } = trpc.doctor.especialidades.useQuery()
@@ -110,6 +113,7 @@ export function RegisterForm() {
         setIsSacsVerified(true)
         if (data.nombre) setFormNombre(data.nombre)
         if (data.apellido) setFormApellido(data.apellido)
+        if (data.matriculaMpps) setFormMppsMatricula(data.matriculaMpps)
         setFormCedula(data.cedula)
         if (data.especialidades && data.especialidades.length > 0) {
           const matchedSpec = especialidades.find((e) =>
@@ -127,13 +131,13 @@ export function RegisterForm() {
       } else {
         setIsSacsVerified(false)
         setSacsMessage(null)
-        setError("La cédula ingresada no aparece registrada como profesional de la salud en el SACS (Ministerio de Salud).")
+        setError("⛔ Registro no permitido: La Cédula ingresada no figura en el Registro de Profesionales de la Salud del Ministerio de Salud (SACS MPPS). Solo médicos registrados ante el MPPS pueden crear una cuenta en MedSysVE.")
       }
     },
     onError: () => {
-      setIsSacsVerified(true)
-      setFormCedula(sacsCedula)
-      setSacsMessage(`⚠️ No se pudo conectar con el SACS MPPS. Ingrese sus datos manualmente.`)
+      setIsSacsVerified(false)
+      setSacsMessage(null)
+      setError("⛔ No se pudo validar la cédula ante el SACS MPPS. Verifique el número e intente de nuevo.")
     },
   })
 
@@ -278,9 +282,13 @@ export function RegisterForm() {
       // clinicInvitationCode is included so the new doctor is affiliated
       // with that clinic from day 1.
       registerDoctor.mutate({
-        cedula: fd.get("cedula") as string,
+        cedula: (fd.get("cedula") as string) || sacsCedula,
+        nacionalidad: sacsNacionalidad,
         nombre: fd.get("nombre") as string,
+        segundoNombre: (fd.get("segundoNombre") as string) || undefined,
         apellido: fd.get("apellido") as string,
+        segundoApellido: (fd.get("segundoApellido") as string) || undefined,
+        mppsMatricula: (fd.get("mppsMatricula") as string) || formMppsMatricula || undefined,
         email: email.trim().toLowerCase(),
         password: fd.get("password") as string,
         telefono: (fd.get("telefono") as string) || undefined,
@@ -594,7 +602,7 @@ export function RegisterForm() {
         >
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-slate-300">Nombre</Label>
+              <Label className="text-slate-300">Primer Nombre (*)</Label>
               <Input
                 name="nombre"
                 value={formNombre}
@@ -604,7 +612,20 @@ export function RegisterForm() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-slate-300">Apellido</Label>
+              <Label className="text-slate-300">Segundo Nombre (Opcional)</Label>
+              <Input
+                name="segundoNombre"
+                value={formSegundoNombre}
+                onChange={(e) => setFormSegundoNombre(e.target.value)}
+                placeholder="Ej. María"
+                className="bg-slate-800 border-slate-700 text-white"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-slate-300">Primer Apellido (*)</Label>
               <Input
                 name="apellido"
                 value={formApellido}
@@ -613,20 +634,41 @@ export function RegisterForm() {
                 className="bg-slate-800 border-slate-700 text-white"
               />
             </div>
-          </div>
-          {/* Cédula is required only for doctors (admin doesn't have one — they
-              are non-medical staff). */}
-          {accountType !== "clinic-admin" && (
             <div className="space-y-1">
-              <Label className="text-slate-300">Cédula</Label>
+              <Label className="text-slate-300">Segundo Apellido (Opcional)</Label>
               <Input
-                name="cedula"
-                value={formCedula || sacsCedula}
-                onChange={(e) => setFormCedula(e.target.value)}
-                placeholder="12345678"
-                required
+                name="segundoApellido"
+                value={formSegundoApellido}
+                onChange={(e) => setFormSegundoApellido(e.target.value)}
+                placeholder="Ej. Pérez"
                 className="bg-slate-800 border-slate-700 text-white"
               />
+            </div>
+          </div>
+
+          {accountType !== "clinic-admin" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-slate-300">Cédula (*)</Label>
+                <Input
+                  name="cedula"
+                  value={formCedula || sacsCedula}
+                  onChange={(e) => setFormCedula(e.target.value)}
+                  placeholder="12345678"
+                  required
+                  className="bg-slate-800 border-slate-700 text-white"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-slate-300">Matrícula MPPS (*)</Label>
+                <Input
+                  name="mppsMatricula"
+                  value={formMppsMatricula}
+                  onChange={(e) => setFormMppsMatricula(e.target.value)}
+                  placeholder="MPPS-107784"
+                  className="bg-slate-800 border-slate-700 text-white font-mono"
+                />
+              </div>
             </div>
           )}
           <div className="space-y-1">

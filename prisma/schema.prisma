@@ -58,10 +58,12 @@ model Doctor {
   /// Encrypted (AES-256-GCM).
   cedulaCifrada          String?
   nombre                 String
+  segundoNombre          String?
   /// Encrypted (AES-256-GCM). NULL until backfill completes; readers should
   /// fall back to `nombre` (plaintext) when this is NULL for backwards compat.
   nombreCifrado          String?                   @db.Text
   apellido               String
+  segundoApellido        String?
   apellidoCifrado        String?                   @db.Text
   email                  String                    @unique
   passwordHash           String

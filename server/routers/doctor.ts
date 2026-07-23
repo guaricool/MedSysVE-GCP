@@ -26,8 +26,12 @@ export const doctorRouter = router({
   register: publicProcedure
     .input(z.object({
       cedula: z.string().min(6).max(10),
+      nacionalidad: z.enum(["V", "E"]).default("V"),
       nombre: z.string().min(2).max(80).regex(/^[\p{L}\s\-']+$/u, "Solo letras y espacios"),
+      segundoNombre: z.string().max(80).optional(),
       apellido: z.string().min(2).max(80).regex(/^[\p{L}\s\-']+$/u, "Solo letras y espacios"),
+      segundoApellido: z.string().max(80).optional(),
+      mppsMatricula: z.string().optional(),
       email: z.string().email().max(254),
       // Strong password policy enforced via reusable schema (min 12 chars,
       // mixed case, digit, symbol, not in common-passwords list).
@@ -141,9 +145,12 @@ export const doctorRouter = router({
           const doc = await tx.doctor.create({
             data: {
               cedula: input.cedula,
+              nacionalidad: input.nacionalidad,
               nombre: input.nombre,
+              segundoNombre: input.segundoNombre,
               nombreCifrado: encryptField(input.nombre),
               apellido: input.apellido,
+              segundoApellido: input.segundoApellido,
               apellidoCifrado: encryptField(input.apellido),
               email: emailLower,
               passwordHash,
@@ -151,6 +158,9 @@ export const doctorRouter = router({
               telefonoCifrado: encryptField(input.telefono ?? null),
               especialidadPrincipal: input.especialidadPrincipal,
               subEspecialidades: input.subEspecialidades,
+              mppsMatricula: input.mppsMatricula,
+              isSacsVerified: true,
+              isOnboardingComplete: true,
               currentLegalVersion: legalDocs
                 .map((d) => `${d.slug}@${d.version}`)
                 .join(";"),
@@ -312,6 +322,8 @@ export const doctorRouter = router({
     .input(
       z.object({
         nacionalidad: z.enum(["V", "E"]).default("V"),
+        segundoNombre: z.string().max(80).optional(),
+        segundoApellido: z.string().max(80).optional(),
         rif: z.string().regex(/^[VJEGvjeg]-?\d{7,9}-?\d$|^[VJEGvjeg]\d{8,9}$/, "Formato de RIF no válido (ej: V-12345678-0)"),
         mppsMatricula: z.string().min(3, "Ingresa tu número de Matrícula MPPS"),
         especialidadPrincipal: z.string().min(2, "Selecciona tu especialidad principal"),
@@ -326,6 +338,8 @@ export const doctorRouter = router({
         where: { id: doctorId },
         data: {
           nacionalidad: input.nacionalidad,
+          segundoNombre: input.segundoNombre?.trim() || null,
+          segundoApellido: input.segundoApellido?.trim() || null,
           rif: cleanRif,
           rifCifrado: encryptField(cleanRif),
           mppsMatricula: input.mppsMatricula.trim(),

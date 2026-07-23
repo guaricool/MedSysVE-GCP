@@ -3,8 +3,12 @@ import { existsSync } from "fs"
 
 export interface DoctorInfo {
   nombre: string
+  segundoNombre?: string
+  segundoApellido?: string
   especialidad?: string
   cedula?: string
+  mppsMatricula?: string
+  rif?: string
   email?: string
   telefono?: string
   /// Absolute fs path (already resolved via urlToFsPath) or undefined.
