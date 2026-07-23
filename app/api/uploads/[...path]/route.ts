@@ -39,7 +39,7 @@ function getUploadsRoot(): string {
 // prevent path traversal — callers can only request prefixes we explicitly
 // serve. Adding a new upload category? Add it here AND update the upload
 // route to write to the matching sub-dir.
-const ALLOWED_PREFIXES = new Set(["logos", "membretes", "imaging-results", "sellos"])
+const ALLOWED_PREFIXES = new Set(["logos", "membretes", "imaging-results", "sellos", "marketing"])
 
 const MIME_BY_EXT: Record<string, string> = {
   ".png": "image/png",
