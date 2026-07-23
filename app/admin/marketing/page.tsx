@@ -161,6 +161,27 @@ export default function MarketingDashboard() {
     return true;
   });
 
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+
+  const handleTriggerAiBot = async () => {
+    setIsGeneratingAi(true);
+    toast.info("Bot IA generando nueva publicación con verificación anti-error...");
+    try {
+      const res = await fetch("/api/cron/generate-marketing-posts", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success(`¡Publicación generada exitosamente en ${data.attempts} intento(s)! Verificada en BD.`);
+        refetch();
+      } else {
+        toast.error(`Error del generador: ${data.error}`);
+      }
+    } catch (e: any) {
+      toast.error(`Error al invocar bot: ${e.message}`);
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -178,17 +199,29 @@ export default function MarketingDashboard() {
             Bandeja de Aprobación & Marketing Bot
           </h1>
           <p className="text-slate-400 mt-2">
-            Revisa, edita, aprueba y gestiona publicaciones generadas por el Bot IA (<span className="text-amber-300 font-semibold">marketing@medsysve.com</span>) antes de enviarlas a Instagram y Facebook.
+            Revisa, edita, aprueba y gestiona publicaciones generadas automáticamente (5-6 diarias) por el Bot IA (<span className="text-amber-300 font-semibold">marketing@medsysve.com</span>) antes de enviarlas a Instagram y Facebook.
           </p>
         </div>
 
-        <Button
-          onClick={() => setShowCreateModal(!showCreateModal)}
-          className="bg-amber-500 text-slate-950 hover:bg-amber-400 font-bold flex items-center gap-2 self-start md:self-auto shadow-lg shadow-amber-500/10"
-        >
-          <Plus className="w-4 h-4" />
-          {showCreateModal ? "Cerrar Creador" : "Crear / Sugerir Publicación"}
-        </Button>
+        <div className="flex items-center gap-3 self-start md:self-auto flex-wrap">
+          <Button
+            onClick={handleTriggerAiBot}
+            disabled={isGeneratingAi}
+            variant="outline"
+            className="border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 font-bold flex items-center gap-2"
+          >
+            <Bot className={`w-4 h-4 text-amber-400 ${isGeneratingAi ? "animate-spin" : ""}`} />
+            {isGeneratingAi ? "Generando con IA..." : "Ejecutar Bot IA Ahora"}
+          </Button>
+
+          <Button
+            onClick={() => setShowCreateModal(!showCreateModal)}
+            className="bg-amber-500 text-slate-950 hover:bg-amber-400 font-bold flex items-center gap-2 shadow-lg shadow-amber-500/10"
+          >
+            <Plus className="w-4 h-4" />
+            {showCreateModal ? "Cerrar Creador" : "Crear / Sugerir Publicación"}
+          </Button>
+        </div>
       </div>
 
       {/* Tabs de Selección y Estado */}
