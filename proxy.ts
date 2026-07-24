@@ -20,6 +20,7 @@ const PUBLIC_PREFIXES = [
   "/portal/schedule",
   "/portal/verify",
   "/api/pdf/vaccine-carnet",
+  "/api/cron",
   "/legal",
   "/forgot-password",
   "/reset-password",
