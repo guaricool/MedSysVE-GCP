@@ -70,6 +70,11 @@ export function AmbientScribeModal({ isOpen, onClose, onApplyToEncounter }: Prop
         rec.onerror = (e: any) => {
           console.error("Speech Recognition Error:", e)
           setIsRecording(false)
+          if (e.error === "not-allowed") {
+            setError("⚠️ Permiso de micrófono no otorgado. Haz clic en el candado 🔒 al lado del URL (medsysve.com) en tu navegador y selecciona 'Permitir Micrófono'.")
+          } else if (e.error === "no-speech") {
+            setError("No se escuchó voz. Habla de nuevo cerca del micrófono.")
+          }
         }
 
         recognitionRef.current = rec
@@ -79,10 +84,23 @@ export function AmbientScribeModal({ isOpen, onClose, onApplyToEncounter }: Prop
 
   if (!isOpen) return null
 
-  const startRecording = () => {
+  const startRecording = async () => {
     setError(null)
     setTranscript("")
     setResult(null)
+
+    if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true })
+      } catch (err: any) {
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          setError("⚠️ Permiso de micrófono denegado. Por favor haz clic en el icono del candado 🔒 en la barra de direcciones de tu navegador y activa el permiso de Micrófono para medsysve.com.")
+          setIsRecording(false)
+          return
+        }
+      }
+    }
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.start()
@@ -91,8 +109,7 @@ export function AmbientScribeModal({ isOpen, onClose, onApplyToEncounter }: Prop
         console.error(err)
       }
     } else {
-      setError("Reconocimiento de voz directo no disponible en este navegador. Puedes pegar la transcripción o escribir abajo.")
-      setIsRecording(true)
+      setError("Reconocimiento de voz directo no disponible en este navegador. Puedes escribir o pegar la transcripción abajo.")
     }
   }
 

@@ -77,6 +77,11 @@ export function AmbientScribeSandbox() {
         rec.onerror = (e: any) => {
           console.error("Speech Recognition Error:", e)
           setIsRecording(false)
+          if (e.error === "not-allowed") {
+            setError("⚠️ Permiso de micrófono no otorgado. Haz clic en el candado 🔒 al lado del URL (medsysve.com) en tu navegador y selecciona 'Permitir Micrófono'.")
+          } else if (e.error === "no-speech") {
+            setError("No se escuchó voz. Habla de nuevo cerca del micrófono.")
+          }
         }
 
         recognitionRef.current = rec
@@ -84,9 +89,22 @@ export function AmbientScribeSandbox() {
     }
   }, [])
 
-  const startRecording = () => {
+  const startRecording = async () => {
     setError(null)
     setTranscript("")
+
+    if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true })
+      } catch (err: any) {
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          setError("⚠️ Permiso de micrófono denegado. Por favor haz clic en el icono del candado 🔒 en la barra de direcciones de tu navegador y activa el permiso de Micrófono para medsysve.com.")
+          setIsRecording(false)
+          return
+        }
+      }
+    }
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.start()
@@ -95,8 +113,7 @@ export function AmbientScribeSandbox() {
         console.error(err)
       }
     } else {
-      setError("El reconocimiento de voz del navegador no está disponible en este dispositivo. Puedes usar las conversaciones de prueba precargadas abajo.")
-      setIsRecording(true)
+      setError("El reconocimiento de voz del navegador no está disponible en este dispositivo. Puedes usar las conversaciones de prueba precargadas abajo o escribir.")
     }
   }
 
