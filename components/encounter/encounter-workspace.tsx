@@ -22,6 +22,8 @@ import { TemplateSelector } from "./template-selector"
 import { WorkspaceTimer } from "./workspace-timer"
 import { QuickActionsBar } from "./quick-actions-bar"
 import { ExpressModeBanner } from "./express-mode-banner"
+import { AmbientScribeModal } from "./ambient-scribe-modal"
+import { Mic, Sparkles } from "lucide-react"
 import { EscalasTrauma } from "./escalas-trauma"
 import { ObstetriciaForm } from "./obstetricia-form"
 import { OncologiaForm } from "./oncologia-form"
@@ -236,8 +238,14 @@ export function EncounterWorkspace({
   )
 
   // Fetch doctor's default report preferences
+  const utils = trpc.useUtils()
   const { data: prefs } = (trpc.reportPreferences.get.useQuery as any)(undefined)
   const updateReportOverride = (trpc.encounter.updateReportOverride.useMutation as any)()
+  const updateEncounter = (trpc.encounter.update.useMutation as any)({
+    onSuccess: () => {
+      utils.encounter.get.invalidate({ id: encounterId })
+    },
+  })
 
   // Per-consulta selection of which SOAP sections the doctor wants in
   // the generated INFORME.
@@ -283,6 +291,50 @@ export function EncounterWorkspace({
   }
   const [ocrData, setOcrData] = useState<any>(null)
   const [showExpress, setShowExpress] = useState(false)
+  const [showScribeModal, setShowScribeModal] = useState(false)
+
+  function handleApplyFromScribe(fields: {
+    motivo?: string
+    historiaClinica?: string
+    examenFisico?: string
+    plan?: string
+  }) {
+    if (locked) return
+
+    const updatedMotivo = fields.motivo || liveMotivo
+    const updatedHistoria = fields.historiaClinica
+      ? `${liveHistoriaClinica ? liveHistoriaClinica + "\n\n" : ""}${fields.historiaClinica}`
+      : liveHistoriaClinica
+    const updatedExamen = fields.examenFisico
+      ? `${liveExamenFisico ? liveExamenFisico + "\n\n" : ""}${fields.examenFisico}`
+      : liveExamenFisico
+    const updatedPlan = fields.plan
+      ? `${livePlan ? livePlan + "\n\n" : ""}${fields.plan}`
+      : livePlan
+
+    updateEncounter.mutate({
+      id: encounterId,
+      motivo: updatedMotivo,
+      historiaClinica: updatedHistoria,
+      examenFisico: updatedExamen,
+      plan: updatedPlan,
+    })
+
+    setVisibleSections((prev) => {
+      const next = new Set(prev)
+      next.add("subjetivo")
+      next.add("examen")
+      next.add("plan")
+      return next
+    })
+    setOpenSections((prev) => {
+      const next = new Set(prev)
+      next.add("subjetivo")
+      next.add("examen")
+      next.add("plan")
+      return next
+    })
+  }
 
   const availableSections = useMemo(() => {
     const core: { id: SectionId; label: string; icon: string }[] = [
@@ -504,6 +556,18 @@ export function EncounterWorkspace({
             </div>
           </div>
 
+          {/* Voice AI Scribe Button */}
+          {!locked && (
+            <button
+              onClick={() => setShowScribeModal(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-purple-600 via-sky-600 to-emerald-600 hover:from-purple-500 hover:to-emerald-500 px-3 py-1.5 text-xs font-bold text-white shadow-md transition-all animate-pulse hover:animate-none"
+              title="Iniciar Escriba Médico por Voz con IA (Gemini Spark)"
+            >
+              <Mic className="w-3.5 h-3.5" />
+              <span>🎙️ Transcribir Consulta (IA)</span>
+            </button>
+          )}
+
           {/* Timer — freezes once the consultation is signed/amended. */}
           <WorkspaceTimer
             startedAt={enc?.createdAt ? new Date(enc.createdAt) : new Date()}
@@ -511,6 +575,12 @@ export function EncounterWorkspace({
           />
         </div>
       </div>
+
+      <AmbientScribeModal
+        isOpen={showScribeModal}
+        onClose={() => setShowScribeModal(false)}
+        onApplyToEncounter={handleApplyFromScribe}
+      />
 
       {/* ─── Express mode banner (one-click pre-fill from last encounter) ─── */}
       {!locked && !initialHistoriaClinica && (
