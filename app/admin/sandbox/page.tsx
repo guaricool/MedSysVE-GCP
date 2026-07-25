@@ -27,7 +27,8 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mic } from "lucide-react";
+import { AmbientScribeSandbox } from "@/components/admin/ambient-scribe-sandbox";
 
 const EncounterWorkspace = dynamic(
   () => import("@/components/encounter/encounter-workspace").then((m) => m.EncounterWorkspace),
@@ -108,6 +109,7 @@ const DEMO_PATIENTS = [
 ];
 
 export default function AdminSandboxPage() {
+  const [activeTab, setActiveTab] = useState<"SPECIALTIES" | "AMBIENT_SCRIBE">("SPECIALTIES");
   const [selectedSpecialty, setSelectedSpecialty] = useState("Traumatología");
   const [selectedPatientId, setSelectedPatientId] = useState("CAMILA_PEREZ");
 
@@ -125,17 +127,46 @@ export default function AdminSandboxPage() {
               Exclusivo Super Admin · cpierluissis@gmail.com
             </span>
             <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-medium px-2 py-0.5 rounded-full">
-              Consulta Completa en Tiempo Real (27 Especialidades)
+              Sandbox Aislado de Pruebas MedSysVE
             </span>
           </div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            🔬 Sandbox de Especialidades — Pruebas de Interfaz y Módulos Clínicos
+            🔬 Sandbox de Pruebas & Inteligencia Artificial Médica
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Muestra el espacio de trabajo de consulta médica 100% completo (SOAP, Ficha de Especialidad, Visor DICOM PACS, Vademécum, Signos Vitales y Firma).
+            Prueba las 27 especialidades médicas y el nuevo Escriba Médico Inteligente en tiempo real sin modificar datos de producción.
           </p>
         </div>
+
+        {/* Mode Selector Tabs */}
+        <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800 self-stretch md:self-auto">
+          <button
+            onClick={() => setActiveTab("SPECIALTIES")}
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === "SPECIALTIES"
+                ? "bg-amber-500 text-slate-950 shadow-md"
+                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            }`}
+          >
+            <Stethoscope className="w-4 h-4" /> 27 Especialidades SOAP & PACS
+          </button>
+          <button
+            onClick={() => setActiveTab("AMBIENT_SCRIBE")}
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === "AMBIENT_SCRIBE"
+                ? "bg-purple-600 text-white shadow-md animate-pulse"
+                : "text-purple-300 hover:text-purple-200 hover:bg-purple-950/40"
+            }`}
+          >
+            <Mic className="w-4 h-4 text-purple-300" /> 🎙️ Gemini Spark Ambient Scribe
+          </button>
+        </div>
       </div>
+
+      {activeTab === "AMBIENT_SCRIBE" ? (
+        <AmbientScribeSandbox />
+      ) : (
+        <>
 
       {/* Control Toolbar Bar */}
       <div className="grid md:grid-cols-2 gap-4 bg-slate-900/90 border border-slate-800 p-4 rounded-xl shadow-md">
@@ -208,6 +239,8 @@ export default function AdminSandboxPage() {
           initialHistoriaClinica="Paciente acude a consulta para evaluación especializada y seguimiento clínico de evoluciones."
         />
       </div>
-    </div>
-  );
+    </>
+  )}
+</div>
+);
 }
