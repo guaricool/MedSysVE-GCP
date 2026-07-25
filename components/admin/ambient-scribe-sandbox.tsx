@@ -301,7 +301,7 @@ export function AmbientScribeSandbox() {
                 {result.enfermedadActual && (
                   <div className="bg-slate-900/90 border border-slate-800 rounded-lg p-3">
                     <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block mb-1">
-                      2. Anamnesis / Enfermedad Actual:
+                      2. Historia Clínica / Enfermedad Actual:
                     </span>
                     <p className="text-slate-200 leading-relaxed">{result.enfermedadActual}</p>
                   </div>

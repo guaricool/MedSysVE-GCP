@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
   const sections: string[] = []
   if (cleanBody.motivo) sections.push(`Motivo de consulta: ${cleanBody.motivo}`)
-  if (cleanBody.historiaClinica) sections.push(`Anamnesis: ${cleanBody.historiaClinica}`)
+  if (cleanBody.historiaClinica) sections.push(`Historia Clínica: ${cleanBody.historiaClinica}`)
   if (cleanBody.vitales && Object.keys(cleanBody.vitales).length > 0) {
     const v = cleanBody.vitales
     const parts: string[] = []

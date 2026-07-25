@@ -186,7 +186,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // fails (i.e. row was written before encryption was wired) so the PDF
   // generator still produces something — operators can re-run the
   // migration to convert legacy rows.
-  const decryptedAnamnesis = enc.historiaClinicaCifrada
+  const decryptedHistoriaClinica = enc.historiaClinicaCifrada
     ? safeDecrypt(enc.historiaClinicaCifrada) ?? enc.historiaClinica ?? undefined
     : enc.historiaClinica ?? undefined
   const decryptedPlan = enc.planCifrado
@@ -232,7 +232,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       encounter: {
         fecha: new Date(e.createdAt).toLocaleDateString("es-VE", { year: "numeric", month: "long", day: "numeric", timeZone: 'America/Caracas' }),
         motivo: readEncounterMotivo(e),
-        historiaClinica: decryptedAnamnesis ?? undefined,
+        historiaClinica: decryptedHistoriaClinica ?? undefined,
         examenFisico: typeof e.examenFisico === "string" ? e.examenFisico : undefined,
         plan: decryptedPlan ?? undefined,
         vitales: (e.vitales as Record<string, number | null> | null) ?? undefined,
