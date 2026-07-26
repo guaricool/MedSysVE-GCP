@@ -90,6 +90,7 @@ model Doctor {
   stripePriceId          String?
   stripeCurrentPeriodEnd DateTime?
   isAdmin                Boolean                   @default(false)
+  hasVoiceAddon          Boolean                   @default(false)
   // ──── 2FA / TOTP ────
   /// Base32-encoded TOTP secret. NEVER returned to client (only used for QR enrollment).
   totpSecret             String?

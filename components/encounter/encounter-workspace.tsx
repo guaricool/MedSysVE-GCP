@@ -24,7 +24,8 @@ import { QuickActionsBar } from "./quick-actions-bar"
 import { ExpressModeBanner } from "./express-mode-banner"
 import { AmbientScribeModal } from "./ambient-scribe-modal"
 import { useRealtimeScribe } from "./use-realtime-scribe"
-import { Mic, Sparkles, Radio, Activity, CheckCircle2, RefreshCw, Zap } from "lucide-react"
+import { VoiceAddonUpsellModal } from "./voice-addon-upsell-modal"
+import { Mic, Sparkles, Radio, Activity, CheckCircle2, RefreshCw, Zap, Lock } from "lucide-react"
 import { EscalasTrauma } from "./escalas-trauma"
 import { ObstetriciaForm } from "./obstetricia-form"
 import { OncologiaForm } from "./oncologia-form"
@@ -293,10 +294,13 @@ export function EncounterWorkspace({
   const [ocrData, setOcrData] = useState<any>(null)
   const [showExpress, setShowExpress] = useState(false)
   const [showScribeModal, setShowScribeModal] = useState(false)
+  const [showUpsellModal, setShowUpsellModal] = useState(false)
   const [isRealtimeScribeEnabled, setIsRealtimeScribeEnabled] = useState(false)
 
+  const { data: hasAddon } = (trpc.doctor.hasVoiceScribeAddon.useQuery as any)()
+
   const realtimeScribe = useRealtimeScribe({
-    enabled: isRealtimeScribeEnabled && !locked,
+    enabled: isRealtimeScribeEnabled && !locked && Boolean(hasAddon),
     onFieldsExtracted: (fields) => {
       handleApplyFromScribe(fields)
     },
@@ -570,27 +574,51 @@ export function EncounterWorkspace({
             <div className="flex items-center gap-2">
               {/* Realtime Auto-Fill Toggle */}
               <button
-                onClick={() => setIsRealtimeScribeEnabled((prev) => !prev)}
+                onClick={() => {
+                  if (!hasAddon) {
+                    setShowUpsellModal(true)
+                  } else {
+                    setIsRealtimeScribeEnabled((prev) => !prev)
+                  }
+                }}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all shadow-md ${
                   isRealtimeScribeEnabled
                     ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white ring-2 ring-emerald-400 animate-pulse"
                     : "bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white"
                 }`}
                 title={
-                  isRealtimeScribeEnabled
+                  !hasAddon
+                    ? "Desbloquear Escriba de Voz IA ($10/mes)"
+                    : isRealtimeScribeEnabled
                     ? "Auto-llenado en tiempo real activo. Haz clic para pausar."
                     : "Activar auto-llenado en tiempo real con IA mientras hablas"
                 }
               >
-                <Radio className={`w-3.5 h-3.5 ${isRealtimeScribeEnabled ? "text-emerald-300 animate-ping" : "text-slate-400"}`} />
-                <span>
-                  {isRealtimeScribeEnabled ? "🔴 Auto-llenado IA Activo" : "⚡ Autocompletar con Voz"}
-                </span>
+                {!hasAddon ? (
+                  <>
+                    <Lock className="w-3.5 h-3.5 text-purple-400" />
+                    <span>⚡ Autocompletar con Voz</span>
+                    <span className="bg-purple-500/20 text-purple-300 text-[10px] font-extrabold px-1.5 py-0.5 rounded border border-purple-500/30 ml-0.5">PRO</span>
+                  </>
+                ) : (
+                  <>
+                    <Radio className={`w-3.5 h-3.5 ${isRealtimeScribeEnabled ? "text-emerald-300 animate-ping" : "text-slate-400"}`} />
+                    <span>
+                      {isRealtimeScribeEnabled ? "🔴 Auto-llenado IA Activo" : "⚡ Autocompletar con Voz"}
+                    </span>
+                  </>
+                )}
               </button>
 
               {/* Manual Scribe Modal trigger */}
               <button
-                onClick={() => setShowScribeModal(true)}
+                onClick={() => {
+                  if (!hasAddon) {
+                    setShowUpsellModal(true)
+                  } else {
+                    setShowScribeModal(true)
+                  }
+                }}
                 className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-sky-600 hover:from-purple-500 hover:to-sky-500 px-3 py-1.5 text-xs font-bold text-white shadow-md transition-all"
                 title="Ver panel completo del Escriba de Voz"
               >
@@ -649,6 +677,12 @@ export function EncounterWorkspace({
         isOpen={showScribeModal}
         onClose={() => setShowScribeModal(false)}
         onApplyToEncounter={handleApplyFromScribe}
+      />
+
+      <VoiceAddonUpsellModal
+        isOpen={showUpsellModal}
+        onClose={() => setShowUpsellModal(false)}
+        onActivated={() => setIsRealtimeScribeEnabled(true)}
       />
 
       {/* ─── Express mode banner (one-click pre-fill from last encounter) ─── */}

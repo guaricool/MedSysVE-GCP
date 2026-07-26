@@ -696,4 +696,29 @@ export const doctorRouter = router({
         currentLegalVersion: legalDocs.map((d) => `${d.slug}@${d.version}`).sort().join(";"),
       }
     }),
+
+  hasVoiceScribeAddon: protectedProcedure.query(async ({ ctx }) => {
+    const doc = await ctx.db.doctor.findFirst({
+      where: { email: ctx.session.email },
+      select: { isAdmin: true, hasVoiceAddon: true, plan: true },
+    })
+    if (!doc) return false
+    return doc.isAdmin || doc.hasVoiceAddon || doc.plan === "pro" || doc.plan === "enterprise"
+  }),
+
+  toggleVoiceScribeAddon: doctorProcedure.mutation(async ({ ctx }) => {
+    const docId = ctx.session.doctorId || ctx.session.id
+    const doc = await ctx.db.doctor.findUnique({
+      where: { id: docId },
+      select: { hasVoiceAddon: true },
+    })
+    if (!doc) return { hasVoiceAddon: false }
+
+    const updated = await ctx.db.doctor.update({
+      where: { id: docId },
+      data: { hasVoiceAddon: !doc.hasVoiceAddon },
+    })
+
+    return { hasVoiceAddon: updated.hasVoiceAddon }
+  }),
 })
