@@ -59,7 +59,7 @@ export const workspaceRouter = router({
       where: { id: ctx.session.workspaceId },
       include: {
         doctor: {
-          select: { nombre: true, apellido: true, especialidadPrincipal: true },
+          select: { nombre: true, apellido: true, especialidadPrincipal: true, subEspecialidades: true },
         },
         clinic: {
           select: {

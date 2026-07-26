@@ -25,7 +25,7 @@ import { ExpressModeBanner } from "./express-mode-banner"
 import { AmbientScribeModal } from "./ambient-scribe-modal"
 import { useRealtimeScribe } from "./use-realtime-scribe"
 import { VoiceAddonUpsellModal } from "./voice-addon-upsell-modal"
-import { Mic, Sparkles, Radio, Activity, CheckCircle2, RefreshCw, Zap, Lock } from "lucide-react"
+import { Mic, Sparkles, Radio, Activity, CheckCircle2, RefreshCw, Zap, Lock, Stethoscope } from "lucide-react"
 import { EscalasTrauma } from "./escalas-trauma"
 import { ObstetriciaForm } from "./obstetricia-form"
 import { OncologiaForm } from "./oncologia-form"
@@ -162,7 +162,18 @@ export function EncounterWorkspace({
   const locked = initialStatus !== "DRAFT"
   const [activeSection, setActiveSection] = useState<SectionId>("subjetivo")
   const { data: doctor } = (trpc.doctor.myProfile.useQuery as any)()
-  const especialidad = overrideSpecialty !== undefined ? overrideSpecialty : doctor?.especialidadPrincipal
+  const { data: doctorSpecs } = (trpc.doctor.getSpecialties.useQuery as any)()
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null)
+
+  const allSpecialties = useMemo(() => {
+    if (!doctorSpecs) return []
+    const list = [doctorSpecs.especialidadPrincipal, ...(doctorSpecs.subEspecialidades || [])].filter(Boolean)
+    return Array.from(new Set(list))
+  }, [doctorSpecs])
+
+  const especialidad = overrideSpecialty !== undefined
+    ? overrideSpecialty
+    : selectedSpecialty || doctorSpecs?.especialidadPrincipal || doctor?.especialidadPrincipal
   // Sections start open by id (subjetivo is the entry point). User toggles
   // and shortcuts add/remove from this set.
   const [openSections, setOpenSections] = useState<Set<SectionId>>(
@@ -568,6 +579,25 @@ export function EncounterWorkspace({
               <p className="text-[10px] text-slate-500">{completed.total}/8 secciones</p>
             </div>
           </div>
+
+          {/* Dynamic Specialty Switcher (only rendered if doctor has >= 2 specialties) */}
+          {allSpecialties.length > 1 && (
+            <div className="flex items-center gap-1.5 bg-blue-950/70 border border-blue-800/80 rounded-lg px-2.5 py-1.5 shadow-sm">
+              <Stethoscope className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              <span className="text-[11px] text-blue-300 font-semibold hidden lg:inline">Especialidad:</span>
+              <select
+                value={especialidad || ""}
+                onChange={(e) => setSelectedSpecialty(e.target.value)}
+                className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-0.5 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                {allSpecialties.map((esp) => (
+                  <option key={esp} value={esp}>
+                    {esp}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Voice AI Scribe Buttons */}
           {!locked && (

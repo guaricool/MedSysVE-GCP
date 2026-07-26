@@ -320,6 +320,34 @@ export const doctorRouter = router({
 
   especialidades: publicProcedure.query(() => ESPECIALIDADES_VE),
 
+  getSpecialties: doctorProcedure.query(async ({ ctx }) => {
+    const doc = await ctx.db.doctor.findUnique({
+      where: { id: ctx.session.doctorId },
+      select: { especialidadPrincipal: true, subEspecialidades: true },
+    })
+    return {
+      especialidadPrincipal: doc?.especialidadPrincipal ?? "Medicina General",
+      subEspecialidades: doc?.subEspecialidades ?? [],
+    }
+  }),
+
+  updateSpecialties: doctorProcedure
+    .input(
+      z.object({
+        especialidadPrincipal: z.string().min(2),
+        subEspecialidades: z.array(z.string()).max(20),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.doctor.update({
+        where: { id: ctx.session.doctorId },
+        data: {
+          especialidadPrincipal: input.especialidadPrincipal,
+          subEspecialidades: input.subEspecialidades,
+        },
+      })
+    }),
+
   verifySacs: publicProcedure
     .input(
       z.object({

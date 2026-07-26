@@ -112,6 +112,9 @@ export function WorkspaceSettingsClient({ workspace }: Props) {
         initialCiudad={workspace.ciudad}
       />
 
+      {/* Especialidades del Doctor */}
+      <DoctorSpecialtiesSection />
+
       {/* Suscripción — manage, cancel, change plan via Stripe Customer Portal */}
       <SubscriptionCard />
 
@@ -756,5 +759,161 @@ function Field({
       </label>
       {children}
     </div>
+  )
+}
+
+function DoctorSpecialtiesSection() {
+  const { data, refetch, isLoading } = trpc.doctor.getSpecialties.useQuery()
+  const [principal, setPrincipal] = useState<string>("")
+  const [subEspecialidades, setSubEspecialidades] = useState<string[]>([])
+  const [saved, setSaved] = useState(false)
+  const [search, setSearch] = useState("")
+
+  useEffect(() => {
+    if (data) {
+      setPrincipal(data.especialidadPrincipal || "Medicina General")
+      setSubEspecialidades(data.subEspecialidades || [])
+    }
+  }, [data])
+
+  const update = trpc.doctor.updateSpecialties.useMutation({
+    onSuccess: () => {
+      setSaved(true)
+      refetch()
+      setTimeout(() => setSaved(false), 2500)
+    },
+  })
+
+  const handleToggleSub = (esp: string) => {
+    if (esp === principal) return
+    setSubEspecialidades((prev) =>
+      prev.includes(esp) ? prev.filter((s) => s !== esp) : [...prev, esp]
+    )
+    setSaved(false)
+  }
+
+  const handleSave = () => {
+    update.mutate({
+      especialidadPrincipal: principal,
+      subEspecialidades: subEspecialidades.filter((s) => s !== principal),
+    })
+  }
+
+  const filtered = ESPECIALIDADES_VE.filter((esp) =>
+    esp.toLowerCase().includes(search.toLowerCase())
+  )
+
+  return (
+    <section className="rounded-lg border border-slate-800 bg-slate-900 p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Especialidades Médicas del Doctor
+          </h2>
+          <p className="text-xs text-slate-500">
+            Configura tus especialidades principales y secundarias. Si seleccionas más de una, podrás alternar entre ellas durante las consultas.
+          </p>
+        </div>
+        {saved && (
+          <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-950/40 px-2 py-1 rounded border border-emerald-800/40">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Cambios guardados
+          </span>
+        )}
+      </div>
+
+      {isLoading ? (
+        <p className="text-xs text-slate-500">Cargando especialidades...</p>
+      ) : (
+        <div className="space-y-4">
+          <Field label="Especialidad Principal" required>
+            <select
+              value={principal}
+              onChange={(e) => {
+                const newP = e.target.value
+                setPrincipal(newP)
+                setSubEspecialidades((prev) => prev.filter((s) => s !== newP))
+                setSaved(false)
+              }}
+              className="input-dark"
+            >
+              {ESPECIALIDADES_VE.map((esp) => (
+                <option key={esp} value={esp}>
+                  {esp}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <div>
+            <label className="mb-1.5 block text-xs text-slate-400">
+              Especialidades Secundarias / Sub-especialidades
+            </label>
+
+            {subEspecialidades.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {subEspecialidades.map((s) => (
+                  <span
+                    key={s}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-900/40 text-blue-300 border border-blue-800/60"
+                  >
+                    <span>{s}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSub(s)}
+                      className="text-blue-400 hover:text-red-400 font-bold"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <input
+              type="text"
+              placeholder="Buscar especialidad adicional..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input-dark mb-2 text-xs"
+            />
+
+            <div className="max-h-40 overflow-y-auto rounded border border-slate-800 bg-slate-950/60 p-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {filtered.map((esp) => {
+                const isPrincipal = esp === principal
+                const isSub = subEspecialidades.includes(esp)
+                return (
+                  <button
+                    key={esp}
+                    type="button"
+                    disabled={isPrincipal}
+                    onClick={() => handleToggleSub(esp)}
+                    className={`text-left text-xs px-2.5 py-1.5 rounded transition ${
+                      isPrincipal
+                        ? "bg-slate-800/50 text-slate-500 cursor-not-allowed"
+                        : isSub
+                        ? "bg-blue-950 text-blue-300 font-medium border border-blue-800"
+                        : "hover:bg-slate-800 text-slate-300"
+                    }`}
+                  >
+                    {isPrincipal ? `★ ${esp} (Principal)` : isSub ? `✓ ${esp}` : `+ ${esp}`}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={update.isPending}
+              className="btn-primary text-xs"
+            >
+              {update.isPending ? "Guardando..." : "Guardar Especialidades"}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
