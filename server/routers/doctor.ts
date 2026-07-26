@@ -703,7 +703,18 @@ export const doctorRouter = router({
       select: { isAdmin: true, hasVoiceAddon: true, plan: true },
     })
     if (!doc) return false
-    return doc.isAdmin || doc.hasVoiceAddon || doc.plan === "pro" || doc.plan === "enterprise"
+    const planLower = (doc.plan || "").toLowerCase()
+    return (
+      doc.isAdmin ||
+      doc.hasVoiceAddon ||
+      planLower === "pro" ||
+      planLower === "enterprise" ||
+      planLower === "cortesia" ||
+      planLower === "courtesy" ||
+      planLower === "vip" ||
+      planLower === "free_vip" ||
+      planLower === "premium"
+    )
   }),
 
   toggleVoiceScribeAddon: doctorProcedure.mutation(async ({ ctx }) => {
