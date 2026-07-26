@@ -49,7 +49,17 @@ export async function POST(req: Request) {
              plan = "clinic"
           }
 
-          if (entityType === "doctor") {
+          if (priceId === process.env.STRIPE_PRICE_VOICE_ADDON_MONTHLY || session.metadata?.addon === "voice_scribe") {
+            if (entityType === "doctor") {
+              await db.doctor.update({
+                where: { id: entityId },
+                data: {
+                  hasVoiceAddon: true,
+                  stripeCustomerId: session.customer as string,
+                },
+              })
+            }
+          } else if (entityType === "doctor") {
             await db.doctor.update({
               where: { id: entityId },
               data: {
@@ -130,6 +140,7 @@ export async function POST(req: Request) {
               stripePriceId: null,
               stripeCurrentPeriodEnd: null,
               plan: "free",
+              hasVoiceAddon: false,
             }
           })
         } else {
