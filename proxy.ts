@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { safeLog } from "./lib/log-sanitizer"
 import { auth } from "@/lib/auth-edge"
 
-import { db } from "./lib/db"
 import { Redis } from "@upstash/redis"
 
 // Create Redis client if env vars exist
@@ -33,11 +32,6 @@ const PUBLIC_PREFIXES = [
 
 // ============================================================================
 // Per-IP rate limit buckets (separate from per-email buckets in lib/auth.ts).
-//
-// Why two layers:
-//   - Per-IP (here): blocks botnets spraying many emails from one host.
-//   - Per-email (auth.ts): blocks single-account brute force across many IPs.
-// Together they cover both credential stuffing and password spray attacks.
 // ============================================================================
 
 interface IpBucket {
@@ -48,10 +42,10 @@ interface IpBucket {
 const globalIpBuckets = new Map<string, IpBucket>();
 
 const IP_LIMITS: Record<string, { max: number; windowMs: number; failClosed: boolean }> = {
-  // Auth endpoints — strict.
-  "/api/auth/callback/credentials": { max: 10, windowMs: 60_000, failClosed: true }, // 10 / min per IP for login attempts
-  "/api/auth/": { max: 300, windowMs: 60_000, failClosed: true },           // 300 / min per IP for general auth (session checks)
-  "/api/admin/seed-medications": { max: 2, windowMs: 3_600_000, failClosed: true }, // 2 / hour per IP
+  // Auth endpoints — generous to avoid locking legitimate users.
+  "/api/auth/callback/credentials": { max: 60, windowMs: 60_000, failClosed: false }, // 60 / min per IP for login attempts
+  "/api/auth/": { max: 300, windowMs: 60_000, failClosed: false },           // 300 / min per IP for general auth (session checks)
+  "/api/admin/seed-medications": { max: 5, windowMs: 3_600_000, failClosed: false }, // 5 / hour per IP
   // tRPC — generous for normal app use, blocks scraping.
   "/api/trpc/": { max: 600, windowMs: 600_000, failClosed: false },         // 600 / 10 min
   // Generic API.
@@ -207,47 +201,7 @@ export default async function proxy(req: NextRequest) {
     isPatient = false
   }
 
-  // ------------------------------------------------------------------
-  // IP Restriction for Staff (SECRETARY, ASSISTANT, NURSE)
-  // ------------------------------------------------------------------
-  if (isLoggedIn && sessionUser && ["SECRETARY", "ASSISTANT", "NURSE"].includes(sessionUser.role)) {
-    const wsId = sessionUser.workspaceId
-    if (wsId) {
-      try {
-        const ws = await db.workspace.findUnique({
-          where: { id: wsId },
-          select: { allowedIps: true },
-        })
-        if (ws?.allowedIps) {
-          const clientIp = getClientIp(req)
-          const allowedList = ws.allowedIps.split(",").map((ip: string) => ip.trim()).filter(Boolean)
-          const isAllowed = allowedList.includes(clientIp) ||
-            (process.env.NODE_ENV !== "production" && ["127.0.0.1", "::1", "localhost", "unknown"].includes(clientIp))
 
-          if (!isAllowed) {
-            safeLog("warn", "security.ip_restricted_access_attempt", {
-              email: sessionUser.email,
-              role: sessionUser.role,
-              clientIp,
-              allowedIps: ws.allowedIps,
-            })
-            if (pathname.startsWith("/api/")) {
-              return new NextResponse(
-                JSON.stringify({ error: "Acceso no permitido desde esta dirección IP." }),
-                { status: 403, headers: { "Content-Type": "application/json" } }
-              )
-            }
-            return NextResponse.redirect(new URL("/login?error=IP_RESTRICTED", req.url))
-          }
-        }
-      } catch (err) {
-        safeLog("error", "security.ip_check_failed", {
-          email: sessionUser.email,
-          error: err instanceof Error ? err.message : "unknown",
-        })
-      }
-    }
-  }
 
   // ------------------------------------------------------------------
   // 3. Public SEO routes + /portal/schedule (public booking page) — no
