@@ -29,7 +29,7 @@ export default function CompleteProfilePage() {
   const [segundoApellido, setSegundoApellido] = useState("");
   const [rif, setRif] = useState("");
   const [mppsMatricula, setMppsMatricula] = useState("");
-  const [especialidadPrincipal, setEspecialidadPrincipal] = useState(ESPECIALIDADES_VE[0] || "Medicina General");
+  const [especialidadPrincipal, setEspecialidadPrincipal] = useState<string>(ESPECIALIDADES_VE[0] || "Medicina General");
   const [nombreCompletoSacs, setNombreCompletoSacs] = useState<string | null>(null);
 
   // Status & Validation

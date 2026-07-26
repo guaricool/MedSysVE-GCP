@@ -191,13 +191,17 @@ export function EncounterWorkspace({
     const specMap: Record<string, SectionId> = {
       "Traumatología": "traumatologia",
       "Ortopedia": "traumatologia",
+      "Traumatología y Ortopedia": "traumatologia",
       "Ginecología y Obstetricia": "obstetricia",
+      "Obstetricia y Ginecología": "obstetricia",
       "Obstetricia": "obstetricia",
       "Oncología": "oncologia",
+      "Oncología Médica": "oncologia",
       "Cardiología": "cardiologia",
       "Neumología": "neumonologia",
       "Neumonología": "neumonologia",
       "Pediatría": "pediatria",
+      "Pediatría y Puericultura": "pediatria",
       "Gastroenterología": "gastroenterologia",
       "Neurología": "neurologia",
       "Urología": "urologia",
@@ -207,6 +211,7 @@ export function EncounterWorkspace({
       "Cirugía General": "cirugia-general",
       "Medicina Interna": "medicina-interna",
       "Psiquiatría": "psiquiatria",
+      "Psiquiatría y Salud Mental": "psiquiatria",
       "Infectología": "infectologia",
       "Otorrinolaringología": "otorrinolaringologia",
       "ORL": "otorrinolaringologia",
@@ -215,15 +220,19 @@ export function EncounterWorkspace({
       "Reumatología": "reumatologia",
       "Nefrología": "nefrologia",
       "Medicina de Emergencia": "emergencias",
+      "Medicina de Emergencia y Urgencias": "emergencias",
+      "Medicina de Emergencia / Urgencias": "emergencias",
       "Emergencias": "emergencias",
       "Geriatría": "geriatria",
       "Medicina Familiar": "medicina-familiar",
       "Cirugía Plástica": "cirugia-plastica",
+      "Cirugía Plástica y Reconstructiva": "cirugia-plastica",
       "Hematología": "hematologia",
       "Alergología e Inmunología": "alergologia",
       "Alergología": "alergologia",
       "Fisiatría": "fisiatria",
       "Medicina Física y Rehabilitación": "fisiatria",
+      "Medicina Física y Rehabilitación (Fisiatría)": "fisiatria",
     }
     const secId = specMap[especialidad]
     if (secId) {
@@ -380,15 +389,15 @@ export function EncounterWorkspace({
       core.push({ id: "addendum", label: "Adenda", icon: "📝" })
     }
 
-    if (especialidad === "Traumatología" || especialidad === "Ortopedia") {
+    if (especialidad === "Traumatología" || especialidad === "Ortopedia" || especialidad === "Traumatología y Ortopedia") {
       core.push({ id: "traumatologia", label: "Traumatología y Ortopedia", icon: "🦴" })
       core.push({ id: "escalas", label: "Escalas SVCOT", icon: "📊" })
     }
-    else if (especialidad === "Ginecología y Obstetricia") core.push({ id: "obstetricia", label: "Obstetricia", icon: "🤰" })
-    else if (especialidad === "Oncología") core.push({ id: "oncologia", label: "Oncología", icon: "🎗️" })
+    else if (especialidad === "Ginecología y Obstetricia" || especialidad === "Obstetricia y Ginecología" || especialidad === "Obstetricia") core.push({ id: "obstetricia", label: "Obstetricia", icon: "🤰" })
+    else if (especialidad === "Oncología" || especialidad === "Oncología Médica") core.push({ id: "oncologia", label: "Oncología", icon: "🎗️" })
     else if (especialidad === "Cardiología") core.push({ id: "cardiologia", label: "Cardiología", icon: "❤️" })
     else if (especialidad === "Neumología" || especialidad === "Neumonología") core.push({ id: "neumonologia", label: "Neumonología", icon: "🫁" })
-    else if (especialidad === "Pediatría") core.push({ id: "pediatria", label: "Pediatría", icon: "👶" })
+    else if (especialidad === "Pediatría" || especialidad === "Pediatría y Puericultura") core.push({ id: "pediatria", label: "Pediatría", icon: "👶" })
     else if (especialidad === "Gastroenterología") core.push({ id: "gastroenterologia", label: "Gastroenterología", icon: "🟢" })
     else if (especialidad === "Neurología") core.push({ id: "neurologia", label: "Neurología", icon: "🧠" })
     else if (especialidad === "Urología") core.push({ id: "urologia", label: "Urología", icon: "🔹" })
@@ -397,9 +406,13 @@ export function EncounterWorkspace({
     else if (especialidad === "Endocrinología") core.push({ id: "endocrinologia", label: "Endocrinología", icon: "🔥" })
     else if (especialidad === "Cirugía General") core.push({ id: "cirugia-general", label: "Cirugía General", icon: "✂️" })
     else if (especialidad === "Medicina Interna") core.push({ id: "medicina-interna", label: "Medicina Interna", icon: "🛡️" })
-    else if (especialidad === "Psiquiatría") core.push({ id: "psiquiatria", label: "Psiquiatría", icon: "🧠" })
+    else if (especialidad === "Psiquiatría" || especialidad === "Psiquiatría y Salud Mental") core.push({ id: "psiquiatria", label: "Psiquiatría", icon: "🧠" })
     else if (especialidad === "Infectología") core.push({ id: "infectologia", label: "Infectología", icon: "🦠" })
     else if (especialidad === "Otorrinolaringología" || especialidad === "ORL" || especialidad === "Otorrino") core.push({ id: "otorrinolaringologia", label: "Otorrinolaringología", icon: "👂" })
+    else if (especialidad === "Medicina de Emergencia" || especialidad === "Medicina de Emergencia y Urgencias" || especialidad === "Medicina de Emergencia / Urgencias" || especialidad === "Emergencias") core.push({ id: "emergencias", label: "Emergencias", icon: "🚨" })
+    else if (especialidad === "Cirugía Plástica" || especialidad === "Cirugía Plástica y Reconstructiva") core.push({ id: "cirugia-plastica", label: "Cirugía Plástica", icon: "✨" })
+    else if (especialidad === "Alergología" || especialidad === "Inmunología" || especialidad === "Alergología e Inmunología") core.push({ id: "alergologia", label: "Alergología e Inmunología", icon: "🌿" })
+    else if (especialidad === "Fisiatría" || especialidad === "Medicina Física y Rehabilitación" || especialidad === "Medicina Física y Rehabilitación (Fisiatría)") core.push({ id: "fisiatria", label: "Fisiatría", icon: "🏋️" })
     
     return core;
   }, [especialidad, initialStatus])

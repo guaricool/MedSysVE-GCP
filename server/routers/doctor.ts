@@ -51,7 +51,7 @@ export const doctorRouter = router({
       // mixed case, digit, symbol, not in common-passwords list).
       password: strongPasswordSchema,
       telefono: optionalPhoneSchema,
-      especialidadPrincipal: z.enum(ESPECIALIDADES_VE as [string, ...string[]]),
+      especialidadPrincipal: z.enum(ESPECIALIDADES_VE as unknown as [string, ...string[]]),
       subEspecialidades: z.array(z.string()).max(20).default([]),
       workspaceNombre: z.string().min(2).max(120),
       workspaceEstado: z.string().min(2).max(60),
