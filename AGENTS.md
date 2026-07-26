@@ -12,20 +12,21 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
-## Estado actual (2026-07-21)
+## Estado actual (2026-07-25)
 
-- **HEAD:** `3daa9a0` (feat(specialties): update doctor registration dropdown and patient marketplace search to include all 27 medical specialties with case-insensitive matching)
-- **Cambios recientes (2026-07-14 → 2026-07-21):**
-  - **Plan Maestro de 27 Especialidades Médicas (100% Completado):** Arquitectura relacional Prisma, tRPC routers y componentes React 19 / Tailwind v4 de las 27 especialidades (ORL, Traumatología, Cardiología, Pediatría, Ginecología/Obstetricia, Neurología, Endocrinología, Psiquiatría, Dermatología, Gastroenterología, Anestesiología, Cirugía General, Infectología, Medicina Interna, Neumonología, Oncología, Urología, Oftalmología, Reumatología, Nefrología, Emergencias, Geriatría, Medicina Familiar, Cirugía Plástica, Hematología, Alergología, Fisiatría).
-  - **Infraestructura Nactiva DICOM / PACS (Modelo Aditivo Estricto):**
-    - *Modelos Prisma:* `DicomStudy`, `DicomSeries`, `DicomImage` vinculados a `PatientRegistration` y `Encounter` con metadatos GCP Cloud Storage.
-    - *Backend tRPC:* Router `server/routers/dicom.ts` aislado registrado en `_app.ts`.
-    - *Visor HTML5 `<DicomViewer />`:* Nivel 1 (Ángulos Cobb en Traumatología, Inversión de Color en Neumonología/Infectología, CINE Multiframe en Cardiología/Obstetricia, Criterios RECIST en Oncología, Densidad HU en Urología/Nefrología) y Nivel 2 (Zoom HD/Pan/WW-WC en Cirugía/Gastro/ORL/Reuma/Fisiatría/Emergencias/Interna/Pedia/Geria/Familiar).
-  - **Integración en Registro de Médicos y Búsqueda del Paciente:** Catálogo `lib/venezuela-specialties.ts` extendido con las 27 especialidades y motor de búsqueda del Marketplace (`searchDoctors`) con filtrado case-insensitive / accent-insensitive.
-  - **Sandbox de Especialidades Habilitado:** Actualizado `/admin/sandbox` para seleccionar e interactuar con el espacio de trabajo SOAP y visor DICOM de cualquiera de las 27 especialidades.
-  - **Fallback de Disponibilidad Médica:** Implementado fallback automático en el backend (`getDoctorAvailability` y `getAvailableSlots`) al horario predeterminado (Lunes a Viernes de 8:00 AM a 5:00 PM con turnos de 30m) cuando el doctor no ha guardado su configuración en base de datos.
-  - **`tsc --noEmit`:** clean ✅
-  - **`next build`:** Compiled successfully in 13.3s ✅
+- **HEAD:** `a6d3568` (feat(ai): add real-time ambient AI scribe for continuous hands-free background auto-filling of SOAP clinical fields)
+- **Cambios recientes (2026-07-21 → 2026-07-25):**
+  - **Gemini Spark Ambient Clinical AI Scribe & Real-time Auto-fill:**
+    - *Backend API:* `/api/ai/ambient-scribe` impulsado por Gemini 2.0 Flash (`Gemini Spark`), con instanciación diferida y motor de tolerancia a fallos (*Rule-based Fallback Parser*) para 0 errores 500.
+    - *Filtro de Ruido Social:* Identifica y descarta automáticamente charla informal (mascotas, viajes, clima, deportes) reportándola en un cuadro de transparencia.
+    - *Auto-Llenado Manos Libres en Tiempo Real:* Hook `useRealtimeScribe` y toggle `[ 🔴 Auto-llenado IA Activo ]` en la barra superior de `EncounterWorkspace`. Escucha la consulta en vivo y autocompleta progresivamente los campos SOAP (**Motivo de consulta**, **Historia Clínica**, **Examen Físico**, **Plan de Tratamiento / Receta**) sin que el médico tenga que presionar botones.
+    - *Gestión de Permisos de Micrófono:* Pre-autorización explícita con `navigator.mediaDevices.getUserMedia({ audio: true })` e instrucciones claras para el candado 🔒 del navegador si el permiso estaba bloqueado.
+  - **Migración de Terminología (Anamnesis ➔ Historia Clínica):**
+    - Eliminada por completo la palabra "Anamnesis" en interfaces de usuario, prompts de IA y rutas de generación de reportes en PDF (`app/api/pdf/encounter/[id]`), reemplazándola por **"Historia Clínica"**.
+  - **Plan Maestro de 27 Especialidades Médicas (100% Completado):** Arquitectura relacional Prisma, tRPC routers y componentes React 19 / Tailwind v4 de las 27 especialidades.
+  - **Infraestructura DICOM / PACS:** Visor HTML5 `<DicomViewer />` en Sandbox y consultas clínicas.
+  - **`tsc --noEmit`:** clean ✅ (0 errores)
+  - **`next build`:** Compiled successfully in 8.0s ✅
 
 ## Feature: location-aware system (implementada 2026-06-27)
 

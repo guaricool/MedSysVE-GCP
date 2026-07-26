@@ -17,7 +17,7 @@ SaaS de gestión médica electrónica (EMR) para el mercado venezolano. Sistema 
 | UI | shadcn/ui + Tailwind | v4 |
 | PDF | @react-pdf/renderer | - |
 | Charts | Recharts | - |
-| AI | Anthropic Claude | claude-sonnet-4-6 |
+| AI | Anthropic Claude + Google Gemini Spark (Gemini 2.0 Flash) | claude-sonnet-4-6 / gemini-2.0-flash |
 | Email | nodemailer + Gmail SMTP | - | (migrado de Resend en 2026-06-25, `e294b90`)
 | WhatsApp | Meta Cloud API v20 (graph.facebook.com) | - |
 

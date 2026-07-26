@@ -24,18 +24,36 @@ SaaS multi-tenant de **Historia ClÃ­nica ElectrÃ³nica (HCE) / EMR** para el 
 
 ---
 
+> **Estado actual:** Producción, ~3 médicos activos multi-tenant (Carlos / Joel / Dayana). Stripe LIVE mode deployed 2026-07-08. Drug-allergy safety check deployed 2026-07-14.
+
+---
+
+## ¿Qué es MedSysVE?
+
+SaaS multi-tenant de **Historia Clínica Electrónica (HCE) / EMR** para el mercado venezolano. Un doctor registra su consultorio, su equipo (secretaria, asistente, enfermera), sus pacientes, y corre todo el flujo clínico-financiero desde un solo lugar:
+
+- **Atención clínica** — consultas SOAP, signos vitales, diagnósticos CIE-10, recetas, órdenes de lab/imagen, reposos, informes, referidos a colegas, certificados.
+- **Gestión** — agenda semanal con tipos (consulta / seguimiento / emergencia / procedimiento / videoconsulta), sala de espera, recordatorios, facturación dual USD/Bs con tasa BCV, cobros parciales, seguros, anuncios al equipo.
+- **Portal del paciente** — agendar citas, ver recetas, mensajes al doctor, descargar PDFs, gestionar consentimiento, vacunas.
+- **Asistencia IA** — borrador de informe con Claude, OCR de resultados de lab con Claude Vision, detección de interacciones medicamentosas, alerta de alergias en receta, diagnóstico diferencial.
+- **Compliance** — HIPAA + LOPDP Venezolano: PHI cifrado a nivel de campo con AES-256-GCM + HMAC indexes buscables, audit log exhaustivo, multi-consultorio con workspace isolation, retenciones, breach ledger.
+
+**Tema:** oscuro (slate-950 con acentos azul / verde / ámbar). Branding: wordmark `MedSysVE` con colores de la bandera venezolana (amarillo `#FFD100`, azul `#3B82F6`, rojo `#EF4444`).
+
+---
+
+| 2026-07-25 | `f29a8c1` | **Gemini Spark Ambient Clinical AI Scribe & Real-time Auto-fill** — Implementation of `/api/ai/ambient-scribe` powered by Gemini 2.0 Flash (`Gemini Spark`). Auto-filters social chatter, continuous real-time auto-filling of SOAP clinical fields (Motivo, Historia Clínica, Examen Físico, Plan) via `useRealtimeScribe` hook. Terminology migration: "Anamnesis" to "Historia Clínica". Includes WebRTC microphone permissions management. |
 | 2026-07-21 | `3daa9a0` | **27 Medical Specialties Blueprint & Native Additive DICOM/PACS Integration** — 100% completed execution of the 27 medical specialties. Integrated native DICOM/PACS infrastructure (`DicomStudy`, `DicomSeries`, `DicomImage` Prisma models, `dicom.ts` tRPC router, reusable HTML5 `<DicomViewer />` component with Level 1 Cobb Angle, Hounsfield HU, RECIST, CINE Multiframe, Color Inversion, and Level 2 basic pan/zoom). Enabled all 27 specialties in Doctor Registration, Patient Marketplace Search, and Admin Sandbox (`/admin/sandbox`). |
 | 2026-07-21 | `52fec99` | **Architectural Refactoring (Phases 1-4)** — Migrated GlobalPatientProfile columns to Postgres JsonB with Prisma. Optimized tRPC queries in portal.ts to remove N+1 queries. Implemented versioned Keyring cryptography in field-crypto.ts with transparent backwards compatibility for raw legacy ciphertexts. Added Cache-Control headers to PDF responses and created pdf-worker.ts queue abstraction. Extracted shared UI clinical components (BloodTypeSelector, AllergyListEditor) and designed generic DynamicSoapForm.tsx. |
 | 2026-07-21 | `294d75f` | **Portal EHR integration, search refinement, and default availability fallback** — Portal login block for unverified users with WhatsApp/Email verification direct panel. Unified local Patient profiles under global profile via cedula/email/phone match. Blood type, allergy list, vaccine registry, insurance, and medical history exposed in portal profile screen. Dynamic selects and accent-insensitive autocomplete for Venezuela locations and specialties in doctor search. Default availability backend fallback to Mon-Fri 8:00 AM - 5:00 PM if no DB config exists. Remediated msmtprc credential exposure, upgraded dependencies to secure versions (`nodemailer@9.0.3` and `postcss@8.5.15` overrides), and hardened GitHub Actions workflow permissions. |
-| 2026-07-08 | `bedcd3a` | **Stripe LIVE launch** â€” 9 envs deployadas (sk_live_*, whsec_*, 6Ã— price_*, NEXT_PUBLIC_*), webhook endpoint suscrito a 5 eventos. Smoke test end-to-end parcial: cargo real $25 procesado bajo sesiÃ³n de Dayana (cross-session). Pending refund. |
-| 2026-07-14 | `9a963d0` | **Drug-allergy interaction check (safety feature)** â€” `lib/drug-allergies.ts` con ~30 familias farmacolÃ³gicas VE + match exact/synonym/family + 31 unit tests. UI: warning en `prescription-form.tsx` al seleccionar med contraindicado. Server: defense-in-depth en `prescription.ts` rechaza `addItem` sin `overrideAlerta=true`. PDF: banner rojo "ALERGIAS DEL PACIENTE" en ambas mitades. AI: inyecciÃ³n de alergias activas en prompts de `encounter-assist` y `plan-suggestion`. Audit: nuevo `ALLERGY_OVERRIDE` action. Cross-reactivity cefalosporinaâ†”penicilina NO modelada (out of scope, requiere side-chain analysis). |
-| 2026-07-08 | `51d4eac` | **Stripe checkout success_url fix** â€” derive de NEXTAUTH_URL con regex force www. (evita Traefik apexâ†’www cookie drop). |
-| 2026-07-08 | `f6dec8a` + `6949f2f` | **Sentry/GlitchTip observability** â€” `@sentry/nextjs` wireado contra GlitchTip self-hosted en `glitchtip.Google Cloud Run.sslip.io`. Error tracking en cliente + edge + server. |
-| 2026-07-07 | `0e8b003` | **Audit S11 â€” Automated PHI key rotation** â€” `scripts/rotate-field-keys.{sh,ts}` + DR-PLAN Â§5.1 runbook + 6 tests. Cierra audit #4. |
+| 2026-07-08 | `bedcd3a` | **Stripe LIVE launch** — 9 envs deployadas (sk_live_*, whsec_*, 6× price_*, NEXT_PUBLIC_*), webhook endpoint suscrito a 5 eventos. Smoke test end-to-end parcial: cargo real $25 procesado bajo sesión de Dayana (cross-session). Pending refund. |
+| 2026-07-14 | `9a963d0` | **Drug-allergy interaction check (safety feature)** — `lib/drug-allergies.ts` con ~30 familias farmacológicas VE + match exact/synonym/family + 31 unit tests. UI: warning en `prescription-form.tsx` al seleccionar med contraindicado. Server: defense-in-depth en `prescription.ts` rechaza `addItem` sin `overrideAlerta=true`. PDF: banner rojo "ALERGIAS DEL PACIENTE" en ambas mitades. AI: inyección de alergias activas en prompts de `encounter-assist` y `plan-suggestion`. Audit: nuevo `ALLERGY_OVERRIDE` action. Cross-reactivity cefalosporina↔penicilina NO modelada (out of scope, requiere side-chain analysis). |
+| 2026-07-08 | `51d4eac` | **Stripe checkout success_url fix** — derive de NEXTAUTH_URL con regex force www. (evita Traefik apex→www cookie drop). |
+| 2026-07-08 | `f6dec8a` | **Sentry/GlitchTip observability** — `@sentry/nextjs` wireado contra GlitchTip self-hosted en `glitchtip.Google Cloud Run.sslip.io`. Error tracking en cliente + edge + server. |
+| 2026-07-07 | `0e8b003` | **Audit S11 — Automated PHI key rotation** — `scripts/rotate-field-keys.{sh,ts}` + DR-PLAN §5.1 runbook + 6 tests. Cierra audit #4. |
 
 | Fecha | Commit | Resumen |
 |---|---|---|
-| 2026-06-21 | `52e2abe` | **Tenant isolation** â€” patient uniqueness removido del global, scoped a `(workspaceId, tipoIdentificacion, numeroIdentificacion)`. Bug crÃ­tico HIPAA cerrado. |
 | 2026-06-21 | `56d0a15` | **Upload streaming fix** â€” `/api/uploads/[...path]` ya no se cuelga en modo standalone. |
 | 2026-06-22 | `22315d5` | **Security hardening completo** â€” 20 bugs en 6 commits. Authz en proxy.ts, JWT verification, PHI encryption para `Patient.numeroIdentificacion`, audit log en 9 rutas PDF + 3 CSV + 3 AI, workspace switcher con DB validation, bcrypt dummy pre-computed. |
 | 2026-06-22 | `0dbe382` | **Encrypt 23 PHI/PII columns** â€” field-level AES-256-GCM en cÃ©dulas, telÃ©fonos, emails, anamnesis, planes, firmas. Migration backfill. |
