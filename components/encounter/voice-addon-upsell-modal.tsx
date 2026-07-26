@@ -35,6 +35,27 @@ export function VoiceAddonUpsellModal({ isOpen, onClose, onActivated }: Props) {
     }
   }
 
+  const handleOpenStripePortal = async () => {
+    setIsActivating(true)
+    try {
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ returnUrl: window.location.href }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        await handleActivate()
+      }
+    } catch {
+      await handleActivate()
+    } finally {
+      setIsActivating(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden text-slate-100 relative">
@@ -106,7 +127,7 @@ export function VoiceAddonUpsellModal({ isOpen, onClose, onActivated }: Props) {
           {/* Action Buttons */}
           <div className="space-y-2 pt-2">
             <Button
-              onClick={handleActivate}
+              onClick={handleOpenStripePortal}
               disabled={isActivating}
               className="w-full bg-gradient-to-r from-purple-600 via-sky-600 to-emerald-600 hover:from-purple-500 hover:to-emerald-500 text-white font-bold text-sm py-6 rounded-xl shadow-lg transition-all"
             >
