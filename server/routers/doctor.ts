@@ -697,16 +697,23 @@ export const doctorRouter = router({
       }
     }),
 
-  hasVoiceScribeAddon: protectedProcedure.query(async ({ ctx }) => {
+  hasVoiceScribeAddon: publicProcedure.query(async ({ ctx }) => {
+    const email = ctx.session?.email
+    if (!email) return false
+
+    // Super Admin (Carlos) ALWAYS gets 100% free unlimited PRO access!
+    if (email === "cpierluissis@gmail.com") return true
+
     const doc = await ctx.db.doctor.findFirst({
-      where: { email: ctx.session.email },
+      where: { email },
       select: { isAdmin: true, hasVoiceAddon: true, plan: true },
     })
+
     if (!doc) return false
+    if (doc.isAdmin || doc.hasVoiceAddon) return true
+
     const planLower = (doc.plan || "").toLowerCase()
     return (
-      doc.isAdmin ||
-      doc.hasVoiceAddon ||
       planLower === "pro" ||
       planLower === "enterprise" ||
       planLower === "cortesia" ||
