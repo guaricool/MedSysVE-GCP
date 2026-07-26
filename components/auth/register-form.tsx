@@ -210,7 +210,7 @@ export function RegisterForm() {
   // Creates Clinic + OWNER ClinicAdmin. After success, the admin signs in
   // and is routed to the clinic dashboard.
   const registerClinicAdmin = trpc.clinicAdmin.register.useMutation({
-    onSuccess: async (_data, variables) => {
+    onSuccess: async (_, variables) => {
       const result = await signIn("credentials", {
         email: variables.email,
         password: variables.password,

@@ -22,6 +22,20 @@ const consentSchema = z.object({
   cookies: z.boolean().default(false), // cookies is optional
 })
 
+const optionalPhoneSchema = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .or(z.literal(""))
+  .transform((val) => (val && val.trim() !== "" ? val.trim() : undefined))
+  .pipe(
+    z
+      .string()
+      .regex(/^[\d\s+\-()]{7,20}$/, "El teléfono debe tener entre 7 y 20 dígitos (ej: 0412-1234567)")
+      .optional()
+  )
+
 export const doctorRouter = router({
   register: publicProcedure
     .input(z.object({
@@ -36,14 +50,14 @@ export const doctorRouter = router({
       // Strong password policy enforced via reusable schema (min 12 chars,
       // mixed case, digit, symbol, not in common-passwords list).
       password: strongPasswordSchema,
-      telefono: z.string().regex(/^[\d\s+\-()]{7,20}$/).optional(),
+      telefono: optionalPhoneSchema,
       especialidadPrincipal: z.enum(ESPECIALIDADES_VE as [string, ...string[]]),
       subEspecialidades: z.array(z.string()).max(20).default([]),
       workspaceNombre: z.string().min(2).max(120),
       workspaceEstado: z.string().min(2).max(60),
       workspaceCiudad: z.string().min(2).max(80),
       workspaceDireccion: z.string().max(250).optional(),
-      workspaceTelefono: z.string().regex(/^[\d\s+\-()]{7,20}$/).optional(),
+      workspaceTelefono: optionalPhoneSchema,
       /**
        * If provided, the new doctor joins the clinic identified by this
        * invitation code (the OWNER ClinicAdmin shares this code with new

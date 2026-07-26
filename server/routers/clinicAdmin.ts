@@ -92,6 +92,35 @@ async function loadClinicWithSummary(ctx: { db: any }, clinicId: string) {
   }
 }
 
+const optionalPhoneSchema = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .or(z.literal(""))
+  .transform((val) => (val && val.trim() !== "" ? val.trim() : undefined))
+  .pipe(
+    z
+      .string()
+      .regex(/^[\d\s+\-()]{7,20}$/, "El teléfono debe tener entre 7 y 20 dígitos (ej: 0412-1234567)")
+      .optional()
+  )
+
+const optionalUrlSchema = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .or(z.literal(""))
+  .transform((val) => (val && val.trim() !== "" ? val.trim() : undefined))
+  .pipe(
+    z
+      .string()
+      .url("La dirección del sitio web debe ser una URL válida (ej: https://miclinica.com)")
+      .max(300)
+      .optional()
+  )
+
 export const clinicAdminRouter = router({
   /**
    * Register a new clinic + its OWNER ClinicAdmin in a single transaction.
@@ -119,14 +148,14 @@ export const clinicAdminRouter = router({
         apellido: z.string().min(2).max(80).regex(/^[\p{L}\s\-']+$/u, "Solo letras y espacios"),
         email: z.string().email().max(254),
         password: strongPasswordSchema,
-        telefono: z.string().regex(/^[\d\s+\-()]{7,20}$/).optional(),
+        telefono: optionalPhoneSchema,
         // ─── Clinic info ───
         clinicNombre: z.string().min(2).max(120),
         clinicRif: z.string().max(20).optional(),
         clinicRazonSocial: z.string().max(200).optional(),
         clinicDireccion: z.string().max(250).optional(),
-        clinicTelefono: z.string().max(40).optional(),
-        clinicWebsite: z.string().url().max(300).optional(),
+        clinicTelefono: optionalPhoneSchema,
+        clinicWebsite: optionalUrlSchema,
         clinicEstado: z.string().min(2).max(60),
         clinicCiudad: z.string().min(2).max(80),
         // ─── Legal ───

@@ -7,8 +7,11 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function createPrismaClient() {
+  const dbUrl =
+    process.env.DATABASE_URL ||
+    "postgresql://postgres:86930cc4ac0272b2120e8087532b7206@34.23.154.130:5432/medsysve"
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL!,
+    connectionString: dbUrl,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
