@@ -42,6 +42,7 @@ export const allergyRouter = router({
         moldsFungiJson: z.string().optional().nullable(),
         epitheliaAnimalJson: z.string().optional().nullable(),
         pollensFoodsJson: z.string().optional().nullable(),
+        customItemsJson: z.string().optional().nullable(),
         positiveReactionsCount: z.number().int().min(0),
       }),
     )
@@ -61,6 +62,7 @@ export const allergyRouter = router({
         moldsFungiJson: input.moldsFungiJson,
         epitheliaAnimalJson: input.epitheliaAnimalJson,
         pollensFoodsJson: input.pollensFoodsJson,
+        customItemsJson: input.customItemsJson,
         positiveReactionsCount: input.positiveReactionsCount,
       }
 
@@ -72,6 +74,86 @@ export const allergyRouter = router({
       }
 
       return ctx.db.allergyPrickTest.create({
+        data: {
+          encounterId: input.encounterId,
+          patientRegistrationId: input.patientRegistrationId,
+          workspaceId: ctx.session.workspaceId,
+          ...data,
+        },
+      })
+    }),
+
+  // ─── 1.5. PRUEBA DE PARCHE / HAPTENOS DE CONTACTO (PATCH TEST) ───
+  getPatchTest: protectedProcedure
+    .input(z.object({ encounterId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      if (input.encounterId === "sandbox-demo") {
+        return {
+          id: "sandbox-allergy-patch-1",
+          encounterId: "sandbox-demo",
+          patientRegistrationId: "sandbox-demo-pat",
+          workspaceId: ctx.session.workspaceId ?? "sandbox",
+          fechaAplicacion: new Date(),
+          fechaLectura: new Date(),
+          diagnostico: "Dermatitis de Contacto Alérgica",
+          comentarios: "Se evidencia reacción ++++ a Níquel Sulfato y ++ a Mezcla de Fragancias.",
+          itemsJson: JSON.stringify([
+            { id: "1", hapteno: "Níquel Sulfato", fuente: "Metales, bisutería", resultado: "++++" },
+            { id: "2", hapteno: "Alcoholes de Lana Lanolina", fuente: "Cremas, cosméticos", resultado: "Neg" },
+            { id: "3", hapteno: "Neomicina Sulfato", fuente: "Fármacos tópicos", resultado: "Neg" },
+            { id: "4", hapteno: "Potasio Dicromato", fuente: "Cuero curtido, metales", resultado: "Neg" },
+            { id: "6", hapteno: "Mezcla de Fragancias", fuente: "Perfumes, cosméticos", resultado: "++" },
+          ]),
+          positiveCount: 2,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+      }
+
+      return ctx.db.allergyPatchTest.findFirst({
+        where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
+      })
+    }),
+
+  savePatchTest: protectedProcedure
+    .input(
+      z.object({
+        encounterId: z.string(),
+        patientRegistrationId: z.string(),
+        fechaAplicacion: z.string().optional().nullable(),
+        fechaLectura: z.string().optional().nullable(),
+        diagnostico: z.string().optional().nullable(),
+        comentarios: z.string().optional().nullable(),
+        itemsJson: z.string().optional().nullable(),
+        positiveCount: z.number().int().min(0),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.encounterId === "sandbox-demo") {
+        return { ok: true, id: "sandbox-allergy-patch-1" }
+      }
+
+      const existing = await ctx.db.allergyPatchTest.findFirst({
+        where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
+      })
+
+      const data = {
+        fechaAplicacion: input.fechaAplicacion ? new Date(input.fechaAplicacion) : null,
+        fechaLectura: input.fechaLectura ? new Date(input.fechaLectura) : null,
+        diagnostico: input.diagnostico,
+        comentarios: input.comentarios,
+        itemsJson: input.itemsJson,
+        positiveCount: input.positiveCount,
+      }
+
+      if (existing) {
+        return ctx.db.allergyPatchTest.update({
+          where: { id: existing.id },
+          data,
+        })
+      }
+
+      return ctx.db.allergyPatchTest.create({
         data: {
           encounterId: input.encounterId,
           patientRegistrationId: input.patientRegistrationId,

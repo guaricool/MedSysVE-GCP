@@ -26,6 +26,7 @@ export const alergiaRouter = router({
       patientRegistrationId: z.string(),
       sustancia: z.string().min(1).max(200),
       reaccion: z.string().max(500).optional(),
+      categoria: z.enum(["FARMACO", "ALIMENTO", "AEROALERGENO", "INSECTO", "CONTACTO", "OTRO"]).optional(),
       gravedad: z.enum(["LEVE", "MODERADA", "SEVERA"]).default("LEVE"),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -40,6 +41,7 @@ export const alergiaRouter = router({
           patientRegistrationId: input.patientRegistrationId,
           sustancia: input.sustancia,
           reaccion: input.reaccion,
+          categoria: input.categoria,
           gravedad: input.gravedad,
         },
       })

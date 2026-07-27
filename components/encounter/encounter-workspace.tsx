@@ -54,6 +54,7 @@ import { CirugiaPlasticaForm } from "./cirugia-plastica-form"
 import { HematologiaForm } from "./hematologia-form"
 import { AlergologiaForm } from "./alergologia-form"
 import { FisiatriaForm } from "./fisiatria-form"
+import { EncounterAllergiesModal } from "./encounter-allergies-modal"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import type { Vitales } from "@/lib/clinical/vitals-alerts"
 
@@ -164,6 +165,7 @@ export function EncounterWorkspace({
   const { data: doctor } = (trpc.doctor.myProfile.useQuery as any)()
   const { data: doctorSpecs } = (trpc.doctor.getSpecialties.useQuery as any)()
   const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null)
+  const [allergiesModalOpen, setAllergiesModalOpen] = useState(false)
 
   const allSpecialties = useMemo(() => {
     if (!doctorSpecs) return []
@@ -230,11 +232,18 @@ export function EncounterWorkspace({
       "Hematología": "hematologia",
       "Alergología e Inmunología": "alergologia",
       "Alergología": "alergologia",
+      "Alergología e Inmunología (Prick Test)": "alergologia",
+      "Alergología e Inmunología Clínica": "alergologia",
       "Fisiatría": "fisiatria",
       "Medicina Física y Rehabilitación": "fisiatria",
       "Medicina Física y Rehabilitación (Fisiatría)": "fisiatria",
     }
-    const secId = specMap[especialidad]
+    let secId = specMap[especialidad]
+    if (!secId && especialidad) {
+      const lower = especialidad.toLowerCase()
+      if (lower.includes("alerg")) secId = "alergologia"
+      else if (lower.includes("fisiatr") || lower.includes("rehabilitaci")) secId = "fisiatria"
+    }
     if (secId) {
       setVisibleSections((prev) => new Set([...Array.from(prev), secId]))
       setOpenSections((prev) => new Set([...Array.from(prev), secId]))
@@ -540,10 +549,24 @@ export function EncounterWorkspace({
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-white">{patientNombre}</p>
               <p className="text-xs text-slate-400">
-                {patientEdad} años · {patientAlergias.length > 0 && (
-                  <span className="mr-2 inline-flex items-center rounded bg-red-900/40 px-1.5 py-0.5 text-[10px] font-medium text-red-300">
+                {patientEdad} años · {patientAlergias.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setAllergiesModalOpen(true)}
+                    className="mr-2 inline-flex items-center rounded bg-red-900/50 hover:bg-red-900/80 border border-red-700/60 px-1.5 py-0.5 text-[10px] font-bold text-red-300 transition-all cursor-pointer shadow-xs"
+                    title="Ver y editar alergias del paciente"
+                  >
                     ⚠ {patientAlergias.length} alergia{patientAlergias.length > 1 ? "s" : ""}
-                  </span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setAllergiesModalOpen(true)}
+                    className="mr-2 inline-flex items-center rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-1.5 py-0.5 text-[10px] font-semibold text-slate-300 transition-all cursor-pointer"
+                    title="Registrar alergia para este paciente"
+                  >
+                    + Alergia
+                  </button>
                 )}
                 {patientCronicos.length > 0 && (
                   <span className="inline-flex items-center rounded bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-medium text-amber-350">
@@ -1245,9 +1268,9 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("alergologia") && (especialidad === "Alergología" || especialidad === "Alergología e Inmunología") && (
+        {visibleSections.has("alergologia") && (
           <Section id="alergologia" key="alergologia" title="Alergología e Inmunología Clínica" icon="🌿" collapsible open={openSections.has("alergologia")} onToggle={() => toggleSection("alergologia")}>
-            <AlergologiaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
+            <AlergologiaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} patientRegistrationId={patientRegId} patientRegId={patientRegId} />
           </Section>
         )}
 
@@ -1406,6 +1429,13 @@ export function EncounterWorkspace({
 
       <QuickActionsBar encounterId={encounterId} patientRegId={patientRegId} percent={completed.percent} />
       <SignBar encounterId={encounterId} patientRegId={patientRegId} status={initialStatus} />
+
+      <EncounterAllergiesModal
+        open={allergiesModalOpen}
+        onOpenChange={setAllergiesModalOpen}
+        patientRegistrationId={patientRegId}
+        patientNombre={patientNombre}
+      />
     </div>
   )
 }

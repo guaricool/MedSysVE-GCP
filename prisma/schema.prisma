@@ -499,6 +499,7 @@ model PatientRegistration {
   hemaSickleModules       HemaSickleCellModule[]
   hemaTransfusions        HemaTransfusionRecord[]
   allergyPrickTests       AllergyPrickTest[]
+  allergyPatchTests       AllergyPatchTest[]
   allergyImmunotherapies  AllergyImmunotherapy[]
   allergyIgPanels         AllergyImmunoglobulinPanel[]
   physiatryMuscles        PhysiatryMuscleGonio[]
@@ -668,6 +669,7 @@ model Encounter {
   hemaSickleModules       HemaSickleCellModule[]
   hemaTransfusions        HemaTransfusionRecord[]
   allergyPrickTests       AllergyPrickTest[]
+  allergyPatchTests       AllergyPatchTest[]
   allergyImmunotherapies  AllergyImmunotherapy[]
   allergyIgPanels         AllergyImmunoglobulinPanel[]
   physiatryMuscles        PhysiatryMuscleGonio[]
@@ -1149,6 +1151,7 @@ model Alergia {
   patientRegistrationId String
   sustancia             String
   reaccion              String?
+  categoria             String?
   gravedad              AlergiaGravedad @default(LEVE)
   activa                Boolean         @default(true)
   createdAt             DateTime        @default(now())
@@ -3761,7 +3764,32 @@ model AllergyPrickTest {
   moldsFungiJson         String? @db.Text // Alternaria, Aspergillus
   epitheliaAnimalJson    String? @db.Text // Gato, Perro
   pollensFoodsJson       String? @db.Text // Pólenes, Alimentos
+  customItemsJson        String? @db.Text // Alérgenos personalizados dinámicos
   positiveReactionsCount Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model AllergyPatchTest {
+  id                    String    @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  fechaAplicacion       DateTime?
+  fechaLectura          DateTime?
+  diagnostico           String?
+  comentarios           String?   @db.Text
+  itemsJson             String?   @db.Text // Haptenos con reactividad en cruces
+  positiveCount         Int       @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
