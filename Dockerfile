@@ -45,7 +45,4 @@ USER nextjs
 
 EXPOSE 3000
 
-# Apply pending Prisma migrations before starting the server.
-# Coolify passes DATABASE_URL via 'docker run -e' so prisma.config.ts
-# picks it up automatically.
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
