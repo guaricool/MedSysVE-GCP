@@ -328,7 +328,7 @@ export const authRouter = router({
         if (doctor) {
           await ctx.db.doctor.update({
             where: { id: doctor.id },
-            data: { passwordHash: newHash, email: emailLower },
+            data: { passwordHash: newHash },
           })
 
           const workspace = await ctx.db.workspace.findFirst({
@@ -361,7 +361,7 @@ export const authRouter = router({
         } else if (clinicAdmin) {
           await ctx.db.clinicAdmin.update({
             where: { id: clinicAdmin.id },
-            data: { passwordHash: newHash, email: emailLower },
+            data: { passwordHash: newHash },
           })
           safeLog("info", "auth.password_reset_completed_clinic_admin", {
             clinicAdminId: clinicAdmin.id,
@@ -369,7 +369,7 @@ export const authRouter = router({
         } else if (portalUser) {
           await ctx.db.portalUser.update({
             where: { id: portalUser.id },
-            data: { passwordHash: newHash, email: emailLower },
+            data: { passwordHash: newHash },
           })
           safeLog("info", "auth.password_reset_completed_portal_user", {
             portalUserId: portalUser.id,
@@ -377,12 +377,19 @@ export const authRouter = router({
         }
 
         return { ok: true as const }
-      } catch (err) {
-        if (err instanceof TRPCError) throw err
-        console.error("[confirmPasswordReset] Error:", err)
+      } catch (err: any) {
+        if (
+          err instanceof TRPCError ||
+          (err && typeof err === "object" && ("code" in err || "shape" in err))
+        ) {
+          throw err
+        }
+        console.error("[confirmPasswordReset] Unexpected Error:", err)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "No se pudo actualizar la contraseña. Intente nuevamente.",
+          message: err?.message
+            ? `No se pudo actualizar la contraseña: ${err.message}`
+            : "No se pudo actualizar la contraseña. Intente nuevamente.",
         })
       }
     }),
