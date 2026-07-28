@@ -538,6 +538,11 @@ function NewWorkspaceSection() {
   const [done, setDone] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
+  const isCortesia = profile?.plan === "cortesia"
+  const baseIncluded = isCortesia ? 3 : 2
+  const extraWorkspaces = profile?.extraWorkspacesCount ?? 0
+  const maxAllowed = baseIncluded + extraWorkspaces
+
   const create = trpc.workspace.create.useMutation({
     onSuccess: () => {
       setDone(true)
@@ -552,10 +557,10 @@ function NewWorkspaceSection() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Múltiples consultorios (2 Incluidos sin costo)
+            Múltiples consultorios ({baseIncluded} Incluidos sin costo)
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Administra varios consultorios con una sola cuenta de médico. Tu suscripción incluye hasta 2 consultorios. A partir del 3er consultorio en adelante, se agregará un cargo adicional de $10 USD/mes por cada consultorio extra.
+            Administra varios consultorios con una sola cuenta de médico. Tu suscripción {isCortesia ? "de cortesía" : ""} incluye hasta {baseIncluded} consultorios sin costo. A partir del {baseIncluded + 1}er consultorio en adelante, se agregará un cargo adicional de $10 USD/mes por cada consultorio extra.
           </p>
         </div>
         <button
@@ -606,7 +611,7 @@ function NewWorkspaceSection() {
             <Lock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-amber-200">
-                Límite de Consultorios Alcanzado (2/2 Incluidos)
+                Límite de Consultorios Alcanzado ({maxAllowed} Incluidos)
               </p>
               <p className="text-xs text-amber-300/80 mt-1">
                 {create.error.message}

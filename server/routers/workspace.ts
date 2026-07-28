@@ -33,15 +33,16 @@ export const workspaceRouter = router({
 
       const doctor = await ctx.db.doctor.findUnique({
         where: { id: ctx.session.doctorId },
-        select: { extraWorkspacesCount: true },
+        select: { plan: true, extraWorkspacesCount: true },
       })
 
-      const maxAllowed = 2 + (doctor?.extraWorkspacesCount ?? 0)
+      const baseIncluded = doctor?.plan === "cortesia" ? 3 : 2
+      const maxAllowed = baseIncluded + (doctor?.extraWorkspacesCount ?? 0)
 
       if (count >= maxAllowed) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: `LÍMITE_CONSULTORIOS: Tu plan profesional incluye hasta ${maxAllowed} consultorios. Para activar un nuevo consultorio adicional, debes suscribir el complemento de consultorio extra ($10 USD/mes).`,
+          message: `LÍMITE_CONSULTORIOS: Tu plan ${doctor?.plan === "cortesia" ? "de cortesía" : "profesional"} incluye hasta ${baseIncluded} consultorios sin costo. Para activar un consultorio adicional, debes suscribir el complemento de consultorio extra ($10 USD/mes).`,
         })
       }
 

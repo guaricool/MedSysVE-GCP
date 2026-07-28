@@ -20,12 +20,15 @@ export function SubscriptionCard() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  // isPaid = tiene stripeSubscriptionId activa (lo que el webhook escribe en
-  // Doctor tras checkout.session.completed). NO usar billingStatus porque
-  // nunca se setea — bug histórico.
-  const isPaid = Boolean(profile?.stripeSubscriptionId)
-  const planLabel = isPaid ? "Premium" :
-                     profile?.plan === "trial" ? "Trial" : "Free"
+  const isCortesia = profile?.plan === "cortesia"
+  const isPaid = Boolean(profile?.stripeSubscriptionId) || isCortesia || profile?.plan === "premium"
+  const planLabel = isCortesia
+    ? "Cortesía"
+    : Boolean(profile?.stripeSubscriptionId) || profile?.plan === "premium"
+    ? "Premium"
+    : profile?.plan === "trial"
+    ? "Trial"
+    : "Free"
 
   // Detectar ?checkout=success&session_id=... desde el redirect post-pago.
   // El webhook de Stripe puede tardar 1-3s en escribir la subscription; hacemos

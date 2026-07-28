@@ -561,6 +561,7 @@ export const doctorRouter = router({
         stripePriceId: true,
         stripeCurrentPeriodEnd: true,
         plan: true,
+        extraWorkspacesCount: true,
       },
     })
     if (!doc) return null
