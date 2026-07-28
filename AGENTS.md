@@ -8,23 +8,28 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # MedSysVE — Agent Entry Point
 
-> **Resumen ejecutivo (1 minuto):** SaaS multi-tenant de Historia Clínica Electrónica para médicos venezolanos. Tema oscuro, asistencia IA, facturación dual USD/Bs con tasa BCV, portal para pacientes, red de referidos entre doctores, suscripciones mensuales/trimestrales via Stripe. Stack: Next.js 16 + React 19 + tRPC 11 + Prisma 7 + PostgreSQL + Auth.js v5 + Tailwind v4 + shadcn/ui + Redis. Deploy: Cloud Run + Docker standalone en GCP GCP `Google Cloud Run`. Repo: `github.com/guaricool/MedSysVE` (`master`).
+> **Resumen ejecutivo (1 minuto):** SaaS multi-tenant de Historia Clínica Electrónica para médicos venezolanos. Tema oscuro, asistencia IA, facturación dual USD/Bs con tasa BCV, portal para pacientes, red de referidos entre doctores, suscripciones mensuales/trimestrales via Stripe. Stack: Next.js 16 + React 19 + tRPC 11 + Prisma 7 + PostgreSQL + Auth.js v5 + Tailwind v4 + shadcn/ui + Redis. Deploy: Cloud Run + Docker standalone en GCP `Google Cloud Run`. Repo: `github.com/guaricool/MedSysVE` (`master`).
 
 ---
 
-## Estado actual (2026-07-25)
+## Estado actual (2026-07-28)
 
-- **HEAD:** `a6d3568` (feat(ai): add real-time ambient AI scribe for continuous hands-free background auto-filling of SOAP clinical fields)
-- **Cambios recientes (2026-07-21 → 2026-07-25):**
+- **HEAD:** `e6ca330` (fix(alergologia): clear hardcoded mock data for real patient encounters and add safe query fallbacks)
+- **Cambios recientes (2026-07-28):**
+  - **Autocuración DDL de Base de Datos en Producción (`ensureDbSchema` en `lib/db.ts`):**
+    - Implementación de DDL resiliente `CREATE TABLE IF NOT EXISTS` y `ALTER TABLE IF NOT EXISTS` que se ejecuta directamente desde Node.js en PostgreSQL al iniciar el servidor o consultar routers.
+    - Se agregaron auto-creaciones para `Doctor.extraWorkspacesCount` y tablas de las 27 especialidades médicas.
+  - **Next.js Standalone Container & Prisma CLI Fixes:**
+    - Removida la importación de `@next/env` en `prisma.config.ts` que causaba `MODULE_NOT_FOUND` al arrancar el contenedor standalone en Cloud Run.
+    - Configurado `ENV HOME=/tmp` en `Dockerfile` para otorgar permisos de escritura requeridos por la CLI de Prisma.
+  - **Limpieza de Datos de Prueba (*Mock Data*) en Consultas Médicas Reales:**
+    - Se corrigieron componentes de especialidades como `AlergologiaForm`. En consultas de pacientes reales (`encounterId !== "sandbox-demo"`), todos los campos inician 100% vacíos y en 0, eliminando la precarga de datos de simulación.
+  - **Routers tRPC Defensivos con Tolerancia a Fallos:**
+    - Invocación de `await ensureDbSchema()` y envoltorio `try/catch` en consultas tRPC de especialidades. Retornan `null` o `[]` de forma limpia si la tabla no tiene registros, eliminando 500 Internal Server Error.
   - **Gemini Spark Ambient Clinical AI Scribe & Real-time Auto-fill:**
     - *Backend API:* `/api/ai/ambient-scribe` impulsado por Gemini 2.0 Flash (`Gemini Spark`), con instanciación diferida y motor de tolerancia a fallos (*Rule-based Fallback Parser*) para 0 errores 500.
-    - *Filtro de Ruido Social:* Identifica y descarta automáticamente charla informal (mascotas, viajes, clima, deportes) reportándola en un cuadro de transparencia.
-    - *Auto-Llenado Manos Libres en Tiempo Real:* Hook `useRealtimeScribe` y toggle `[ 🔴 Auto-llenado IA Activo ]` en la barra superior de `EncounterWorkspace`. Escucha la consulta en vivo y autocompleta progresivamente los campos SOAP (**Motivo de consulta**, **Historia Clínica**, **Examen Físico**, **Plan de Tratamiento / Receta**) sin que el médico tenga que presionar botones.
-    - *Gestión de Permisos de Micrófono:* Pre-autorización explícita con `navigator.mediaDevices.getUserMedia({ audio: true })` e instrucciones claras para el candado 🔒 del navegador si el permiso estaba bloqueado.
-  - **Migración de Terminología (Anamnesis ➔ Historia Clínica):**
-    - Eliminada por completo la palabra "Anamnesis" en interfaces de usuario, prompts de IA y rutas de generación de reportes en PDF (`app/api/pdf/encounter/[id]`), reemplazándola por **"Historia Clínica"**.
-  - **Plan Maestro de 27 Especialidades Médicas (100% Completado):** Arquitectura relacional Prisma, tRPC routers y componentes React 19 / Tailwind v4 de las 27 especialidades.
-  - **Infraestructura DICOM / PACS:** Visor HTML5 `<DicomViewer />` en Sandbox y consultas clínicas.
+    - *Filtro de Ruido Social:* Identifica y descarta automáticamente charla informal (mascotas, viajes, clima, deportes).
+    - *Auto-Llenado Manos Libres en Tiempo Real:* Hook `useRealtimeScribe` y toggle `[ 🔴 Auto-llenado IA Activo ]` en la barra superior de `EncounterWorkspace`. Autocompleta progresivamente los campos SOAP sin que el médico tenga que presionar botones.
   - **`tsc --noEmit`:** clean ✅ (0 errores)
   - **`next build`:** Compiled successfully in 8.0s ✅
 
@@ -236,10 +241,14 @@ Las rutas de notificación viven en `server/routers/notification.ts` con `list`,
 ## Gotchas específicos del proyecto
 
 - **`proxy.ts` reemplaza `middleware.ts`** — runtime edge no soporta `node:util/types`. Si ves un middleware, no es el que está activo.
+- **No importar `@next/env` en `prisma.config.ts`** — En compilaciones `output: "standalone"`, Next.js no incluye `@next/env` en `.next/standalone/node_modules`. Importarlo provoca `MODULE_NOT_FOUND` en el arranque del contenedor en Cloud Run. Usar `dotenv/config` o variables de entorno nativas.
+- **Autocuración DDL en Runtime (`ensureDbSchema()` en `lib/db.ts`)** — No depender únicamente del entrypoint del contenedor para migraciones de DB. Invocar `ensureDbSchema()` en `lib/db.ts` (con `CREATE TABLE IF NOT EXISTS` y `ALTER TABLE IF NOT EXISTS`) auto-repara la estructura en PostgreSQL directamente durante la ejecución.
+- **Aislamiento de Datos Falsos (*Mock Data*) en Formularios Médicos** — NUNCA colocar valores iniciales simulados distintos de 0 o vacíos en `useState` de componentes de consulta sin verificar `isSandbox` (`encounterId === "sandbox-demo"`). Para pacientes reales, todo debe iniciar en 0 o vacío.
+- **Consultas tRPC Defensivas (`try/catch`)** — Las consultas tRPC de especialidades u opcionales (`allergy.getPrickTest`, `alergia.list`, etc.) deben capturar excepciones y retornar `null` o `[]` de forma limpia para evitar errores HTTP 500 no controlados.
 - **Doctor.cedula es UNIQUE global** (no por workspace). Esto es OK porque un doctor es un doctor — pero un doctor no es un paciente.
 - **`Patient.numeroIdentificacion` NO es unique global** — removido para evitar leak cross-tenant. Usar `hmacCedula` indexable + filter por workspace.
 - **Redis `meds:autocomplete`** se siembra via POST. Cada deploy toca algo → re-sembrar.
-- **Cloud Run auto-ejecuta `prisma migrate deploy`** — el `Dockerfile` línea 51 corre `CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]` desde commit `112ed33`. Las migrations se aplican automáticamente al startup del container, ~3 segundos antes de que Node levante. NO hace falta correr `docker exec ... npx prisma migrate deploy` post-deploy — el entrypoint ya lo hace. Confirmado en deploys `575c3b8` (rename) y `b2eef56` (DoctorReportPreferences). Lo que sigue pendiente (PROJECT_STATUS.md §474): auto-migrate en el **build step de Cloud Run** (prestart script) para que el `prisma generate` del build corra con el schema ya migrado.
+- **Cloud Run auto-ejecuta `prisma migrate deploy`** — el `Dockerfile` línea 51 corre `CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]` desde commit `112ed33`. Las migrations se aplican automáticamente al startup del container.
 - **Container es efímero** — cualquier archivo escrito a disco (que no sea volumen montado) se pierde al reiniciar. PDFs son on-demand, uploads están en Cloud Run volume.
 - **Allowed IPs** en la config del DB de Cloud Run a veces se "abre a 0.0.0.0" durante debug. Restaurar a `73.8.161.68,65.155.46.36` (IPs de Carlos). El cron de MedSysVE verifica esto en cada run.
 
