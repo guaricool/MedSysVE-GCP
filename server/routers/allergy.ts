@@ -2,12 +2,14 @@ import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import { audit } from "@/lib/audit"
+import { ensureDbSchema } from "@/lib/db"
 
 export const allergyRouter = router({
   // ─── 1. PRUEBAS CUTÁNEAS PRICK TEST / ALÉRGENOS ───
   getPrickTest: protectedProcedure
     .input(z.object({ encounterId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await ensureDbSchema()
       if (input.encounterId === "sandbox-demo") {
         return {
           id: "sandbox-allergy-prick-1",
@@ -26,9 +28,14 @@ export const allergyRouter = router({
         }
       }
 
-      return ctx.db.allergyPrickTest.findFirst({
-        where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
-      })
+      try {
+        return await ctx.db.allergyPrickTest.findFirst({
+          where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
+        })
+      } catch (err) {
+        console.warn("[getPrickTest] Query warning:", err)
+        return null
+      }
     }),
 
   savePrickTest: protectedProcedure
@@ -87,6 +94,7 @@ export const allergyRouter = router({
   getPatchTest: protectedProcedure
     .input(z.object({ encounterId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await ensureDbSchema()
       if (input.encounterId === "sandbox-demo") {
         return {
           id: "sandbox-allergy-patch-1",
@@ -110,9 +118,14 @@ export const allergyRouter = router({
         }
       }
 
-      return ctx.db.allergyPatchTest.findFirst({
-        where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
-      })
+      try {
+        return await ctx.db.allergyPatchTest.findFirst({
+          where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
+        })
+      } catch (err) {
+        console.warn("[getPatchTest] Query warning:", err)
+        return null
+      }
     }),
 
   savePatchTest: protectedProcedure
@@ -167,6 +180,7 @@ export const allergyRouter = router({
   listImmunotherapies: protectedProcedure
     .input(z.object({ patientRegistrationId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await ensureDbSchema()
       if (input.patientRegistrationId === "sandbox-demo-pat") {
         return [
           {
@@ -187,10 +201,15 @@ export const allergyRouter = router({
         ]
       }
 
-      return ctx.db.allergyImmunotherapy.findMany({
-        where: { patientRegistrationId: input.patientRegistrationId, workspaceId: ctx.session.workspaceId },
-        orderBy: { createdAt: "desc" },
-      })
+      try {
+        return await ctx.db.allergyImmunotherapy.findMany({
+          where: { patientRegistrationId: input.patientRegistrationId, workspaceId: ctx.session.workspaceId },
+          orderBy: { createdAt: "desc" },
+        })
+      } catch (err) {
+        console.warn("[listImmunotherapies] Query warning:", err)
+        return []
+      }
     }),
 
   saveImmunotherapy: protectedProcedure
@@ -232,6 +251,7 @@ export const allergyRouter = router({
   getIgPanel: protectedProcedure
     .input(z.object({ encounterId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await ensureDbSchema()
       if (input.encounterId === "sandbox-demo") {
         return {
           id: "sandbox-allergy-ig-1",
@@ -250,9 +270,14 @@ export const allergyRouter = router({
         }
       }
 
-      return ctx.db.allergyImmunoglobulinPanel.findFirst({
-        where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
-      })
+      try {
+        return await ctx.db.allergyImmunoglobulinPanel.findFirst({
+          where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
+        })
+      } catch (err) {
+        console.warn("[getIgPanel] Query warning:", err)
+        return null
+      }
     }),
 
   saveIgPanel: protectedProcedure

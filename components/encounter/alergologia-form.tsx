@@ -126,34 +126,41 @@ export function AlergologiaForm({ encounterId, disabled, initialData = {}, patie
     },
   });
 
+  const isSandbox = encounterId === "sandbox-demo";
+
   // ─── 1. PRICK TEST STATE ───
-  const [histamineMm, setHistamineMm] = useState(7.0);
+  const [histamineMm, setHistamineMm] = useState(isSandbox ? 7.0 : 0.0);
   const [salineMm, setSalineMm] = useState(0.0);
-  const [papuleMm, setPapuleMm] = useState<Record<string, number>>({
-    D_pteronyssinus: 8.0,
-    D_farinae: 6.0,
-    Blomia_tropicalis: 9.0,
-    Epitelio_Gato: 0,
-    Epitelio_Perro: 0,
-    Caseina: 0,
-    Huevo: 4.0,
-  });
-  const [erythemaMm, setErythemaMm] = useState<Record<string, number>>({
-    D_pteronyssinus: 15.0,
-    D_farinae: 12.0,
-    Blomia_tropicalis: 18.0,
-    Huevo: 8.0,
-  });
+  const [papuleMm, setPapuleMm] = useState<Record<string, number>>(
+    isSandbox
+      ? {
+          D_pteronyssinus: 8.0,
+          D_farinae: 6.0,
+          Blomia_tropicalis: 9.0,
+          Huevo: 4.0,
+        }
+      : {}
+  );
+  const [erythemaMm, setErythemaMm] = useState<Record<string, number>>(
+    isSandbox
+      ? {
+          D_pteronyssinus: 15.0,
+          D_farinae: 12.0,
+          Blomia_tropicalis: 18.0,
+          Huevo: 8.0,
+        }
+      : {}
+  );
   const [customPrickItems, setCustomPrickItems] = useState<CustomPrickItem[]>([]);
   const [newPrickLabel, setNewPrickLabel] = useState("");
   const [newPrickCategory, setNewPrickCategory] = useState("Aeroalérgenos");
-  const [newPrickPapule, setNewPrickPapule] = useState(4.0);
-  const [newPrickErythema, setNewPrickErythema] = useState(8.0);
+  const [newPrickPapule, setNewPrickPapule] = useState(0.0);
+  const [newPrickErythema, setNewPrickErythema] = useState(0.0);
 
   // ─── 2. PATCH TEST STATE ───
   const [patchFechaAplicacion, setPatchFechaAplicacion] = useState(new Date().toISOString().substring(0, 10));
   const [patchFechaLectura, setPatchFechaLectura] = useState(new Date(Date.now() + 48 * 3600 * 1000).toISOString().substring(0, 10));
-  const [patchDiagnostico, setPatchDiagnostico] = useState("Dermatitis de Contacto Alérgica");
+  const [patchDiagnostico, setPatchDiagnostico] = useState(isSandbox ? "Dermatitis de Contacto Alérgica" : "");
   const [patchComentarios, setPatchComentarios] = useState("");
   const [patchItems, setPatchItems] = useState<PatchTestItem[]>(STANDARD_HAPTEN_KIT);
   const [newHaptenName, setNewHaptenName] = useState("");
@@ -161,21 +168,21 @@ export function AlergologiaForm({ encounterId, disabled, initialData = {}, patie
 
   // ─── 3. INMUNOTERAPIA STATE ───
   const [therapyRoute, setTherapyRoute] = useState("SLIT Sublingual (Gotas bajo la lengua)");
-  const [extract, setExtract] = useState("Mezcla Ácaros (D.pteronyssinus 50% + Blomia 50%)");
-  const [phase, setPhase] = useState("Fase de Mantenimiento (Frasco Concentrado Rojo)");
-  const [vial, setVial] = useState("Concentración Máxima 100.000 DPT/ml");
-  const [dose, setDose] = useState("5 gotas diarias por 3 años");
+  const [extract, setExtract] = useState(isSandbox ? "Mezcla Ácaros (D.pteronyssinus 50% + Blomia 50%)" : "");
+  const [phase, setPhase] = useState(isSandbox ? "Fase de Mantenimiento (Frasco Concentrado Rojo)" : "");
+  const [vial, setVial] = useState(isSandbox ? "Concentración Máxima 100.000 DPT/ml" : "");
+  const [dose, setDose] = useState(isSandbox ? "5 gotas diarias por 3 años" : "");
   const [localReaction, setLocalReaction] = useState(0);
-  const [systemicReaction, setSystemicReaction] = useState("Sin reacciones adversas / Tolerancia excelente");
+  const [systemicReaction, setSystemicReaction] = useState(isSandbox ? "Sin reacciones adversas / Tolerancia excelente" : "");
 
   // ─── 4. PANEL IG STATE ───
-  const [ige, setIge] = useState(850.0);
-  const [igg, setIgg] = useState(1120.0);
-  const [iga, setIga] = useState(210.0);
-  const [igm, setIgm] = useState(145.0);
-  const [c3, setC3] = useState(115.0);
-  const [c4, setC4] = useState(28.0);
-  const [immunodeficiency, setImmunodeficiency] = useState("Atopia Severa Hiper-IgE (Rinitis & Asma Alérgica)");
+  const [ige, setIge] = useState(isSandbox ? 850.0 : 0);
+  const [igg, setIgg] = useState(isSandbox ? 1120.0 : 0);
+  const [iga, setIga] = useState(isSandbox ? 210.0 : 0);
+  const [igm, setIgm] = useState(isSandbox ? 145.0 : 0);
+  const [c3, setC3] = useState(isSandbox ? 115.0 : 0);
+  const [c4, setC4] = useState(isSandbox ? 28.0 : 0);
+  const [immunodeficiency, setImmunodeficiency] = useState(isSandbox ? "Atopia Severa Hiper-IgE (Rinitis & Asma Alérgica)" : "");
 
   // Sync from DB: Prick Test
   useEffect(() => {

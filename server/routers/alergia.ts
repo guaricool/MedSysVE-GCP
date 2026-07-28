@@ -1,24 +1,27 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { router, doctorProcedure } from "../trpc"
+import { ensureDbSchema } from "@/lib/db"
 
 export const alergiaRouter = router({
-  // Audit S5 (2026-07-06): list migrated from protectedProcedure to
-  // doctorProcedure for consistency with add/delete. Per PERMISSIONS.md
-  // Gap #5, staff (SECRETARY/ASSISTANT/NURSE) does not have login yet,
-  // so only DOCTOR should access this clinical data.
   list: doctorProcedure
     .input(z.object({ patientRegistrationId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const reg = await ctx.db.patientRegistration.findFirst({
-        where: { id: input.patientRegistrationId, workspaceId: ctx.session.workspaceId },
-        select: { id: true },
-      })
-      if (!reg) throw new TRPCError({ code: "NOT_FOUND" })
-      return ctx.db.alergia.findMany({
-        where: { patientRegistrationId: input.patientRegistrationId },
-        orderBy: { createdAt: "asc" },
-      })
+      await ensureDbSchema()
+      try {
+        const reg = await ctx.db.patientRegistration.findFirst({
+          where: { id: input.patientRegistrationId, workspaceId: ctx.session.workspaceId },
+          select: { id: true },
+        })
+        if (!reg) return []
+        return await ctx.db.alergia.findMany({
+          where: { patientRegistrationId: input.patientRegistrationId },
+          orderBy: { createdAt: "asc" },
+        })
+      } catch (err) {
+        console.warn("[alergia.list] Query warning:", err)
+        return []
+      }
     }),
 
   add: doctorProcedure
