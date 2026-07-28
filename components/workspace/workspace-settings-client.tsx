@@ -597,7 +597,30 @@ function NewWorkspaceSection() {
         </div>
       )}
       {create.error && (
-        <p className="mt-2 text-sm text-red-400">{create.error.message}</p>
+        <div className="mt-4 rounded-lg border border-amber-800/60 bg-amber-950/40 p-4 space-y-3">
+          <div className="flex items-start gap-2.5">
+            <Lock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-200">
+                Límite de Consultorios Alcanzado (2/2 Incluidos)
+              </p>
+              <p className="text-xs text-amber-300/80 mt-1">
+                {create.error.message}
+              </p>
+            </div>
+          </div>
+          <a
+            href="#suscripcion"
+            onClick={() => {
+              const el = document.querySelector('section:has(button)')
+              if (el) el.scrollIntoView({ behavior: 'smooth' })
+            }}
+            className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition-colors shadow"
+          >
+            <Building2 className="w-4 h-4" />
+            Actualizar Suscripción para Agregar Consultorio Extra ($10 USD/mes)
+          </a>
+        </div>
       )}
     </section>
   )

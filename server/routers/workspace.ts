@@ -27,6 +27,17 @@ export const workspaceRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const count = await ctx.db.workspace.count({
+        where: { doctorId: ctx.session.doctorId },
+      })
+
+      if (count >= 2) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "LÍMITE_CONSULTORIOS: Tu plan profesional incluye hasta 2 consultorios. Para activar un 3er consultorio o más, debes suscribir el complemento de consultorio adicional ($10 USD/mes).",
+        })
+      }
+
       return ctx.db.workspace.create({
         data: { ...input, doctorId: ctx.session.doctorId },
       })
