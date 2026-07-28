@@ -90,10 +90,11 @@ export const billingRouter = router({
 
         return { url: stripeSession.url };
       } catch (error: any) {
+        console.error("[Stripe Checkout Session Error]", error)
         if (error instanceof TRPCError) throw error
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: error.message || "Error de comunicación con Stripe.",
+          message: error?.message ? `Error de Stripe: ${error.message}` : "Error de comunicación con Stripe.",
         });
       }
     }),

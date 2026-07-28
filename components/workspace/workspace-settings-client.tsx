@@ -536,6 +536,7 @@ function NewWorkspaceSection() {
   const [open, setOpen] = useState(false)
   const [nombre, setNombre] = useState("")
   const [done, setDone] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   const create = trpc.workspace.create.useMutation({
     onSuccess: () => {
@@ -616,6 +617,7 @@ function NewWorkspaceSection() {
             type="button"
             disabled={checkoutMutation.isPending}
             onClick={async () => {
+              setCheckoutError(null)
               if (!profile?.id) return
               try {
                 const res = await checkoutMutation.mutateAsync({
@@ -624,8 +626,8 @@ function NewWorkspaceSection() {
                   entityId: profile.id,
                 })
                 window.location.href = res.url
-              } catch (e) {
-                alert(e instanceof Error ? e.message : "Error al conectar con Stripe.")
+              } catch (e: any) {
+                setCheckoutError(e?.message || "Error al conectar con Stripe.")
               }
             }}
             className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition-colors shadow disabled:opacity-50"
@@ -633,6 +635,11 @@ function NewWorkspaceSection() {
             <Building2 className="w-4 h-4" />
             {checkoutMutation.isPending ? "Redirigiendo a Stripe..." : "Pagar y Activar Consultorio Adicional ($10 USD/mes)"}
           </button>
+          {checkoutError && (
+            <p className="text-xs text-red-400 font-medium mt-1">
+              ⚠️ {checkoutError}
+            </p>
+          )}
         </div>
       )}
     </section>
