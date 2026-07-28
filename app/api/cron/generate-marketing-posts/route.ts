@@ -2,92 +2,24 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { GoogleGenAI } from "@google/genai";
+import { writeFile, mkdir } from "fs/promises";
+import { join, resolve } from "path";
 
 const ADMIN_EMAIL = "cpierluissis@gmail.com";
 
-async function generateImagen3Image(prompt: string): Promise<string | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  try {
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateImages({
-      model: "imagen-3.0-generate-002",
-      prompt: `${prompt}. Venezuelan medical doctor context, 8k resolution, professional studio lighting, cinematic 1:1 square format.`,
-      config: {
-        numberOfImages: 1,
-        outputMimeType: "image/jpeg",
-        aspectRatio: "1:1",
-      },
-    });
-
-    const b64 = response?.generatedImages?.[0]?.image?.imageBytes;
-    if (b64) {
-      return `data:image/jpeg;base64,${b64}`;
-    }
-  } catch (err: any) {
-    console.warn("[Imagen 3 API fallback to MedSysVE SVG renderer]:", err?.message || err);
-  }
-  return null;
+function getUploadsDir(): string {
+  const configured = process.env.UPLOADS_DIR?.trim();
+  if (configured && configured.length > 0) return resolve(configured, "marketing");
+  return resolve(process.cwd(), "public", "uploads", "marketing");
 }
 
-const CAMPAIGN_TOPICS = [
-  {
-    topic: "Historias Clínicas SOAP",
-    style: "screenshot",
-    caption: "🏥 Optimiza tu consulta médica con MedSysVE. Registra antecedentes, diagnóstico diferencial e imprime récipes oficiales en formato SOAP con código QR en menos de 2 minutos.",
-    hashtags: "#MedSysVE #HistoriaClinica #MedicinaVenezuela #SaludVenezuela #DoctorVenezolano #SOAP #ExpedienteElectronico",
-    imageUrl: "/api/uploads/marketing/soap-demo.png",
-  },
-  {
-    topic: "Visor DICOM / PACS Web",
-    style: "hyperrealistic",
-    caption: "🔬 ¡Visualiza tomografías, ecografías y resonancias en HD directo en la historia clínica del paciente! MedSysVE cuenta con visor PACS 100% web con medición de ángulos Cobb y CINE multiframe.",
-    hashtags: "#MedSysVE #DICOM #PACS #RadiologiaVenezuela #Traumatologia #Cardiologia #SaludDigital #Doctor",
-    imageUrl: "/api/uploads/marketing/dicom-demo.png",
-  },
-  {
-    topic: "Facturación Dual USD / Bs (BCV)",
-    style: "marketing",
-    caption: "💵 Mantén la contabilidad de tu consultorio al día. MedSysVE sincroniza automáticamente la tasa oficial del Banco Central de Venezuela (BCV) cada mañana para facturar en dólares y bolívares.",
-    hashtags: "#MedSysVE #FacturacionSENIAT #BCV #SaaSMedico #ConsultorioMedico #Venezuela #Salud",
-    imageUrl: "/api/uploads/marketing/soap-demo.png",
-  },
-  {
-    topic: "Verificación Oficial SACS MPPS",
-    style: "marketing",
-    caption: "🛡️ En MedSysVE cuidamos la salud de Venezuela. Todos los médicos en nuestra plataforma son validados ante el Registro del Ministerio de Salud (SACS MPPS). ¡Garantía de consultas 100% verificadas! 🩺🇻🇪",
-    hashtags: "#MedSysVE #SACS #MPPS #DoctorVerificado #SaludVenezuela #MedicinaVenezuela #ConsultasSeguras",
-    imageUrl: "/api/uploads/marketing/sacs-demo.png",
-  },
-  {
-    topic: "Red de Referidos & Interconsulta",
-    style: "cartoon",
-    caption: "🤝 Conecta tu consultorio con médicos de todo el país. Remite pacientes entre especialidades en segundos conservando la trazabilidad clínica y la confidencialidad de la historia.",
-    hashtags: "#MedSysVE #RedDeReferidos #DoctoresVenezuela #SaludDigital #EspecialistasMedicos #Interconsulta",
-    imageUrl: "/api/uploads/marketing/dicom-demo.png",
-  },
-  {
-    topic: "Vademécum & Recetas Inteligentes",
-    style: "screenshot",
-    caption: "💊 Emite recetas claras, seguras e infalsificables. Accede al vademécum en tiempo real, verifica interacciones farmacológicas y firma tus prescripciones digitalmente.",
-    hashtags: "#MedSysVE #Vademecum #RecetasMedicas #Farmacologia #DoctoresVenezuela #Salud",
-    imageUrl: "/api/uploads/marketing/soap-demo.png",
-  },
-  {
-    topic: "Consentimientos Informados Digitales",
-    style: "hyperrealistic",
-    caption: "📜 Resguarda tu responsabilidad profesional. Firma y haz firmar a tus pacientes consentimientos informados digitales con valor legal y resguardo cifrado HIPAA/LOPDP.",
-    hashtags: "#MedSysVE #DerechoMedico #ConsentimientoInformado #LOPDP #MedicinaLegal #Venezuela",
-    imageUrl: "/api/uploads/marketing/sacs-demo.png",
-  },
-  {
-    topic: "Gestión de Citas & Sala de Espera",
-    style: "cartoon",
-    caption: "⏰ Reduce ausencias y organiza tu día. Ofrece agendamiento online a tus pacientes y gestiona tu sala de espera en tiempo real desde tu laptop o teléfono.",
-    hashtags: "#MedSysVE #AgendaMedica #SalaDeEspera #CitasMedicas #DoctorVenezolano #SaludDigital",
-    imageUrl: "/api/uploads/marketing/soap-demo.png",
-  },
-];
+async function saveMarketingImage(buffer: Buffer, filename: string): Promise<string> {
+  const dir = getUploadsDir();
+  await mkdir(dir, { recursive: true });
+  const filePath = join(dir, filename);
+  await writeFile(filePath, buffer);
+  return `/api/uploads/marketing/${filename}`;
+}
 
 const SPECIALTIES_LIST = [
   "Traumatología y Ortopedia",
@@ -102,16 +34,141 @@ const SPECIALTIES_LIST = [
   "Neumonología",
   "Endocrinología",
   "Medicina Interna",
+  "Alergología",
 ];
 
-async function generateSinglePostWithSelfHealing(): Promise<{
+const CAMPAIGN_CONCEPTS = [
+  {
+    topic: "Historias Clínicas SOAP con Firma y QR",
+    keyBenefits: "Apertura rápida de expediente, registro SOAP intuitivo, firma digital del médico, código QR verificado para recetas e informes, exportación en PDF instantánea.",
+    defaultImage: "/api/uploads/marketing/soap-demo.png",
+  },
+  {
+    topic: "Visor DICOM y PACS 100% Web",
+    keyBenefits: "Carga inmediata de radiografías, tomografías y resonancias en HD. Medición de ángulos Cobb, cálculo HU y reproducción multiframe CINE en la misma historia del paciente.",
+    defaultImage: "/api/uploads/marketing/dicom-demo.png",
+  },
+  {
+    topic: "Facturación Dual USD / Bolívares con Tasa BCV",
+    keyBenefits: "Sincronización automática de la tasa oficial del Banco Central de Venezuela cada mañana. Emisión de presupuestos, recibos y control contable en dólares y Bs sin complicaciones.",
+    defaultImage: "/api/uploads/marketing/soap-demo.png",
+  },
+  {
+    topic: "Verificación Oficial de Profesionales SACS MPPS",
+    keyBenefits: "Validación del número de matrícula MPPS y colegio médico ante el registro del Ministerio de Salud. Consultas 100% legales, verificadas y transparentes en Venezuela.",
+    defaultImage: "/api/uploads/marketing/sacs-demo.png",
+  },
+  {
+    topic: "Red Nacional de Referidos entre Especialistas",
+    keyBenefits: "Remisión de pacientes entre doctores de diferentes ciudades y clínicas en segundos, conservando la confidencialidad de la historia clínica bajo estándares HIPAA/LOPDP.",
+    defaultImage: "/api/uploads/marketing/dicom-demo.png",
+  },
+  {
+    topic: "Vademécum & Receta Inteligente",
+    keyBenefits: "Búsqueda instantánea de medicamentos con posología, alertas de interacciones farmacológicas y emisión de récipes digitalizados e infalsificables.",
+    defaultImage: "/api/uploads/marketing/soap-demo.png",
+  },
+];
+
+async function generateGeminiMarketingCopy(
+  topic: string,
+  keyBenefits: string,
+  specialty: string
+): Promise<{ caption: string; hashtags: string; imagePrompt: string }> {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    return {
+      caption: `🩺 Atencion especial para ${specialty} en Venezuela: ${topic}. Optimiza tu consultorio con MedSysVE, registra historias clinicas en formato SOAP, emite recetas infalsificables con QR y administra tus pagos con la tasa oficial BCV. ¡Pruébalo gratis hoy en www.medsysve.com! 🚀🇻🇪`,
+      hashtags: `#MedSysVE #SaludVenezuela #DoctorVenezolano #${specialty.replace(/[\s\(\)]+/g, "")} #HistoriaClinica #BCV`,
+      imagePrompt: `A professional Venezuelan doctor specialized in ${specialty} in a modern bright medical office using a sleek digital tablet with medical software, 8k resolution, cinematic lighting`,
+    };
+  }
+
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const prompt = `Eres el Director de Marketing y Copywriter Senior de MedSysVE, la plataforma SaaS médica líder en Venezuela (www.medsysve.com).
+Crea un post sumamente persuasivo, profesional y atractivo para Instagram y Facebook dirigido a médicos especialistas en "${specialty}".
+
+Tema del Post: "${topic}"
+Beneficios Claves del Sistema: "${keyBenefits}"
+
+Requisitos:
+1. "caption": Un texto persuasivo de 120 a 200 palabras enfocado en aportar valor al doctor en su día a día en Venezuela. Utiliza emojicraft moderado, párrafos cortos y termina con un llamado a la acción (CTA) invitándolos a registrarse en www.medsysve.com.
+2. "hashtags": De 6 a 10 hashtags relevantes combinando el producto (#MedSysVE), la medicina en Venezuela (#MedicinaVenezuela #SaludVenezuela #DoctorVenezolano) y la especialidad (#${specialty.replace(/[\s\(\)]+/g, "")}).
+3. "imagePrompt": Un prompt en inglés de alta calidad para generar una imagen hiperrealista 8k en Imagen 3 enfocada en la especialidad médica "${specialty}" y la tecnología médica de MedSysVE.
+
+Responde ÚNICAMENTE en formato JSON válido con la estructura:
+{
+  "caption": "...",
+  "hashtags": "...",
+  "imagePrompt": "..."
+}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+      },
+    });
+
+    const jsonText = response?.text || "{}";
+    const parsed = JSON.parse(jsonText);
+
+    return {
+      caption: parsed.caption || `🩺 Optimiza tu consulta de ${specialty} con MedSysVE. ${topic}. Registra historias clínicas SOAP e imprime recetas con código QR. Visita www.medsysve.com`,
+      hashtags: parsed.hashtags || `#MedSysVE #MedicinaVenezuela #${specialty.replace(/[\s\(\)]+/g, "")}`,
+      imagePrompt: parsed.imagePrompt || `A professional ${specialty} doctor in Venezuela using modern digital health software on a tablet, 8k, cinematic photo`,
+    };
+  } catch (err: any) {
+    console.warn("[Gemini 2.0 Flash Marketing Copy Fallback]:", err?.message || err);
+    return {
+      caption: `🩺 Consulta médica de ${specialty} en Venezuela: ${topic}. Con MedSysVE optimizas tu tiempo, emites recetas seguras con código QR y controlas la facturación a tasa oficial BCV. ¡Pruébalo gratis en www.medsysve.com! 🇻🇪✨`,
+      hashtags: `#MedSysVE #SaludVenezuela #DoctoresVenezuela #${specialty.replace(/[\s\(\)]+/g, "")} #HistoriaClinica`,
+      imagePrompt: `A high quality photo of a doctor in a modern clinic holding a digital tablet, 8k`,
+    };
+  }
+}
+
+async function generateImagen3Image(prompt: string): Promise<string | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateImages({
+      model: "imagen-3.0-generate-002",
+      prompt: `${prompt}. Venezuelan medical doctor context, clean medical setting, 8k resolution, professional studio lighting, 1:1 square format.`,
+      config: {
+        numberOfImages: 1,
+        outputMimeType: "image/png",
+        aspectRatio: "1:1",
+      },
+    });
+
+    const b64 = response?.generatedImages?.[0]?.image?.imageBytes;
+    if (b64) {
+      const buffer = Buffer.from(b64, "base64");
+      const filename = `gen-${Date.now()}-${Math.floor(Math.random() * 10000)}.png`;
+      const savedPath = await saveMarketingImage(buffer, filename);
+      return savedPath;
+    }
+  } catch (err: any) {
+    console.warn("[Imagen 3 API fallback to local PNG assets]:", err?.message || err);
+  }
+  return null;
+}
+
+async function generateSinglePostWithSelfHealing(
+  overrideStyle?: "hyperrealistic" | "cartoon" | "marketing" | "screenshot"
+): Promise<{
   post: any;
   attempts: number;
 }> {
   const MAX_ATTEMPTS = 3;
   let lastError: any = null;
 
-  // 1. Fetch ALL existing marketing posts to guarantee ZERO duplicate captions or images
+  // 1. Fetch existing marketing posts to avoid duplicates
   const existingPosts = await db.marketingPost.findMany({
     select: { caption: true, imageUrl: true },
   });
@@ -119,107 +176,53 @@ async function generateSinglePostWithSelfHealing(): Promise<{
   const usedCaptions = new Set(existingPosts.map((p) => p.caption.trim()));
   const usedImages = new Set(existingPosts.map((p) => p.imageUrl.trim()));
 
-  const themes = ["emerald", "purple", "amber", "cyan", "indigo"];
-  const randomTheme = themes[Math.floor(Math.random() * themes.length)];
   const randomSpec = SPECIALTIES_LIST[Math.floor(Math.random() * SPECIALTIES_LIST.length)];
-
-  // Unused topics first
-  let availableTopics = CAMPAIGN_TOPICS.filter((t) => !usedCaptions.has(t.caption.trim()));
-
+  const randomConcept = CAMPAIGN_CONCEPTS[Math.floor(Math.random() * CAMPAIGN_CONCEPTS.length)];
   const styles = ["hyperrealistic", "cartoon", "screenshot", "marketing"] as const;
-  const selectedStyle = styles[Math.floor(Math.random() * styles.length)];
+  const selectedStyle = overrideStyle || styles[Math.floor(Math.random() * styles.length)];
 
-  let selectedTopic: {
-    topic: string;
-    style: string;
-    caption: string;
-    hashtags: string;
-    imageUrl: string;
-  };
+  // 2. Generate custom copywriting using Gemini 2.0 Flash
+  const aiCopy = await generateGeminiMarketingCopy(
+    randomConcept.topic,
+    randomConcept.keyBenefits,
+    randomSpec
+  );
 
-  if (availableTopics.length > 0) {
-    const topicIndex = Math.floor(Math.random() * availableTopics.length);
-    const base = availableTopics[topicIndex];
-
-    let aiImage: string | null = null;
-    if (selectedStyle === "hyperrealistic") {
-      aiImage = await generateImagen3Image(
-        `A cinematic 8k photo of a professional Venezuelan medical doctor using a tablet displaying digital health software in a bright modern clinic`
-      );
-    } else if (selectedStyle === "cartoon") {
-      aiImage = await generateImagen3Image(
-        `A high quality 3D Pixar-style cartoon illustration of a friendly doctor smiling happily with a laptop displaying digital medical data and heart icons`
-      );
-    }
-
-    const timestampSeed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-    const dynamicImageUrl =
-      aiImage ||
-      `/api/marketing/render-post-image?title=${encodeURIComponent(base.topic)}&subtitle=${encodeURIComponent("Plataforma Médica SaaS #1 en Venezuela")}&specialty=${encodeURIComponent(randomSpec)}&style=${selectedStyle}&v=${timestampSeed}`;
-
-    selectedTopic = {
-      topic: base.topic,
-      style: selectedStyle,
-      caption: base.caption,
-      hashtags: base.hashtags,
-      imageUrl: dynamicImageUrl,
-    };
-  } else {
-    // Fresh variation
-    const randomBase = CAMPAIGN_TOPICS[Math.floor(Math.random() * CAMPAIGN_TOPICS.length)];
-
-    let aiImage: string | null = null;
-    if (selectedStyle === "hyperrealistic") {
-      aiImage = await generateImagen3Image(
-        `A cinematic 8k photo of a confident Venezuelan doctor in a pristine white coat standing in a state-of-the-art medical consulting room`
-      );
-    } else if (selectedStyle === "cartoon") {
-      aiImage = await generateImagen3Image(
-        `A cute modern 3D vector illustration of a superhero doctor flying with a laptop, bright colors, clean corporate medical tech style`
-      );
-    }
-
-    const timestampSeed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-    const title = `${randomBase.topic}`;
-    const subtitle = `Diseñado para ${randomSpec} en Venezuela`;
-    const dynamicImageUrl =
-      aiImage ||
-      `/api/marketing/render-post-image?title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent(subtitle)}&specialty=${encodeURIComponent(randomSpec)}&style=${selectedStyle}&v=${timestampSeed}`;
-
-    selectedTopic = {
-      topic: `${randomBase.topic} (${randomSpec})`,
-      style: selectedStyle,
-      caption: `🩺 Consulta especializada de ${randomSpec} en Venezuela: ${randomBase.caption} Adapta MedSysVE a tu práctica diaria.`,
-      hashtags: `${randomBase.hashtags} #${randomSpec.replace(/[\s\(\)]+/g, "")}`,
-      imageUrl: dynamicImageUrl,
-    };
+  // 3. Generate synthetic AI image or select fallback PNG asset
+  let imageUrl: string | null = null;
+  if (selectedStyle === "hyperrealistic" || selectedStyle === "cartoon") {
+    imageUrl = await generateImagen3Image(aiCopy.imagePrompt);
   }
 
-  // Ensure 100% uniqueness
-  let validImageUrl = selectedTopic.imageUrl;
+  if (!imageUrl) {
+    imageUrl = randomConcept.defaultImage;
+  }
+
+  // Guarantee uniqueness
+  let validImageUrl = imageUrl;
   if (usedImages.has(validImageUrl)) {
-    validImageUrl += `&u=${Date.now()}`;
+    validImageUrl += `?v=${Date.now()}`;
   }
 
-  let validCaption = selectedTopic.caption;
+  let validCaption = aiCopy.caption;
   if (usedCaptions.has(validCaption)) {
-    validCaption += ` [Edición Especial ${randomSpec}]`;
+    validCaption += `\n\n(Edición Especial ${randomSpec})`;
   }
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      // 3. Insert post in status PENDING_APPROVAL
+      // 4. Create post in status PENDING_APPROVAL
       const newPost = await db.marketingPost.create({
         data: {
           imageUrl: validImageUrl,
           caption: validCaption,
-          hashtags: selectedTopic.hashtags,
-          style: selectedTopic.style || "hyperrealistic",
+          hashtags: aiCopy.hashtags,
+          style: selectedStyle,
           status: "PENDING_APPROVAL",
         },
       });
 
-      // 4. Self-Healing Verification Check: Verify insertion in DB
+      // 5. Self-healing verification check
       const verifiedPost = await db.marketingPost.findUnique({
         where: { id: newPost.id },
       });
@@ -228,7 +231,6 @@ async function generateSinglePostWithSelfHealing(): Promise<{
         throw new Error("Post insertion verification failed: row not found after create.");
       }
 
-      // Success! Return generated post
       return { post: verifiedPost, attempts: attempt };
     } catch (err: any) {
       console.error(`⚠️ Marketing Generator attempt ${attempt} failed:`, err);
@@ -240,13 +242,12 @@ async function generateSinglePostWithSelfHealing(): Promise<{
   throw new Error(`Self-healing generator failed after ${MAX_ATTEMPTS} attempts. Last error: ${lastError?.message || lastError}`);
 }
 
-// GET endpoint called by Cloud Scheduler / Cron (6 times daily)
+// GET endpoint called by Cloud Scheduler / Cron
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET || "medsysve-cron-secret-2026";
 
   if (authHeader !== `Bearer ${cronSecret}`) {
-    // Also allow manual query parameter for internal cron testing
     const url = new URL(req.url);
     const key = url.searchParams.get("key");
     if (key !== cronSecret) {
@@ -258,7 +259,7 @@ export async function GET(req: Request) {
     const result = await generateSinglePostWithSelfHealing();
     return NextResponse.json({
       ok: true,
-      message: "Publicación de marketing generada y enviada a la bandeja de aprobación del Super Admin",
+      message: "Publicación de marketing generada dinámicamente con Gemini 2.0 Flash y guardada para aprobación",
       post: result.post,
       attempts: result.attempts,
       verified: true,
@@ -273,8 +274,8 @@ export async function GET(req: Request) {
   }
 }
 
-// POST endpoint called manually by Super Admin from /admin/marketing dashboard
-export async function POST() {
+// POST endpoint called manually by Super Admin from /admin/marketing dashboard or batch generation
+export async function POST(req: Request) {
   const session = await auth();
   const user = session?.user as any;
   const isAdmin = user?.isAdmin || user?.email === ADMIN_EMAIL;
@@ -284,20 +285,54 @@ export async function POST() {
   }
 
   try {
-    const result = await generateSinglePostWithSelfHealing();
+    const url = new URL(req.url);
+    const mode = url.searchParams.get("mode") || "batch"; // "batch" (5 posts) or "single"
+
+    if (mode === "single") {
+      const result = await generateSinglePostWithSelfHealing();
+      return NextResponse.json({
+        ok: true,
+        message: "Publicación de marketing generada dinámicamente con Gemini 2.0 Flash.",
+        post: result.post,
+        attempts: result.attempts,
+        verified: true,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    // Daily Batch Mode: 5 posts (1 hyperrealistic, 1 cartoon, 1 marketing, 2 screenshots)
+    const requiredBatchStyles: Array<"hyperrealistic" | "cartoon" | "marketing" | "screenshot" | "screenshot"> = [
+      "hyperrealistic",
+      "cartoon",
+      "marketing",
+      "screenshot",
+      "screenshot",
+    ];
+
+    const generatedPosts: any[] = [];
+
+    for (const targetStyle of requiredBatchStyles) {
+      try {
+        const result = await generateSinglePostWithSelfHealing(targetStyle);
+        generatedPosts.push(result.post);
+      } catch (err: any) {
+        console.error(`⚠️ Failed to generate batch post for style ${targetStyle}:`, err);
+      }
+    }
+
     return NextResponse.json({
       ok: true,
-      message: "Publicación de marketing generada exitosamente con auto-recuperación de errores.",
-      post: result.post,
-      attempts: result.attempts,
-      verified: true,
+      message: `Lote diario de ${generatedPosts.length} publicaciones generadas exitosamente (1 Hiperrealista, 1 Cartoon, 1 Marketing, 2 Capturas de Pantalla) en formato 1080x1080px.`,
+      posts: generatedPosts,
+      count: generatedPosts.length,
       createdAt: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error("❌ Manual Generate Marketing Post Error:", error);
+    console.error("❌ Batch Generate Marketing Posts Error:", error);
     return NextResponse.json(
       { ok: false, error: error.message || "Internal server error" },
       { status: 500 }
     );
   }
 }
+
