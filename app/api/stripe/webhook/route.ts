@@ -63,6 +63,19 @@ export async function POST(req: Request) {
                 },
               })
             }
+          } else if (
+            priceId === STRIPE_PRICES.EXTRA_WORKSPACE_MONTHLY ||
+            session.metadata?.addon === "extra_workspace"
+          ) {
+            if (entityType === "doctor") {
+              await db.doctor.update({
+                where: { id: entityId },
+                data: {
+                  extraWorkspacesCount: { increment: 1 },
+                  stripeCustomerId: session.customer as string,
+                },
+              })
+            }
           } else if (entityType === "doctor") {
             await db.doctor.update({
               where: { id: entityId },
