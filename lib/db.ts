@@ -26,3 +26,18 @@ function createPrismaClient() {
 export const db = globalForPrisma.prisma ?? createPrismaClient()
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db
+
+let migrationCheckDone = false
+export async function ensureDbSchema() {
+  if (migrationCheckDone) return
+  migrationCheckDone = true
+  try {
+    await db.$executeRawUnsafe(
+      `ALTER TABLE "Doctor" ADD COLUMN IF NOT EXISTS "extraWorkspacesCount" INTEGER NOT NULL DEFAULT 0;`
+    )
+  } catch (err) {
+    console.warn("[ensureDbSchema] Auto-migration execution note:", err)
+  }
+}
+
+ensureDbSchema().catch(() => {})

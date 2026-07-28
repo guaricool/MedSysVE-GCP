@@ -17,6 +17,7 @@ import { safeLog } from "@/lib/log-sanitizer"
 import { sendOtpEmail } from "@/lib/email"
 import { clearLockout } from "@/lib/account-lockout"
 import { hmacIndex } from "@/lib/field-crypto"
+import { ensureDbSchema } from "@/lib/db"
 
 const emailSchema = z.string().email().max(254)
 
@@ -312,12 +313,27 @@ export const authRouter = router({
         }
 
         const newHash = await hashPassword(input.newPassword)
+        await ensureDbSchema()
 
         if (doctor) {
-          await ctx.db.doctor.update({
-            where: { id: doctor.id },
-            data: { passwordHash: newHash },
-          })
+          try {
+            await ctx.db.doctor.update({
+              where: { id: doctor.id },
+              data: { passwordHash: newHash },
+            })
+          } catch (updErr: any) {
+            if (String(updErr).includes("extraWorkspacesCount")) {
+              await ctx.db.$executeRawUnsafe(
+                'ALTER TABLE "Doctor" ADD COLUMN IF NOT EXISTS "extraWorkspacesCount" INTEGER NOT NULL DEFAULT 0;'
+              )
+              await ctx.db.doctor.update({
+                where: { id: doctor.id },
+                data: { passwordHash: newHash },
+              })
+            } else {
+              throw updErr
+            }
+          }
 
           const workspace = await ctx.db.workspace.findFirst({
             where: { doctorId: doctor.id },
