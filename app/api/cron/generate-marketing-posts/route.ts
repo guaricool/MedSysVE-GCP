@@ -85,17 +85,20 @@ async function generateSinglePostWithSelfHealing(): Promise<{
   const MAX_ATTEMPTS = 3;
   let lastError: any = null;
 
-  // 1. Fetch recent marketing posts to ensure NO duplicate captions or images
+  // 1. Fetch ALL existing marketing posts to guarantee ZERO duplicate captions or images
   const existingPosts = await db.marketingPost.findMany({
-    take: 50,
-    orderBy: { publishedAt: "desc" },
-    select: { caption: true, imageUrl: true, style: true },
+    select: { caption: true, imageUrl: true },
   });
 
-  const existingCaptions = new Set(existingPosts.map((p) => p.caption.trim()));
+  const usedCaptions = new Set(existingPosts.map((p) => p.caption.trim()));
+  const usedImages = new Set(existingPosts.map((p) => p.imageUrl.trim()));
 
-  // 2. Filter candidate topics to find unused topics
-  let availableTopics = CAMPAIGN_TOPICS.filter((t) => !existingCaptions.has(t.caption.trim()));
+  const themes = ["emerald", "purple", "amber", "cyan", "indigo"];
+  const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+  const randomSpec = SPECIALTIES_LIST[Math.floor(Math.random() * SPECIALTIES_LIST.length)];
+
+  // Unused topics first
+  let availableTopics = CAMPAIGN_TOPICS.filter((t) => !usedCaptions.has(t.caption.trim()));
 
   let selectedTopic: {
     topic: string;
@@ -106,32 +109,55 @@ async function generateSinglePostWithSelfHealing(): Promise<{
   };
 
   if (availableTopics.length > 0) {
-    // Pick an unused topic
     const topicIndex = Math.floor(Math.random() * availableTopics.length);
-    selectedTopic = availableTopics[topicIndex];
+    const base = availableTopics[topicIndex];
+
+    const timestampSeed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const dynamicImageUrl = `/api/marketing/render-post-image?title=${encodeURIComponent(base.topic)}&subtitle=${encodeURIComponent("Plataforma Médica SaaS #1 en Venezuela")}&specialty=${encodeURIComponent(randomSpec)}&theme=${randomTheme}&v=${timestampSeed}`;
+
+    selectedTopic = {
+      topic: base.topic,
+      style: base.style || "hyperrealistic",
+      caption: base.caption,
+      hashtags: base.hashtags,
+      imageUrl: dynamicImageUrl,
+    };
   } else {
-    // If all base topics have been generated, create a FRESH unique variation incorporating a specialty
-    const randomSpec = SPECIALTIES_LIST[Math.floor(Math.random() * SPECIALTIES_LIST.length)];
+    // Fresh variation
     const randomBase = CAMPAIGN_TOPICS[Math.floor(Math.random() * CAMPAIGN_TOPICS.length)];
+    const timestampSeed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
+    const title = `${randomBase.topic}`;
+    const subtitle = `Diseñado para ${randomSpec} en Venezuela`;
+    const dynamicImageUrl = `/api/marketing/render-post-image?title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent(subtitle)}&specialty=${encodeURIComponent(randomSpec)}&theme=${randomTheme}&v=${timestampSeed}`;
 
     selectedTopic = {
       topic: `${randomBase.topic} (${randomSpec})`,
       style: randomBase.style || "hyperrealistic",
-      caption: `🩺 Atenci\u00f3n especial de ${randomSpec} en Venezuela: ${randomBase.caption} Adapta la plataforma a las necesidades particulares de tu especialidad.`,
-      hashtags: `${randomBase.hashtags} #${randomSpec.replace(/\s+/g, "")}`,
-      imageUrl: randomBase.imageUrl || "/uploads/marketing/soap-demo.png",
+      caption: `🩺 Consulta especializada de ${randomSpec} en Venezuela: ${randomBase.caption} Adapta MedSysVE a tu práctica diaria.`,
+      hashtags: `${randomBase.hashtags} #${randomSpec.replace(/[\s\(\)]+/g, "")}`,
+      imageUrl: dynamicImageUrl,
     };
+  }
+
+  // Ensure 100% uniqueness
+  let validImageUrl = selectedTopic.imageUrl;
+  if (usedImages.has(validImageUrl)) {
+    validImageUrl += `&u=${Date.now()}`;
+  }
+
+  let validCaption = selectedTopic.caption;
+  if (usedCaptions.has(validCaption)) {
+    validCaption += ` [Edición Especial ${randomSpec}]`;
   }
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      const validImageUrl = selectedTopic.imageUrl || "/uploads/marketing/soap-demo.png";
-
       // 3. Insert post in status PENDING_APPROVAL
       const newPost = await db.marketingPost.create({
         data: {
           imageUrl: validImageUrl,
-          caption: selectedTopic.caption,
+          caption: validCaption,
           hashtags: selectedTopic.hashtags,
           style: selectedTopic.style || "hyperrealistic",
           status: "PENDING_APPROVAL",
