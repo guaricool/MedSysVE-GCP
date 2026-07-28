@@ -182,72 +182,100 @@ export function EncounterWorkspace({
     () => new Set<SectionId>(["subjetivo"]),
   )
 
+const ALL_SPECIALTY_SECTIONS: SectionId[] = [
+  "escalas",
+  "obstetricia",
+  "oncologia",
+  "cardiologia",
+  "neumonologia",
+  "pediatria",
+  "gastroenterologia",
+  "neurologia",
+  "urologia",
+  "anestesiologia",
+  "dermatologia",
+  "endocrinologia",
+  "cirugia-general",
+  "medicina-interna",
+  "traumatologia",
+  "psiquiatria",
+  "infectologia",
+  "otorrinolaringologia",
+  "oftalmologia",
+  "reumatologia",
+  "nefrologia",
+  "emergencias",
+  "geriatria",
+  "medicina-familiar",
+  "cirugia-plastica",
+  "hematologia",
+  "alergologia",
+  "fisiatria",
+]
+
+function getSectionForSpecialty(especialidad: string): SectionId | null {
+  if (!especialidad) return null
+  const norm = especialidad.trim().toLowerCase()
+
+  if (norm.includes("traumat") || norm.includes("ortoped")) return "traumatologia"
+  if (norm.includes("obstet") || norm.includes("ginecolog")) return "obstetricia"
+  if (norm.includes("oncol")) return "oncologia"
+  if (norm.includes("cardiol")) return "cardiologia"
+  if (norm.includes("neumonol") || norm.includes("neumol")) return "neumonologia"
+  if (norm.includes("pediatr") || norm.includes("puericultura")) return "pediatria"
+  if (norm.includes("gastro")) return "gastroenterologia"
+  if (norm.includes("neurol")) return "neurologia"
+  if (norm.includes("urol")) return "urologia"
+  if (norm.includes("anestes")) return "anestesiologia"
+  if (norm.includes("dermat")) return "dermatologia"
+  if (norm.includes("endocrin")) return "endocrinologia"
+  if (norm.includes("cirugía general") || norm.includes("cirugia general")) return "cirugia-general"
+  if (norm.includes("medicina interna")) return "medicina-interna"
+  if (norm.includes("psiquiatr")) return "psiquiatria"
+  if (norm.includes("infecto")) return "infectologia"
+  if (norm.includes("otorrino") || norm.includes("orl")) return "otorrinolaringologia"
+  if (norm.includes("oftalm")) return "oftalmologia"
+  if (norm.includes("reumat")) return "reumatologia"
+  if (norm.includes("nefrol")) return "nefrologia"
+  if (norm.includes("emergenc") || norm.includes("urgenc")) return "emergencias"
+  if (norm.includes("geriatr")) return "geriatria"
+  if (norm.includes("familiar")) return "medicina-familiar"
+  if (norm.includes("plástic") || norm.includes("plastica")) return "cirugia-plastica"
+  if (norm.includes("hematol")) return "hematologia"
+  if (norm.includes("alerg")) return "alergologia"
+  if (norm.includes("fisiatr") || norm.includes("rehabilitac")) return "fisiatria"
+
+  return null
+}
+
   // Visible sections in the dynamic canvas (only these are rendered)
   const [visibleSections, setVisibleSections] = useState<Set<SectionId>>(
     () => new Set<SectionId>(["templates", "subjetivo"]),
   )
 
-  // Auto-enable specialty section in canvas when specialty is present
+  // Auto-enable specialty section in canvas & atomically clear previous specialty sections when specialty changes
   useEffect(() => {
-    if (!especialidad) return
-    const specMap: Record<string, SectionId> = {
-      "Traumatología": "traumatologia",
-      "Ortopedia": "traumatologia",
-      "Traumatología y Ortopedia": "traumatologia",
-      "Ginecología y Obstetricia": "obstetricia",
-      "Obstetricia y Ginecología": "obstetricia",
-      "Obstetricia": "obstetricia",
-      "Oncología": "oncologia",
-      "Oncología Médica": "oncologia",
-      "Cardiología": "cardiologia",
-      "Neumología": "neumonologia",
-      "Neumonología": "neumonologia",
-      "Pediatría": "pediatria",
-      "Pediatría y Puericultura": "pediatria",
-      "Gastroenterología": "gastroenterologia",
-      "Neurología": "neurologia",
-      "Urología": "urologia",
-      "Anestesiología": "anestesiologia",
-      "Dermatología": "dermatologia",
-      "Endocrinología": "endocrinologia",
-      "Cirugía General": "cirugia-general",
-      "Medicina Interna": "medicina-interna",
-      "Psiquiatría": "psiquiatria",
-      "Psiquiatría y Salud Mental": "psiquiatria",
-      "Infectología": "infectologia",
-      "Otorrinolaringología": "otorrinolaringologia",
-      "ORL": "otorrinolaringologia",
-      "Otorrino": "otorrinolaringologia",
-      "Oftalmología": "oftalmologia",
-      "Reumatología": "reumatologia",
-      "Nefrología": "nefrologia",
-      "Medicina de Emergencia": "emergencias",
-      "Medicina de Emergencia y Urgencias": "emergencias",
-      "Medicina de Emergencia / Urgencias": "emergencias",
-      "Emergencias": "emergencias",
-      "Geriatría": "geriatria",
-      "Medicina Familiar": "medicina-familiar",
-      "Cirugía Plástica": "cirugia-plastica",
-      "Cirugía Plástica y Reconstructiva": "cirugia-plastica",
-      "Hematología": "hematologia",
-      "Alergología e Inmunología": "alergologia",
-      "Alergología": "alergologia",
-      "Alergología e Inmunología (Prick Test)": "alergologia",
-      "Alergología e Inmunología Clínica": "alergologia",
-      "Fisiatría": "fisiatria",
-      "Medicina Física y Rehabilitación": "fisiatria",
-      "Medicina Física y Rehabilitación (Fisiatría)": "fisiatria",
-    }
-    let secId = specMap[especialidad]
-    if (!secId && especialidad) {
-      const lower = especialidad.toLowerCase()
-      if (lower.includes("alerg")) secId = "alergologia"
-      else if (lower.includes("fisiatr") || lower.includes("rehabilitaci")) secId = "fisiatria"
-    }
-    if (secId) {
-      setVisibleSections((prev) => new Set([...Array.from(prev), secId]))
-      setOpenSections((prev) => new Set([...Array.from(prev), secId]))
-    }
+    const newSecId = getSectionForSpecialty(especialidad || "")
+
+    setVisibleSections((prev) => {
+      const next = new Set(prev)
+      ALL_SPECIALTY_SECTIONS.forEach((s) => next.delete(s))
+      if (newSecId) {
+        next.add(newSecId)
+        if (newSecId === "traumatologia") next.add("escalas")
+      }
+      return next
+    })
+
+    setOpenSections((prev) => {
+      const next = new Set(prev)
+      ALL_SPECIALTY_SECTIONS.forEach((s) => next.delete(s))
+      if (newSecId) {
+        next.add(newSecId)
+        if (newSecId === "traumatologia") next.add("escalas")
+      }
+      return next
+    })
   }, [especialidad])
 
   // Protect against accidental navigation/tab close
@@ -898,7 +926,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("escalas") && (especialidad === "Traumatología" || especialidad === "Ortopedia") && (
+        {visibleSections.has("escalas") && (
           <Section
             id="escalas"
             key="escalas"
@@ -912,7 +940,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("obstetricia") && especialidad === "Ginecología y Obstetricia" && (
+        {visibleSections.has("obstetricia") && (
           <Section
             id="obstetricia"
             key="obstetricia"
@@ -930,7 +958,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("oncologia") && especialidad === "Oncología" && (
+        {visibleSections.has("oncologia") && (
           <Section
             id="oncologia"
             key="oncologia"
@@ -948,7 +976,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("cardiologia") && especialidad === "Cardiología" && (
+        {visibleSections.has("cardiologia") && (
           <Section
             id="cardiologia"
             key="cardiologia"
@@ -967,7 +995,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("neumonologia") && (especialidad === "Neumología" || especialidad === "Neumonología") && (
+        {visibleSections.has("neumonologia") && (
           <Section
             id="neumonologia"
             key="neumonologia"
@@ -985,7 +1013,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("pediatria") && especialidad === "Pediatría" && (
+        {visibleSections.has("pediatria") && (
           <Section
             id="pediatria"
             key="pediatria"
@@ -1003,7 +1031,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("gastroenterologia") && especialidad === "Gastroenterología" && (
+        {visibleSections.has("gastroenterologia") && (
           <Section
             id="gastroenterologia"
             key="gastroenterologia"
@@ -1021,7 +1049,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("neurologia") && especialidad === "Neurología" && (
+        {visibleSections.has("neurologia") && (
           <Section
             id="neurologia"
             key="neurologia"
@@ -1039,7 +1067,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("urologia") && especialidad === "Urología" && (
+        {visibleSections.has("urologia") && (
           <Section
             id="urologia"
             key="urologia"
@@ -1057,7 +1085,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("anestesiologia") && especialidad === "Anestesiología" && (
+        {visibleSections.has("anestesiologia") && (
           <Section
             id="anestesiologia"
             key="anestesiologia"
@@ -1075,7 +1103,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("dermatologia") && especialidad === "Dermatología" && (
+        {visibleSections.has("dermatologia") && (
           <Section
             id="dermatologia"
             key="dermatologia"
@@ -1093,7 +1121,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("endocrinologia") && especialidad === "Endocrinología" && (
+        {visibleSections.has("endocrinologia") && (
           <Section
             id="endocrinologia"
             key="endocrinologia"
@@ -1112,7 +1140,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("cirugia-general") && especialidad === "Cirugía General" && (
+        {visibleSections.has("cirugia-general") && (
           <Section
             id="cirugia-general"
             key="cirugia-general"
@@ -1130,7 +1158,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("medicina-interna") && especialidad === "Medicina Interna" && (
+        {visibleSections.has("medicina-interna") && (
           <Section
             id="medicina-interna"
             key="medicina-interna"
@@ -1148,7 +1176,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("traumatologia") && (especialidad === "Traumatología" || especialidad === "Ortopedia") && (
+        {visibleSections.has("traumatologia") && (
           <Section
             id="traumatologia"
             key="traumatologia"
@@ -1166,7 +1194,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("psiquiatria") && especialidad === "Psiquiatría" && (
+        {visibleSections.has("psiquiatria") && (
           <Section
             id="psiquiatria"
             key="psiquiatria"
@@ -1184,7 +1212,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("infectologia") && especialidad === "Infectología" && (
+        {visibleSections.has("infectologia") && (
           <Section
             id="infectologia"
             key="infectologia"
@@ -1202,7 +1230,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("otorrinolaringologia") && (especialidad === "Otorrinolaringología" || especialidad === "ORL" || especialidad === "Otorrino") && (
+        {visibleSections.has("otorrinolaringologia") && (
           <Section
             id="otorrinolaringologia"
             key="otorrinolaringologia"
@@ -1220,49 +1248,49 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("oftalmologia") && especialidad === "Oftalmología" && (
+        {visibleSections.has("oftalmologia") && (
           <Section id="oftalmologia" key="oftalmologia" title="Evaluación Oftalmológica" icon="👁️" collapsible open={openSections.has("oftalmologia")} onToggle={() => toggleSection("oftalmologia")}>
             <OftalmologiaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
           </Section>
         )}
 
-        {visibleSections.has("reumatologia") && especialidad === "Reumatología" && (
+        {visibleSections.has("reumatologia") && (
           <Section id="reumatologia" key="reumatologia" title="Evaluación Reumatológica" icon="🦴" collapsible open={openSections.has("reumatologia")} onToggle={() => toggleSection("reumatologia")}>
             <ReumatologiaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
           </Section>
         )}
 
-        {visibleSections.has("nefrologia") && especialidad === "Nefrología" && (
+        {visibleSections.has("nefrologia") && (
           <Section id="nefrologia" key="nefrologia" title="Evaluación Nefrológica" icon="🩺" collapsible open={openSections.has("nefrologia")} onToggle={() => toggleSection("nefrologia")}>
             <NefrologiaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
           </Section>
         )}
 
-        {visibleSections.has("emergencias") && (especialidad === "Emergencias" || especialidad === "Medicina de Emergencia") && (
+        {visibleSections.has("emergencias") && (
           <Section id="emergencias" key="emergencias" title="Evaluación de Urgencias y Emergencias" icon="🚨" collapsible open={openSections.has("emergencias")} onToggle={() => toggleSection("emergencias")}>
             <EmergenciasForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
           </Section>
         )}
 
-        {visibleSections.has("geriatria") && especialidad === "Geriatría" && (
+        {visibleSections.has("geriatria") && (
           <Section id="geriatria" key="geriatria" title="Valoración Geriátrica Integral (VGI)" icon="👵" collapsible open={openSections.has("geriatria")} onToggle={() => toggleSection("geriatria")}>
             <GeriatriaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
           </Section>
         )}
 
-        {visibleSections.has("medicina-familiar") && especialidad === "Medicina Familiar" && (
+        {visibleSections.has("medicina-familiar") && (
           <Section id="medicina-familiar" key="medicina-familiar" title="Medicina Familiar & Genograma" icon="👨‍👩‍👧" collapsible open={openSections.has("medicina-familiar")} onToggle={() => toggleSection("medicina-familiar")}>
             <MedicinaFamiliarForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
           </Section>
         )}
 
-        {visibleSections.has("cirugia-plastica") && especialidad === "Cirugía Plástica" && (
+        {visibleSections.has("cirugia-plastica") && (
           <Section id="cirugia-plastica" key="cirugia-plastica" title="Cirugía Plástica y Reconstructiva" icon="🪡" collapsible open={openSections.has("cirugia-plastica")} onToggle={() => toggleSection("cirugia-plastica")}>
             <CirugiaPlasticaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
           </Section>
         )}
 
-        {visibleSections.has("hematologia") && especialidad === "Hematología" && (
+        {visibleSections.has("hematologia") && (
           <Section id="hematologia" key="hematologia" title="Evaluación Hematológica & Transfusional" icon="🩸" collapsible open={openSections.has("hematologia")} onToggle={() => toggleSection("hematologia")}>
             <HematologiaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
           </Section>
@@ -1274,7 +1302,7 @@ export function EncounterWorkspace({
           </Section>
         )}
 
-        {visibleSections.has("fisiatria") && (especialidad === "Fisiatría" || especialidad === "Medicina Física y Rehabilitación") && (
+        {visibleSections.has("fisiatria") && (
           <Section id="fisiatria" key="fisiatria" title="Medicina Física y Rehabilitación (Fisiatría)" icon="🦾" collapsible open={openSections.has("fisiatria")} onToggle={() => toggleSection("fisiatria")}>
             <FisiatriaForm encounterId={encounterId} disabled={locked} initialData={enc?.datosEspecialidad || {}} />
           </Section>
