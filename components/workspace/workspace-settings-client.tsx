@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react"
 import { trpc } from "@/lib/trpc-client"
 import { ClinicCard, LocationForm } from "@/components/clinic/clinic-card"
-import { JoinClinicForm } from "@/components/clinic/join-clinic-form"
 import { SubscriptionCard } from "@/components/workspace/subscription-card"
 import { Lock, ShieldCheck, FileText, Building2, User, Stethoscope, CheckCircle2 } from "lucide-react"
 import { getDoctorPrefix } from "@/lib/doctor-utils"
@@ -127,15 +126,11 @@ export function WorkspaceSettingsClient({ workspace }: Props) {
                 nombre: workspace.clinic.nombre,
                 estado: workspace.clinic.estado,
                 ciudad: workspace.clinic.ciudad,
-                invitationCodes: workspace.clinic.invitationCodes,
               }
             : null
         }
-        isOwner={workspace.clinic?.invitationCodes != null}
+        isOwner={false}
       />
-
-      {/* Si no pertenece a una clínica, opción de unirse */}
-      {!workspace.clinic && <JoinClinicForm />}
 
       {/* Información del consultorio */}
       <section className="rounded-lg border border-slate-800 bg-slate-900 p-5 space-y-4">
@@ -553,10 +548,10 @@ function NewWorkspaceSection() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Múltiples consultorios
+            Múltiples consultorios (2 Incluidos sin costo)
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Administra varios consultorios con una sola cuenta de médico.
+            Administra varios consultorios con una sola cuenta de médico. Tu suscripción incluye hasta 2 consultorios. A partir del 3er consultorio en adelante, se agregará un cargo adicional de $10 USD/mes por cada consultorio extra.
           </p>
         </div>
         <button
