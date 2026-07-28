@@ -1,8 +1,34 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { GoogleGenAI } from "@google/genai";
 
 const ADMIN_EMAIL = "cpierluissis@gmail.com";
+
+async function generateImagen3Image(prompt: string): Promise<string | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateImages({
+      model: "imagen-3.0-generate-002",
+      prompt: `${prompt}. Venezuelan medical doctor context, 8k resolution, professional studio lighting, cinematic 1:1 square format.`,
+      config: {
+        numberOfImages: 1,
+        outputMimeType: "image/jpeg",
+        aspectRatio: "1:1",
+      },
+    });
+
+    const b64 = response?.generatedImages?.[0]?.image?.imageBytes;
+    if (b64) {
+      return `data:image/jpeg;base64,${b64}`;
+    }
+  } catch (err: any) {
+    console.warn("[Imagen 3 API fallback to MedSysVE SVG renderer]:", err?.message || err);
+  }
+  return null;
+}
 
 const CAMPAIGN_TOPICS = [
   {
@@ -100,6 +126,9 @@ async function generateSinglePostWithSelfHealing(): Promise<{
   // Unused topics first
   let availableTopics = CAMPAIGN_TOPICS.filter((t) => !usedCaptions.has(t.caption.trim()));
 
+  const styles = ["hyperrealistic", "cartoon", "screenshot", "marketing"] as const;
+  const selectedStyle = styles[Math.floor(Math.random() * styles.length)];
+
   let selectedTopic: {
     topic: string;
     style: string;
@@ -112,12 +141,25 @@ async function generateSinglePostWithSelfHealing(): Promise<{
     const topicIndex = Math.floor(Math.random() * availableTopics.length);
     const base = availableTopics[topicIndex];
 
+    let aiImage: string | null = null;
+    if (selectedStyle === "hyperrealistic") {
+      aiImage = await generateImagen3Image(
+        `A cinematic 8k photo of a professional Venezuelan medical doctor using a tablet displaying digital health software in a bright modern clinic`
+      );
+    } else if (selectedStyle === "cartoon") {
+      aiImage = await generateImagen3Image(
+        `A high quality 3D Pixar-style cartoon illustration of a friendly doctor smiling happily with a laptop displaying digital medical data and heart icons`
+      );
+    }
+
     const timestampSeed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-    const dynamicImageUrl = `/api/marketing/render-post-image?title=${encodeURIComponent(base.topic)}&subtitle=${encodeURIComponent("Plataforma Médica SaaS #1 en Venezuela")}&specialty=${encodeURIComponent(randomSpec)}&theme=${randomTheme}&v=${timestampSeed}`;
+    const dynamicImageUrl =
+      aiImage ||
+      `/api/marketing/render-post-image?title=${encodeURIComponent(base.topic)}&subtitle=${encodeURIComponent("Plataforma Médica SaaS #1 en Venezuela")}&specialty=${encodeURIComponent(randomSpec)}&style=${selectedStyle}&v=${timestampSeed}`;
 
     selectedTopic = {
       topic: base.topic,
-      style: base.style || "hyperrealistic",
+      style: selectedStyle,
       caption: base.caption,
       hashtags: base.hashtags,
       imageUrl: dynamicImageUrl,
@@ -125,15 +167,28 @@ async function generateSinglePostWithSelfHealing(): Promise<{
   } else {
     // Fresh variation
     const randomBase = CAMPAIGN_TOPICS[Math.floor(Math.random() * CAMPAIGN_TOPICS.length)];
-    const timestampSeed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
+    let aiImage: string | null = null;
+    if (selectedStyle === "hyperrealistic") {
+      aiImage = await generateImagen3Image(
+        `A cinematic 8k photo of a confident Venezuelan doctor in a pristine white coat standing in a state-of-the-art medical consulting room`
+      );
+    } else if (selectedStyle === "cartoon") {
+      aiImage = await generateImagen3Image(
+        `A cute modern 3D vector illustration of a superhero doctor flying with a laptop, bright colors, clean corporate medical tech style`
+      );
+    }
+
+    const timestampSeed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     const title = `${randomBase.topic}`;
     const subtitle = `Diseñado para ${randomSpec} en Venezuela`;
-    const dynamicImageUrl = `/api/marketing/render-post-image?title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent(subtitle)}&specialty=${encodeURIComponent(randomSpec)}&theme=${randomTheme}&v=${timestampSeed}`;
+    const dynamicImageUrl =
+      aiImage ||
+      `/api/marketing/render-post-image?title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent(subtitle)}&specialty=${encodeURIComponent(randomSpec)}&style=${selectedStyle}&v=${timestampSeed}`;
 
     selectedTopic = {
       topic: `${randomBase.topic} (${randomSpec})`,
-      style: randomBase.style || "hyperrealistic",
+      style: selectedStyle,
       caption: `🩺 Consulta especializada de ${randomSpec} en Venezuela: ${randomBase.caption} Adapta MedSysVE a tu práctica diaria.`,
       hashtags: `${randomBase.hashtags} #${randomSpec.replace(/[\s\(\)]+/g, "")}`,
       imageUrl: dynamicImageUrl,

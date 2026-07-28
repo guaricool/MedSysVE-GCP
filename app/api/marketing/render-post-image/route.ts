@@ -6,12 +6,22 @@ export async function GET(req: Request) {
   const title = searchParams.get("title") || "Historia Clínica Electrónica";
   const subtitle = searchParams.get("subtitle") || "Plataforma Médica Integral en Venezuela";
   const specialty = searchParams.get("specialty") || "Medicina General";
+  const style = searchParams.get("style") || "marketing";
 
   // Official MedSysVE Brand Colors:
   // - Background: Deep Dark Navy Slate (#0b132b -> #0f172a)
   // - Primary Accent: Amber Gold (#f59e0b, #d97706, #fbbf24)
   // - Secondary Accent: Electric Cyan/Blue (#38bdf8, #0ea5e9)
   // - Text: White (#ffffff) & Gold (#fbbf24) & Slate (#94a3b8)
+
+  const isScreenshotStyle = style === "screenshot";
+  const isCartoonStyle = style === "cartoon";
+
+  const cardHeaderTitle = isScreenshotStyle
+    ? "🖥️ CAPTURA DE PANTALLA EN VIVO • INTERFAZ MEDSYSVE"
+    : isCartoonStyle
+    ? "🎨 ILUSTRACIÓN MÉDICA DIGITAL • MEDSYSVE"
+    : `🩺 ${specialty.toUpperCase()}`;
 
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
@@ -29,7 +39,7 @@ export async function GET(req: Request) {
     </linearGradient>
 
     <linearGradient id="cardBg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.95" />
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.96" />
       <stop offset="100%" stop-color="#0f172a" stop-opacity="0.98" />
     </linearGradient>
 
@@ -62,37 +72,53 @@ export async function GET(req: Request) {
     <!-- Top Gold Accent Line -->
     <rect x="0" y="0" width="920" height="10" rx="5" fill="url(#goldGrad)" />
 
-    <!-- Specialty Badge -->
+    <!-- Style / Category Badge -->
     <g transform="translate(60, 55)">
-      <rect x="0" y="0" width="520" height="52" rx="14" fill="rgba(245, 158, 11, 0.15)" stroke="#f59e0b" stroke-opacity="0.5" stroke-width="1.5" />
-      <text x="22" y="34" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="18" fill="#fbbf24" letter-spacing="1.5">🩺 ${specialty.toUpperCase()}</text>
+      <rect x="0" y="0" width="560" height="52" rx="14" fill="rgba(245, 158, 11, 0.15)" stroke="#f59e0b" stroke-opacity="0.5" stroke-width="1.5" />
+      <text x="22" y="34" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="17" fill="#fbbf24" letter-spacing="1">${cardHeaderTitle}</text>
     </g>
 
     <!-- Main Title -->
-    <foreignObject x="60" y="135" width="800" height="260">
-      <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: system-ui, -apple-system, sans-serif; color: #ffffff; font-size: 52px; font-weight: 900; line-height: 1.15; letter-spacing: -1px;">
+    <foreignObject x="60" y="135" width="800" height="250">
+      <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: system-ui, -apple-system, sans-serif; color: #ffffff; font-size: 50px; font-weight: 900; line-height: 1.15; letter-spacing: -1px;">
         ${title}
       </div>
     </foreignObject>
 
     <!-- Subtitle / Description -->
-    <foreignObject x="60" y="420" width="800" height="180">
-      <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: system-ui, -apple-system, sans-serif; color: #cbd5e1; font-size: 26px; font-weight: 500; line-height: 1.5;">
+    <foreignObject x="60" y="415" width="800" height="180">
+      <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: system-ui, -apple-system, sans-serif; color: #cbd5e1; font-size: 25px; font-weight: 500; line-height: 1.5;">
         ${subtitle}
       </div>
     </foreignObject>
 
-    <!-- Feature Pillars -->
-    <g transform="translate(60, 610)">
-      <rect x="0" y="0" width="245" height="54" rx="12" fill="rgba(245, 158, 11, 0.1)" stroke="rgba(245, 158, 11, 0.3)" stroke-width="1.5" />
-      <text x="20" y="34" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#fbbf24">✓ Tasa Oficial BCV</text>
+    <!-- UI Mockup Toolbar (if Screenshot style) or Feature Pillars -->
+    ${
+      isScreenshotStyle
+        ? `
+      <g transform="translate(60, 600)">
+        <rect x="0" y="0" width="800" height="70" rx="14" fill="rgba(15, 23, 42, 0.9)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1.5" />
+        <circle cx="30" cy="35" r="8" fill="#ef4444" />
+        <circle cx="54" cy="35" r="8" fill="#f59e0b" />
+        <circle cx="78" cy="35" r="8" fill="#10b981" />
+        <text x="110" y="42" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#38bdf8">medsysve.com/doctor/patients/encounter</text>
+        <rect x="620" y="18" width="150" height="34" rx="8" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="1" />
+        <text x="635" y="40" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="14" fill="#fbbf24">✓ SOAP EN VIVO</text>
+      </g>
+      `
+        : `
+      <g transform="translate(60, 610)">
+        <rect x="0" y="0" width="245" height="54" rx="12" fill="rgba(245, 158, 11, 0.1)" stroke="rgba(245, 158, 11, 0.3)" stroke-width="1.5" />
+        <text x="20" y="34" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#fbbf24">✓ Tasa Oficial BCV</text>
 
-      <rect x="265" y="0" width="245" height="54" rx="12" fill="rgba(56, 189, 248, 0.1)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1.5" />
-      <text x="285" y="34" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#38bdf8">✓ Firma &amp; QR Legal</text>
+        <rect x="265" y="0" width="245" height="54" rx="12" fill="rgba(56, 189, 248, 0.1)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1.5" />
+        <text x="285" y="34" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#38bdf8">✓ Firma &amp; QR Legal</text>
 
-      <rect x="530" y="0" width="245" height="54" rx="12" fill="rgba(16, 185, 129, 0.1)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1.5" />
-      <text x="550" y="34" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#34d399">✓ SACS MPPS Valid</text>
-    </g>
+        <rect x="530" y="0" width="245" height="54" rx="12" fill="rgba(16, 185, 129, 0.1)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1.5" />
+        <text x="550" y="34" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#34d399">✓ SACS MPPS Valid</text>
+      </g>
+      `
+    }
   </g>
 
   <!-- Bottom Footer Bar -->
