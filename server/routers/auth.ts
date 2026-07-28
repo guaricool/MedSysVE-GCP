@@ -15,6 +15,8 @@ import { hashPassword, verifyPassword, strongPasswordSchema } from "@/lib/passwo
 import { rateLimit, LIMITERS } from "@/lib/rate-limit"
 import { safeLog } from "@/lib/log-sanitizer"
 import { sendOtpEmail } from "@/lib/email"
+import { clearLockout } from "@/lib/account-lockout"
+import { hmacIndex } from "@/lib/field-crypto"
 
 const emailSchema = z.string().email().max(254)
 
@@ -149,37 +151,31 @@ export const authRouter = router({
       // can't tell the difference between "email not registered" and
       // "rate limited" because both surface the same generic response.
       const emailLower = input.email.toLowerCase().trim()
-      let userExists = await ctx.db.doctor.findUnique({
-        where: { email: emailLower },
+      const emailHmac = hmacIndex(emailLower)
+
+      // 1. Doctor
+      let userExists = await ctx.db.doctor.findFirst({
+        where: { OR: [{ email: emailLower }, { email: { equals: emailLower, mode: "insensitive" } }] },
         select: { id: true },
       })
-      if (!userExists) {
-        userExists = await ctx.db.doctor.findFirst({
-          where: { email: { equals: emailLower, mode: "insensitive" } },
-          select: { id: true },
-        })
-      }
-      if (!userExists) {
-        userExists = await ctx.db.clinicAdmin.findUnique({
-          where: { email: emailLower },
-          select: { id: true },
-        })
-      }
+      // 2. ClinicAdmin
       if (!userExists) {
         userExists = await ctx.db.clinicAdmin.findFirst({
-          where: { email: { equals: emailLower, mode: "insensitive" } },
+          where: { OR: [{ email: emailLower }, { email: { equals: emailLower, mode: "insensitive" } }] },
           select: { id: true },
         })
       }
+      // 3. Staff
       if (!userExists) {
-        userExists = await ctx.db.portalUser.findFirst({
-          where: { email: emailLower },
+        userExists = await ctx.db.staff.findFirst({
+          where: { OR: [{ email: emailLower }, { email: { equals: emailLower, mode: "insensitive" } }], activo: true },
           select: { id: true },
         })
       }
+      // 4. Patient
       if (!userExists) {
-        userExists = await ctx.db.portalUser.findFirst({
-          where: { email: { equals: emailLower, mode: "insensitive" } },
+        userExists = await ctx.db.patient.findFirst({
+          where: { OR: [{ email: emailLower }, { hmacEmail: emailHmac }] },
           select: { id: true },
         })
       }
@@ -273,50 +269,42 @@ export const authRouter = router({
         }
 
         const emailLower = claims.email.toLowerCase().trim()
+        const emailHmac = hmacIndex(emailLower)
 
         // 1. Try Doctor
-        let doctor = await ctx.db.doctor.findUnique({
-          where: { email: emailLower },
+        let doctor = await ctx.db.doctor.findFirst({
+          where: { OR: [{ email: emailLower }, { email: { equals: emailLower, mode: "insensitive" } }] },
           select: { id: true },
         })
-        if (!doctor) {
-          doctor = await ctx.db.doctor.findFirst({
-            where: { email: { equals: emailLower, mode: "insensitive" } },
-            select: { id: true },
-          })
-        }
 
         // 2. Try ClinicAdmin
         let clinicAdmin = null
         if (!doctor) {
-          clinicAdmin = await ctx.db.clinicAdmin.findUnique({
-            where: { email: emailLower },
+          clinicAdmin = await ctx.db.clinicAdmin.findFirst({
+            where: { OR: [{ email: emailLower }, { email: { equals: emailLower, mode: "insensitive" } }] },
             select: { id: true },
           })
-          if (!clinicAdmin) {
-            clinicAdmin = await ctx.db.clinicAdmin.findFirst({
-              where: { email: { equals: emailLower, mode: "insensitive" } },
-              select: { id: true },
-            })
-          }
         }
 
-        // 3. Try PortalUser (Patient)
-        let portalUser = null
+        // 3. Try Staff
+        let staff = null
         if (!doctor && !clinicAdmin) {
-          portalUser = await ctx.db.portalUser.findFirst({
-            where: { email: emailLower },
+          staff = await ctx.db.staff.findFirst({
+            where: { OR: [{ email: emailLower }, { email: { equals: emailLower, mode: "insensitive" } }], activo: true },
             select: { id: true },
           })
-          if (!portalUser) {
-            portalUser = await ctx.db.portalUser.findFirst({
-              where: { email: { equals: emailLower, mode: "insensitive" } },
-              select: { id: true },
-            })
-          }
         }
 
-        if (!doctor && !clinicAdmin && !portalUser) {
+        // 4. Try Patient
+        let patient = null
+        if (!doctor && !clinicAdmin && !staff) {
+          patient = await ctx.db.patient.findFirst({
+            where: { OR: [{ email: emailLower }, { hmacEmail: emailHmac }] },
+            select: { id: true },
+          })
+        }
+
+        if (!doctor && !clinicAdmin && !staff && !patient) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Cuenta no encontrada.",
@@ -355,25 +343,32 @@ export const authRouter = router({
             }
           }
 
-          safeLog("info", "auth.password_reset_completed", {
-            doctorId: doctor.id,
-          })
+          safeLog("info", "auth.password_reset_completed", { doctorId: doctor.id })
         } else if (clinicAdmin) {
           await ctx.db.clinicAdmin.update({
             where: { id: clinicAdmin.id },
             data: { passwordHash: newHash },
           })
-          safeLog("info", "auth.password_reset_completed_clinic_admin", {
-            clinicAdminId: clinicAdmin.id,
+          safeLog("info", "auth.password_reset_completed_clinic_admin", { clinicAdminId: clinicAdmin.id })
+        } else if (staff) {
+          await ctx.db.staff.update({
+            where: { id: staff.id },
+            data: { pinAccesoHash: newHash },
           })
-        } else if (portalUser) {
-          await ctx.db.portalUser.update({
-            where: { id: portalUser.id },
-            data: { passwordHash: newHash },
+          safeLog("info", "auth.password_reset_completed_staff", { staffId: staff.id })
+        } else if (patient) {
+          await ctx.db.patient.update({
+            where: { id: patient.id },
+            data: { portalPasswordHash: newHash },
           })
-          safeLog("info", "auth.password_reset_completed_portal_user", {
-            portalUserId: portalUser.id,
-          })
+          safeLog("info", "auth.password_reset_completed_patient", { patientId: patient.id })
+        }
+
+        // Clear any Redis account-lockout state so user can immediately log in
+        try {
+          await clearLockout(emailLower)
+        } catch {
+          // non-fatal
         }
 
         return { ok: true as const }

@@ -16,10 +16,14 @@ import {
 type Step = "request" | "verify" | "reset" | "done"
 
 function parseTRPCError(message: string): string {
+  if (!message) return "Ocurrió un error inesperado."
   try {
     const parsed = JSON.parse(message)
-    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].message) {
-      return parsed.map((e: any) => e.message).join(", ")
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.message) {
+      return parsed.map((e: any) => e.message).join(" • ")
+    }
+    if (parsed && typeof parsed === "object" && parsed.message) {
+      return parsed.message
     }
   } catch {
     // not JSON
