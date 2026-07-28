@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { trpc } from "@/lib/trpc-client"
 import { ClinicCard, LocationForm } from "@/components/clinic/clinic-card"
 import { SubscriptionCard } from "@/components/workspace/subscription-card"
+import { STRIPE_PRICES } from "@/lib/stripe"
 import { Lock, ShieldCheck, FileText, Building2, User, Stethoscope, CheckCircle2 } from "lucide-react"
 import { getDoctorPrefix } from "@/lib/doctor-utils"
 import { ESPECIALIDADES_VE } from "@/lib/venezuela-specialties"
@@ -530,6 +531,8 @@ function DoctorProfileSection() {
 }
 
 function NewWorkspaceSection() {
+  const { data: profile } = trpc.doctor.myProfile.useQuery()
+  const checkoutMutation = trpc.billing.createCheckoutSession.useMutation()
   const [open, setOpen] = useState(false)
   const [nombre, setNombre] = useState("")
   const [done, setDone] = useState(false)
@@ -609,17 +612,27 @@ function NewWorkspaceSection() {
               </p>
             </div>
           </div>
-          <a
-            href="#suscripcion"
-            onClick={() => {
-              const el = document.querySelector('section:has(button)')
-              if (el) el.scrollIntoView({ behavior: 'smooth' })
+          <button
+            type="button"
+            disabled={checkoutMutation.isPending}
+            onClick={async () => {
+              if (!profile?.id) return
+              try {
+                const res = await checkoutMutation.mutateAsync({
+                  priceId: STRIPE_PRICES.EXTRA_WORKSPACE_MONTHLY,
+                  entityType: "doctor",
+                  entityId: profile.id,
+                })
+                window.location.href = res.url
+              } catch (e) {
+                alert("Redirigiendo a Stripe...")
+              }
             }}
-            className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition-colors shadow"
+            className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition-colors shadow disabled:opacity-50"
           >
             <Building2 className="w-4 h-4" />
-            Actualizar Suscripción para Agregar Consultorio Extra ($10 USD/mes)
-          </a>
+            {checkoutMutation.isPending ? "Redirigiendo a Stripe..." : "Pagar y Activar Consultorio Adicional ($10 USD/mes)"}
+          </button>
         </div>
       )}
     </section>

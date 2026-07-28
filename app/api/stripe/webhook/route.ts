@@ -1,6 +1,6 @@
 import { headers } from "next/headers"
 import { NextResponse } from "next/server"
-import { stripe } from "@/lib/stripe"
+import { stripe, STRIPE_PRICES } from "@/lib/stripe"
 import { db } from "@/lib/db"
 import Stripe from "stripe"
 
@@ -43,13 +43,17 @@ export async function POST(req: Request) {
           const priceId = sub.items.data[0].price.id
           
           let plan = "premium"
-          if (priceId === process.env.STRIPE_PRICE_INDIVIDUAL_MONTHLY || priceId === process.env.STRIPE_PRICE_INDIVIDUAL_QUARTERLY) {
+          if (
+            priceId === STRIPE_PRICES.INDIVIDUAL_MONTHLY ||
+            priceId === STRIPE_PRICES.INDIVIDUAL_QUARTERLY
+          ) {
              plan = "premium"
-          } else if (priceId === process.env.STRIPE_PRICE_CLINIC_MONTHLY || priceId === process.env.STRIPE_PRICE_CLINIC_QUARTERLY) {
-             plan = "clinic"
           }
 
-          if (priceId === process.env.STRIPE_PRICE_VOICE_ADDON_MONTHLY || session.metadata?.addon === "voice_scribe") {
+          if (
+            priceId === STRIPE_PRICES.VOICE_ADDON_MONTHLY ||
+            session.metadata?.addon === "voice_scribe"
+          ) {
             if (entityType === "doctor") {
               await db.doctor.update({
                 where: { id: entityId },

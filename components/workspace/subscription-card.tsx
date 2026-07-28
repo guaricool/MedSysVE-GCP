@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { CreditCard, AlertCircle, ExternalLink, Check } from "lucide-react"
 import { trpc } from "@/lib/trpc-client"
+import { STRIPE_PRICES } from "@/lib/stripe"
 
 /**
  * SubscriptionCard — sección en Configuración del consultorio para gestionar
@@ -95,8 +96,8 @@ export function SubscriptionCard() {
 
       <p className="text-xs text-slate-500">
         {isPaid
-          ? "Tu suscripción está activa. Puedes cambiar de plan, actualizar el método de pago o cancelar desde el portal de Stripe."
-          : "Estás en el plan Free. Upgrade a Individual ($25/mes) o Clínica ($60/mes con 2 médicos) para desbloquear todas las funciones."}
+          ? "Tu suscripción incluye hasta 2 consultorios activos. Puedes cambiar de plan, actualizar el método de pago o cancelar desde el portal de Stripe."
+          : "Estás en el plan Free. Suscríbete al Plan Profesional que incluye 2 consultorios para desbloquear todas las funciones."}
       </p>
 
       {successMessage && (
@@ -108,29 +109,55 @@ export function SubscriptionCard() {
 
       <div className="flex flex-wrap items-center gap-2">
         {!isPaid && (
-          <button
-            type="button"
-            disabled={opening || checkoutMutation.isPending}
-            onClick={async () => {
-              if (!profile?.id) return;
-              try {
-                setOpening(true)
-                const res = await checkoutMutation.mutateAsync({
-                  priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_INDIVIDUAL_MONTHLY || "",
-                  entityType: "doctor",
-                  entityId: profile.id
-                })
-                window.location.href = res.url
-              } catch (e) {
-                setError(e instanceof Error ? e.message : "Error al iniciar el pago")
-                setOpening(false)
-              }
-            }}
-            className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-amber-400 disabled:opacity-50"
-          >
-            <Check size={14} />
-            {checkoutMutation.isPending ? "Redirigiendo..." : "Suscribirse a Plan Premium ($25/mes)"}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={opening || checkoutMutation.isPending}
+              onClick={async () => {
+                if (!profile?.id) return;
+                try {
+                  setOpening(true)
+                  const res = await checkoutMutation.mutateAsync({
+                    priceId: STRIPE_PRICES.INDIVIDUAL_MONTHLY,
+                    entityType: "doctor",
+                    entityId: profile.id
+                  })
+                  window.location.href = res.url
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "Error al iniciar el pago")
+                  setOpening(false)
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-amber-400 disabled:opacity-50"
+            >
+              <Check size={14} />
+              {checkoutMutation.isPending ? "Redirigiendo..." : "Plan Mensual ($25 USD / mes)"}
+            </button>
+
+            <button
+              type="button"
+              disabled={opening || checkoutMutation.isPending}
+              onClick={async () => {
+                if (!profile?.id) return;
+                try {
+                  setOpening(true)
+                  const res = await checkoutMutation.mutateAsync({
+                    priceId: STRIPE_PRICES.INDIVIDUAL_QUARTERLY,
+                    entityType: "doctor",
+                    entityId: profile.id
+                  })
+                  window.location.href = res.url
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "Error al iniciar el pago")
+                  setOpening(false)
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-md border border-amber-500/60 bg-amber-950/30 px-4 py-2 text-sm font-medium text-amber-300 hover:bg-amber-900/40 disabled:opacity-50"
+            >
+              <Check size={14} />
+              {checkoutMutation.isPending ? "Redirigiendo..." : "Plan Trimestral ($70 USD / 3 meses)"}
+            </button>
+          </div>
         )}
         {isPaid && (
           <>
