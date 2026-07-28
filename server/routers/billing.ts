@@ -28,9 +28,13 @@ export const billingRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // entityId must match the calling doctor's id — prevents one doctor
-      // from opening a checkout session for another doctor's subscription.
-      if (input.entityId !== ctx.session.id) {
+      // Allow entityId to match either doctorId or session user id
+      const isAuthorizedDoctor =
+        input.entityId === ctx.session.doctorId ||
+        input.entityId === ctx.session.id ||
+        Boolean(ctx.session.doctorId && input.entityId === ctx.session.doctorId)
+
+      if (!isAuthorizedDoctor) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Cannot create a checkout session for a different entity.",
@@ -86,9 +90,10 @@ export const billingRouter = router({
 
         return { url: stripeSession.url };
       } catch (error: any) {
+        if (error instanceof TRPCError) throw error
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
+          message: error.message || "Error de comunicación con Stripe.",
         });
       }
     }),

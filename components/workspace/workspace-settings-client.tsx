@@ -625,7 +625,7 @@ function NewWorkspaceSection() {
                 })
                 window.location.href = res.url
               } catch (e) {
-                alert("Redirigiendo a Stripe...")
+                alert(e instanceof Error ? e.message : "Error al conectar con Stripe.")
               }
             }}
             className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition-colors shadow disabled:opacity-50"
