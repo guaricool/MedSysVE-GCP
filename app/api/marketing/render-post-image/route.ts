@@ -1,5 +1,14 @@
 import { NextResponse } from "next/server";
 
+function escapeSvgText(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
@@ -78,19 +87,15 @@ export async function GET(req: Request) {
       <text x="22" y="34" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="17" fill="#fbbf24" letter-spacing="1">${cardHeaderTitle}</text>
     </g>
 
-    <!-- Main Title -->
-    <foreignObject x="60" y="135" width="800" height="250">
-      <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: system-ui, -apple-system, sans-serif; color: #ffffff; font-size: 50px; font-weight: 900; line-height: 1.15; letter-spacing: -1px;">
-        ${title}
-      </div>
-    </foreignObject>
+    <!-- Main Title (Native SVG Text for 100% <img> tag compatibility) -->
+    <text x="60" y="180" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="44" fill="#ffffff" letter-spacing="-1">
+      ${escapeSvgText(title)}
+    </text>
 
     <!-- Subtitle / Description -->
-    <foreignObject x="60" y="415" width="800" height="180">
-      <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: system-ui, -apple-system, sans-serif; color: #cbd5e1; font-size: 25px; font-weight: 500; line-height: 1.5;">
-        ${subtitle}
-      </div>
-    </foreignObject>
+    <text x="60" y="440" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="24" fill="#cbd5e1">
+      ${escapeSvgText(subtitle)}
+    </text>
 
     <!-- UI Mockup Toolbar (if Screenshot style) or Feature Pillars -->
     ${
