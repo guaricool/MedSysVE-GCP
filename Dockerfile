@@ -41,8 +41,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # (which writes to .prisma/ and reads prisma/ + prisma.config.ts).
 RUN chown nextjs:nodejs /app
 
+ENV HOME=/tmp
+
 USER nextjs
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+CMD ["sh", "-c", "node ./node_modules/prisma/build/index.js migrate deploy || true; node server.js"]
