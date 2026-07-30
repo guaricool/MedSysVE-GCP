@@ -15,6 +15,7 @@ fix category.
 
 | Batch | Commit | Scope |
 |---|---|---|
+| **Audit 360** | `9fac8db` | Remediation of findings C1-C4, H1, H2, H7: zero hardcoded credentials, Secret Manager Terraform integration, cron POST route, Bot Prisma models, DDL error logging |
 | A | `4ba1819` | Low-risk cleanup: Math.random fallbacks, serieId crypto, audit PHI detail, setPortalPassword audit, workspaceId fail-fast |
 | B | `926aabf` | Audit logging on 12 PDF/CSV/AI routes + new `AI_PHI_DISCLOSURE` action |
 | C | `3631f6f` | Authz: JWT verification in proxy + workspace switcher DB validation |

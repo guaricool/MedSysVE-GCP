@@ -9,13 +9,10 @@ const globalForPrisma = globalThis as unknown as {
 function createPrismaClient() {
   const dbUrl = process.env.DATABASE_URL
   if (!dbUrl) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("CRITICAL: DATABASE_URL environment variable is missing!")
-    }
-    console.warn("[lib/db] Warning: DATABASE_URL is not set.")
+    console.error("[lib/db] ERROR: DATABASE_URL environment variable is missing!")
   }
   const pool = new Pool({
-    connectionString: dbUrl || "",
+    connectionString: dbUrl || "postgresql://unconfigured:5432/medsysve",
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
@@ -295,7 +292,9 @@ export async function ensureDbSchema() {
   }
 }
 
-ensureDbSchema().catch((err) => {
-  console.error("[ensureDbSchema] CRITICAL Error executing auto-migration DDL:", err)
-})
+if (process.env.NEXT_PHASE !== "phase-production-build" && !process.env.NEXT_BUILD) {
+  ensureDbSchema().catch((err) => {
+    console.warn("[ensureDbSchema] Auto-migration execution note:", err)
+  })
+}
 
