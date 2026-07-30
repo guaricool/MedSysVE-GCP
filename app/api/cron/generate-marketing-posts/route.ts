@@ -5,7 +5,6 @@ import { writeFile, mkdir } from "fs/promises";
 import { join, resolve } from "path";
 import { overlayMedSysVEBranding } from "@/lib/marketing/brand-overlay";
 import { captureLiveSystemScreenshot } from "@/lib/marketing/screenshot-capturer";
-import { generateVertexAICopy } from "@/lib/marketing/vertex-ai";
 import { generateSparkMarketingSuite } from "@/lib/marketing/spark-engine";
 import { generatePomelliBrandImage } from "@/lib/marketing/pomelli-engine";
 import sharp from "sharp";
@@ -224,7 +223,7 @@ async function generateSinglePostWithSelfHealing(
     selectedConcept.topic
   );
 
-  // 4. Generate base image buffer using Google Pomelli Brand Engine (Imagen 3 + FLUX.1 Studio)
+  // 4. Generate base image buffer according to selected style
   let baseBuffer: Buffer | null = null;
 
   if (selectedStyle === "screenshot") {
@@ -235,17 +234,19 @@ async function generateSinglePostWithSelfHealing(
     const shotResult = await captureLiveSystemScreenshot(baseUrl, botUser, botPass);
     if (shotResult) {
       baseBuffer = shotResult.buffer;
+    } else {
+      // For screenshot style, if Puppeteer fails, DO NOT generate a doctor photo! Fallback to simulated UI card!
+      baseBuffer = await generateSystemCardBuffer(selectedSpec, selectedConcept.topic, "screenshot");
     }
-  }
-
-  if (!baseBuffer) {
+  } else {
+    // For hyperrealistic, cartoon, and marketing: Use Pomelli Brand Engine
     baseBuffer = await generatePomelliBrandImage(
       sparkSuite.imagePrompt,
       selectedStyle
     );
   }
 
-  // Fallback to system card SVG if image generation / screenshot unavailable
+  // Fallback if image generation unavailable
   if (!baseBuffer) {
     baseBuffer = await generateSystemCardBuffer(
       selectedSpec,
