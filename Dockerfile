@@ -15,10 +15,14 @@ ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
-# curl for Docker health checks
-RUN apk add --no-cache curl && \
+# curl and font packages (DejaVu, Noto) for Sharp SVG rendering + chromium for Puppeteer
+RUN apk add --no-cache curl chromium nss freetype harfbuzz ca-certificates font-noto font-dejavu ttf-freefont fontconfig && \
     addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
+
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
 
 # Copy the full node_modules tree from the builder (Prisma + all transitive
 # deps for migrate deploy at startup).

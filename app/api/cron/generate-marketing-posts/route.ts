@@ -8,6 +8,31 @@ import { overlayMedSysVEBranding } from "@/lib/marketing/brand-overlay";
 import sharp from "sharp";
 
 const ADMIN_EMAIL = "cpierluissis@gmail.com";
+const fontStack = "'DejaVu Sans', 'Noto Sans', 'Liberation Sans', Arial, Helvetica, sans-serif";
+
+async function getSecret(secretName: string): Promise<string | undefined> {
+  if (process.env[secretName] && process.env[secretName]!.trim().length > 0) {
+    return process.env[secretName]!.trim();
+  }
+  try {
+    const tokenRes = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", {
+      headers: { "Metadata-Flavor": "Google" }
+    });
+    if (!tokenRes.ok) return process.env[secretName];
+    const { access_token } = await tokenRes.json();
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "medsysve-gcp";
+    const secretRes = await fetch(`https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${secretName}/versions/latest:access`, {
+      headers: { "Authorization": `Bearer ${access_token}` }
+    });
+    const secretData = await secretRes.json();
+    if (!secretData || !secretData.payload) {
+      return process.env[secretName];
+    }
+    return Buffer.from(secretData.payload.data, "base64").toString("utf8").trim();
+  } catch (e) {
+    return process.env[secretName];
+  }
+}
 
 function getUploadsDir(): string {
   const configured = process.env.UPLOADS_DIR?.trim();
@@ -75,7 +100,7 @@ async function generateGeminiMarketingCopy(
   keyBenefits: string,
   specialty: string
 ): Promise<{ caption: string; hashtags: string; imagePrompt: string }> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = await getSecret("GEMINI_API_KEY");
 
   if (!apiKey) {
     return {
@@ -132,17 +157,31 @@ Responde ÚNICAMENTE en formato JSON válido con la estructura:
 }
 
 async function generateImagen3Image(prompt: string, style: "hyperrealistic" | "cartoon"): Promise<Buffer | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
+  const apiKey = await getSecret("GEMINI_API_KEY");
+  if (!apiKey) {
+    console.warn("[Imagen 3 API]: GEMINI_API_KEY not found in process.env or Secret Manager.");
+    return null;
+  }
 
   try {
     const fullPrompt = style === "cartoon"
-      ? `3D Pixar Disney style digital illustration of ${prompt}, bright colors, friendly Venezuelan doctor, digital medical chart tablet, clean modern aesthetic, 1:1 aspect ratio, high resolution`
+      ? `3D Pixar Disney style digital illustration of ${prompt}, bright vibrant colors, friendly Venezuelan medical doctor, digital medical chart tablet, clean modern aesthetic, 1:1 aspect ratio, high resolution`
       : `Hyper-realistic 8k cinematic photograph of ${prompt}, Venezuelan medical doctor context, modern clean clinic setting, professional studio lighting, 1:1 square format`;
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, {
+    let url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+    let headers: Record<string, string> = { "Content-Type": "application/json" };
+
+    if (apiKey.startsWith("ya29.")) {
+      url = `https://us-central1-aiplatform.googleapis.com/v1/projects/medsysve-gcp/locations/us-central1/publishers/google/models/imagegeneration@006:predict`;
+      headers = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      };
+    }
+
+    const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         instances: [{ prompt: fullPrompt }],
         parameters: {
@@ -214,45 +253,45 @@ async function generateSystemCardBuffer(specialty: string, topic: string, style:
     <circle cx="60" cy="57" r="7" fill="#ef4444" />
     <circle cx="82" cy="57" r="7" fill="#f59e0b" />
     <circle cx="104" cy="57" r="7" fill="#10b981" />
-    <text x="140" y="63" font-family="system-ui, sans-serif" font-weight="700" font-size="16" fill="#38bdf8">medsysve.com/doctor/patients/encounter</text>
+    <text x="140" y="63" font-family="${fontStack}" font-weight="700" font-size="16" fill="#38bdf8">medsysve.com/doctor/patients/encounter</text>
     <rect x="740" y="42" width="160" height="30" rx="8" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="1" />
-    <text x="756" y="62" font-family="system-ui, sans-serif" font-weight="800" font-size="13" fill="#fbbf24">✓ SOAP EN VIVO</text>
+    <text x="756" y="62" font-family="${fontStack}" font-weight="800" font-size="13" fill="#fbbf24">✓ SOAP EN VIVO</text>
     ` : `
     <rect x="30" y="30" width="900" height="54" rx="12" fill="rgba(245, 158, 11, 0.12)" stroke="rgba(245, 158, 11, 0.4)" stroke-width="1.5" />
-    <text x="50" y="64" font-family="system-ui, sans-serif" font-weight="800" font-size="18" fill="#fbbf24" letter-spacing="1">🩺 CONSULTA DE ${specialty.toUpperCase()}</text>
+    <text x="50" y="64" font-family="${fontStack}" font-weight="800" font-size="18" fill="#fbbf24" letter-spacing="1">🩺 CONSULTA DE ${specialty.toUpperCase()}</text>
     `}
 
     <!-- Content Preview Elements -->
     <g transform="translate(40, 120)">
       <rect x="0" y="0" width="420" height="240" rx="16" fill="rgba(15, 23, 42, 0.8)" stroke="rgba(245, 158, 11, 0.2)" stroke-width="1.5" />
-      <text x="25" y="45" font-family="system-ui, sans-serif" font-weight="800" font-size="20" fill="#fbbf24">📝 HISTORIA CLÍNICA SOAP</text>
-      <text x="25" y="90" font-family="system-ui, sans-serif" font-weight="500" font-size="15" fill="#cbd5e1">Subjetivo: Paciente acude a control de ${specialty}.</text>
-      <text x="25" y="125" font-family="system-ui, sans-serif" font-weight="500" font-size="15" fill="#cbd5e1">Objetivo: Signos vitales estables. FC: 72 bpm.</text>
-      <text x="25" y="160" font-family="system-ui, sans-serif" font-weight="500" font-size="15" fill="#cbd5e1">Plan: Esquema farmacológico verificado BCV.</text>
+      <text x="25" y="45" font-family="${fontStack}" font-weight="800" font-size="20" fill="#fbbf24">📝 HISTORIA CLÍNICA SOAP</text>
+      <text x="25" y="90" font-family="${fontStack}" font-weight="500" font-size="15" fill="#cbd5e1">Subjetivo: Paciente acude a control de ${specialty}.</text>
+      <text x="25" y="125" font-family="${fontStack}" font-weight="500" font-size="15" fill="#cbd5e1">Objetivo: Signos vitales estables. FC: 72 bpm.</text>
+      <text x="25" y="160" font-family="${fontStack}" font-weight="500" font-size="15" fill="#cbd5e1">Plan: Esquema farmacológico verificado BCV.</text>
       <rect x="25" y="185" width="200" height="34" rx="8" fill="rgba(16, 185, 129, 0.2)" stroke="#10b981" stroke-width="1" />
-      <text x="40" y="207" font-family="system-ui, sans-serif" font-weight="800" font-size="13" fill="#34d399">✓ FIRMA Y QR LEGAL</text>
+      <text x="40" y="207" font-family="${fontStack}" font-weight="800" font-size="13" fill="#34d399">✓ FIRMA Y QR LEGAL</text>
 
       <rect x="460" y="0" width="420" height="240" rx="16" fill="rgba(15, 23, 42, 0.8)" stroke="rgba(56, 189, 248, 0.2)" stroke-width="1.5" />
-      <text x="485" y="45" font-family="system-ui, sans-serif" font-weight="800" font-size="20" fill="#38bdf8">📊 VISOR DICOM &amp; PACS</text>
-      <text x="485" y="90" font-family="system-ui, sans-serif" font-weight="500" font-size="15" fill="#cbd5e1">Estudio HD CINE Multiframe</text>
-      <text x="485" y="125" font-family="system-ui, sans-serif" font-weight="500" font-size="15" fill="#cbd5e1">Medición de Ángulos Cobb &amp; HU</text>
-      <text x="485" y="160" font-family="system-ui, sans-serif" font-weight="500" font-size="15" fill="#cbd5e1">Integración 100% Web sin descargas</text>
+      <text x="485" y="45" font-family="${fontStack}" font-weight="800" font-size="20" fill="#38bdf8">📊 VISOR DICOM &amp; PACS</text>
+      <text x="485" y="90" font-family="${fontStack}" font-weight="500" font-size="15" fill="#cbd5e1">Estudio HD CINE Multiframe</text>
+      <text x="485" y="125" font-family="${fontStack}" font-weight="500" font-size="15" fill="#cbd5e1">Medición de Ángulos Cobb &amp; HU</text>
+      <text x="485" y="160" font-family="${fontStack}" font-weight="500" font-size="15" fill="#cbd5e1">Integración 100% Web sin descargas</text>
       <rect x="485" y="185" width="220" height="34" rx="8" fill="rgba(56, 189, 248, 0.2)" stroke="#38bdf8" stroke-width="1" />
-      <text x="500" y="207" font-family="system-ui, sans-serif" font-weight="800" font-size="13" fill="#38bdf8">✓ PACS NUBE ACTIVO</text>
+      <text x="500" y="207" font-family="${fontStack}" font-weight="800" font-size="13" fill="#38bdf8">✓ PACS NUBE ACTIVO</text>
 
       <!-- Bottom Pillar Cards -->
       <g transform="translate(0, 270)">
         <rect x="0" y="0" width="270" height="110" rx="14" fill="rgba(245, 158, 11, 0.1)" stroke="rgba(245, 158, 11, 0.3)" stroke-width="1.5" />
-        <text x="20" y="40" font-family="system-ui, sans-serif" font-weight="800" font-size="16" fill="#fbbf24">💵 Tasa Oficial BCV</text>
-        <text x="20" y="75" font-family="system-ui, sans-serif" font-weight="500" font-size="14" fill="#cbd5e1">Facturación USD / Bs</text>
+        <text x="20" y="40" font-family="${fontStack}" font-weight="800" font-size="16" fill="#fbbf24">💵 Tasa Oficial BCV</text>
+        <text x="20" y="75" font-family="${fontStack}" font-weight="500" font-size="14" fill="#cbd5e1">Facturación USD / Bs</text>
 
         <rect x="305" y="0" width="270" height="110" rx="14" fill="rgba(56, 189, 248, 0.1)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1.5" />
-        <text x="325" y="40" font-family="system-ui, sans-serif" font-weight="800" font-size="16" fill="#38bdf8">🛡️ Validación SACS</text>
-        <text x="325" y="75" font-family="system-ui, sans-serif" font-weight="500" font-size="14" fill="#cbd5e1">Matrícula MPPS Verificada</text>
+        <text x="325" y="40" font-family="${fontStack}" font-weight="800" font-size="16" fill="#38bdf8">🛡️ Validación SACS</text>
+        <text x="325" y="75" font-family="${fontStack}" font-weight="500" font-size="14" fill="#cbd5e1">Matrícula MPPS Verificada</text>
 
         <rect x="610" y="0" width="270" height="110" rx="14" fill="rgba(16, 185, 129, 0.1)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1.5" />
-        <text x="630" y="40" font-family="system-ui, sans-serif" font-weight="800" font-size="16" fill="#34d399">🤝 Red Referidos</text>
-        <text x="630" y="75" font-family="system-ui, sans-serif" font-weight="500" font-size="14" fill="#cbd5e1">Interconsulta Segura</text>
+        <text x="630" y="40" font-family="${fontStack}" font-weight="800" font-size="16" fill="#34d399">🤝 Red Referidos</text>
+        <text x="630" y="75" font-family="${fontStack}" font-weight="500" font-size="14" fill="#cbd5e1">Interconsulta Segura</text>
       </g>
     </g>
   </g>
@@ -276,8 +315,6 @@ async function generateSinglePostWithSelfHealing(
     select: { caption: true, imageUrl: true, style: true },
   });
 
-  // Clean URLs of any legacy query params
-  const usedImageUrls = new Set(existingPosts.map((p) => p.imageUrl.split("?")[0].trim()));
   const usedCaptions = new Set(existingPosts.map((p) => p.caption.trim()));
 
   // 2. Select unused specialty and concept
