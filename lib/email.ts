@@ -35,7 +35,7 @@ function getTransport(): nodemailer.Transporter | null {
   return cachedTransport
 }
 
-async function send(opts: {
+export async function sendEmail(opts: {
   to: string
   subject: string
   html: string
@@ -68,6 +68,8 @@ async function send(opts: {
     return { success: false, error: msg }
   }
 }
+
+const send = sendEmail
 
 function base(content: string): string {
   return `<!DOCTYPE html><html lang="es"><body style="font-family:sans-serif;background:#0f172a;color:#e2e8f0;padding:32px;">

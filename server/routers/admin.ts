@@ -321,4 +321,59 @@ export const adminRouter = router({
 
       return { ok: true }
     }),
+
+  getAgentMetrics: adminProcedure.query(async ({ ctx }) => {
+    const prisma = ctx.db as any
+
+    const [
+      totalConversations,
+      marketingConversations,
+      customerServiceConversations,
+      techSupportConversations,
+      humanTakeoverCount,
+      totalLeads,
+      newLeads,
+      knowledgeChunksCount,
+      recentConversations,
+      recentLeads,
+    ] = await Promise.all([
+      prisma.botConversation.count(),
+      prisma.botConversation.count({ where: { botType: "MARKETING" } }),
+      prisma.botConversation.count({ where: { botType: "CUSTOMER_SERVICE" } }),
+      prisma.botConversation.count({ where: { botType: "TECH_SUPPORT" } }),
+      prisma.botConversation.count({ where: { status: "HUMAN_TAKEOVER" } }),
+      prisma.botLead.count(),
+      prisma.botLead.count({ where: { status: "NEW" } }),
+      prisma.knowledgeChunk.count(),
+      prisma.botConversation.findMany({
+        orderBy: { lastMessageAt: "desc" },
+        take: 15,
+        include: {
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 2,
+          },
+        },
+      }),
+      prisma.botLead.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+    ])
+
+    return {
+      overview: {
+        totalConversations,
+        marketingConversations,
+        customerServiceConversations,
+        techSupportConversations,
+        humanTakeoverCount,
+        totalLeads,
+        newLeads,
+        knowledgeChunksCount,
+      },
+      recentConversations,
+      recentLeads,
+    }
+  }),
 })

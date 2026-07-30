@@ -4071,3 +4071,19 @@ model BotLead {
   @@index([channel])
 }
 
+model KnowledgeChunk {
+  id          String   @id @default(cuid())
+  source      String   // e.g. "SISTEMA.md", "FAQ_DOCTORES", "APPOINTMENT_RULES", "PRICING"
+  category    String   // "MARKETING" | "CUSTOMER_SERVICE" | "TECH_SUPPORT" | "SYSTEM"
+  title       String
+  content     String   @db.Text
+  vectorJson  String?  @db.Text // Array de floats guardado como JSON para búsqueda vectorial
+  metadata    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([source])
+}
+
+

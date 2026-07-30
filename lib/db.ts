@@ -286,6 +286,19 @@ export async function ensureDbSchema() {
       );
       CREATE INDEX IF NOT EXISTS "BotLead_status_idx" ON "BotLead"("status");
       CREATE INDEX IF NOT EXISTS "BotLead_channel_idx" ON "BotLead"("channel");
+      CREATE TABLE IF NOT EXISTS "KnowledgeChunk" (
+          "id" TEXT NOT NULL,
+          "source" TEXT NOT NULL,
+          "category" TEXT NOT NULL,
+          "title" TEXT NOT NULL,
+          "content" TEXT NOT NULL,
+          "vectorJson" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "KnowledgeChunk_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "KnowledgeChunk_source_idx" ON "KnowledgeChunk"("source");
+      CREATE INDEX IF NOT EXISTS "KnowledgeChunk_category_idx" ON "KnowledgeChunk"("category");
 
       -- ORL Tables
       CREATE TABLE IF NOT EXISTS "OrlAudiometry" (
@@ -359,6 +372,21 @@ export async function ensureDbSchema() {
           CONSTRAINT "TraumaAoClassification_pkey" PRIMARY KEY ("id")
       );
       CREATE INDEX IF NOT EXISTS "TraumaAoClassification_encounterId_idx" ON "TraumaAoClassification"("encounterId");
+
+      CREATE TABLE IF NOT EXISTS "KnowledgeChunk" (
+          "id" TEXT NOT NULL,
+          "source" TEXT NOT NULL,
+          "category" TEXT NOT NULL,
+          "title" TEXT NOT NULL,
+          "content" TEXT NOT NULL,
+          "vectorJson" TEXT,
+          "metadata" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "KnowledgeChunk_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "KnowledgeChunk_category_idx" ON "KnowledgeChunk"("category");
+      CREATE INDEX IF NOT EXISTS "KnowledgeChunk_source_idx" ON "KnowledgeChunk"("source");
     `)
   } catch (err) {
     console.warn("[ensureDbSchema] Auto-migration execution note:", err)
