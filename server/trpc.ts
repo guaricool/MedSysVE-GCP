@@ -12,7 +12,10 @@ const redisUrl = process.env.UPSTASH_REDIS_REST_URL
 const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN
 const redis = redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken }) : null
 
+import { ensureDbSchema } from "@/lib/db"
+
 export async function createContext() {
+  await ensureDbSchema()
   const session = await auth()
   return {
     session: session?.user as SessionUser | null,
@@ -80,6 +83,12 @@ export const publicProcedure = t.procedure.use(gcpTelemetryMiddleware)
 
 export const protectedProcedure = publicProcedure.use(async ({ ctx, path, next }) => {
   if (!ctx.session) throw new TRPCError({ code: "UNAUTHORIZED" })
+  if (!ctx.db) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Database connection unavailable.",
+    })
+  }
   
   // Anti-Scraping / Pagination Anomaly Detection
   // We limit each authenticated user to 300 tRPC requests per 5 minutes.

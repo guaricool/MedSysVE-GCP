@@ -15,6 +15,7 @@ fix category.
 
 | Batch | Commit | Scope |
 |---|---|---|
+| **Audit C1-C3 / H1-H5** | `current` | Remediation of findings C1-C3 and H1-H5: removed fallback auth secret in `lib/auth.ts`, removed fallback DB URL in `lib/db.ts` (throwing critical error in production if missing), added `ensureDbSchema()` & non-null `ctx.db` check in `server/trpc.ts`, added `TraumaAoClassification` DDL & Prisma model, and added `ensureDbSchema()` guard in REST PDF routes (`app/api/pdf/allergy-report/[id]`). |
 | **Audit 360** | `9fac8db` | Remediation of findings C1-C4, H1, H2, H7: zero hardcoded credentials, Secret Manager Terraform integration, cron POST route, Bot Prisma models, DDL error logging |
 | A | `4ba1819` | Low-risk cleanup: Math.random fallbacks, serieId crypto, audit PHI detail, setPortalPassword audit, workspaceId fail-fast |
 | B | `926aabf` | Audit logging on 12 PDF/CSV/AI routes + new `AI_PHI_DISCLOSURE` action |

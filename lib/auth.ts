@@ -49,9 +49,13 @@ function getDummyHash(): Promise<string> {
 const getAuthSecret = () => {
   const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
   if (!secret) {
-    console.error("[auth] ERROR: AUTH_SECRET or NEXTAUTH_SECRET environment variable is missing!")
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("CRITICAL: AUTH_SECRET or NEXTAUTH_SECRET environment variable is missing!")
+    }
+    console.warn("[auth] Warning: AUTH_SECRET / NEXTAUTH_SECRET is missing. Using development local secret.")
+    return "dev-local-secret-key-only"
   }
-  return secret || "medsysve-fallback-auth-secret-production-safe"
+  return secret
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({

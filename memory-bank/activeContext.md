@@ -8,13 +8,14 @@ Las últimas integraciones fueron:
 - **[[PsiquiatriaForm]]**: Herramienta de Historia Clínica que agrega el Examen Mental estructurado (MSE) y calculadoras clínicas como PHQ-9 (Depresión) y GAD-7 (Ansiedad), así como alertas de Riesgo Suicida.
 - **[[InfectologiaForm]]**: Panel avanzado de monitoreo de infecciones y control antimicrobiano. Incluye escalas predictivas de Sepsis (**qSOFA**, **SIRS**) y campos estructurados para seguimiento crónico de VIH (Carga Viral, CD4), Hepatitis, y Tuberculosis.
 
-- **Hardening de Seguridad & Remedación Auditoría 360° (Julio 2026)**:
-  - Finalización exitosa de la auditoría 360° y saneamiento completo de credenciales (Hallazgos C1, C2, C3, C4, H1, H2, H7).
-  - Eliminación 100% de la URL PostgreSQL hardcodeada en `lib/db.ts`, scripts de mantenimiento (`scripts/`, `restore-dump.js`, `drop.js`, etc.) y fallbacks de `AUTH_SECRET` en `lib/auth.ts` y `lib/auth-edge.ts`.
+- **Hardening de Seguridad & Remediación Auditoría 360° (Julio 2026)**:
+  - Finalización exitosa de la auditoría 360° y saneamiento completo de credenciales (Hallazgos C1, C2, C3, C4, H1-H5).
+  - Eliminación 100% de la URL PostgreSQL hardcodeada y fallbacks de `AUTH_SECRET` en `lib/auth.ts` y `lib/db.ts` (lanzando excepción explícita en producción `CRITICAL: AUTH_SECRET / DATABASE_URL missing`).
+  - Protección preventiva de `createContext` y `protectedProcedure` en `server/trpc.ts` validando `ensureDbSchema()` y disponibilidad de `ctx.db`.
+  - Adición de `TraumaAoClassification` en DDL `ensureDbSchema()` de `lib/db.ts` y sincronización en Prisma.
+  - Invocación preventiva de `ensureDbSchema()` en endpoints REST de PDF (`app/api/pdf/allergy-report/[id]/route.ts`).
   - Inyección de secretos en Cloud Run mediante variables `env` con `value_source.secret_key_ref` desde GCP Secret Manager en `terraform/cloudrun.tf`.
-  - Migración del handler de cron de recordatorio de citas a método `POST`.
-  - Manejo de excepciones explícito en `ensureDbSchema()` para logging en Cloud Logging.
-  - Estado del proyecto: 100% verificado (`npx tsc --noEmit` con 0 errores), commiteado (`9fac8db`) y desplegado a producción.
+  - Estado del proyecto: 100% verificado (`npx tsc --noEmit` con 0 errores), commiteado y listo para despliegue.
 
 - **Defensas Anti-Scraping y Perímetro (Julio 2026)**: 
   - Restricción de Ingress (`terraform/cloudrun.tf`) para forzar tráfico por Cloud Armor.

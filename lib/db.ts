@@ -345,6 +345,20 @@ export async function ensureDbSchema() {
           CONSTRAINT "OrlDiagramPin_pkey" PRIMARY KEY ("id")
       );
       CREATE INDEX IF NOT EXISTS "OrlDiagramPin_encounterId_idx" ON "OrlDiagramPin"("encounterId");
+
+      CREATE TABLE IF NOT EXISTS "TraumaAoClassification" (
+          "id" TEXT NOT NULL,
+          "encounterId" TEXT NOT NULL,
+          "hueso" TEXT NOT NULL,
+          "segmento" TEXT NOT NULL,
+          "codigoAO" TEXT NOT NULL,
+          "descripcion" TEXT,
+          "mecanismoLesion" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "TraumaAoClassification_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "TraumaAoClassification_encounterId_idx" ON "TraumaAoClassification"("encounterId");
     `)
   } catch (err) {
     console.warn("[ensureDbSchema] Auto-migration execution note:", err)

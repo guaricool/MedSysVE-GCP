@@ -12,7 +12,10 @@ import { auditFromHeaders } from "@/lib/audit"
 import { readPatientCedula } from "@/lib/patient-crypto"
 import { formatDoctorName } from "@/lib/doctor-utils"
 
+import { ensureDbSchema } from "@/lib/db"
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await ensureDbSchema()
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const user = session.user as SessionUser
