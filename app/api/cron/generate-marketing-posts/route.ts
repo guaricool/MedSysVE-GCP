@@ -5,6 +5,7 @@ import { GoogleGenAI } from "@google/genai";
 import { writeFile, mkdir } from "fs/promises";
 import { join, resolve } from "path";
 import { overlayMedSysVEBranding } from "@/lib/marketing/brand-overlay";
+import { captureLiveSystemScreenshot } from "@/lib/marketing/screenshot-capturer";
 import sharp from "sharp";
 
 const ADMIN_EMAIL = "cpierluissis@gmail.com";
@@ -168,40 +169,35 @@ async function generateImagen3Image(prompt: string, style: "hyperrealistic" | "c
       ? `3D Pixar Disney style digital illustration of ${prompt}, bright vibrant colors, friendly Venezuelan medical doctor, digital medical chart tablet, clean modern aesthetic, 1:1 aspect ratio, high resolution`
       : `Hyper-realistic 8k cinematic photograph of ${prompt}, Venezuelan medical doctor context, modern clean clinic setting, professional studio lighting, 1:1 square format`;
 
-    let url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-    let headers: Record<string, string> = { "Content-Type": "application/json" };
+    const modelEndpoints = [
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-fast-generate-001:predict?key=${apiKey}`,
+    ];
 
-    if (apiKey.startsWith("ya29.")) {
-      url = `https://us-central1-aiplatform.googleapis.com/v1/projects/medsysve-gcp/locations/us-central1/publishers/google/models/imagegeneration@006:predict`;
-      headers = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      };
-    }
+    for (const url of modelEndpoints) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instances: [{ prompt: fullPrompt }],
+          parameters: {
+            sampleCount: 1,
+            aspectRatio: "1:1",
+            outputMimeType: "image/png",
+          },
+        }),
+      });
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        instances: [{ prompt: fullPrompt }],
-        parameters: {
-          sampleCount: 1,
-          aspectRatio: "1:1",
-          outputMimeType: "image/png",
-        },
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      console.warn("[Google Imagen 3 API Warning]:", res.status, errText);
-      return null;
-    }
-
-    const data = await res.json();
-    const b64 = data?.predictions?.[0]?.bytesBase64;
-    if (b64) {
-      return Buffer.from(b64, "base64");
+      if (res.ok) {
+        const data = await res.json();
+        const b64 = data?.predictions?.[0]?.bytesBase64;
+        if (b64) {
+          return Buffer.from(b64, "base64");
+        }
+      } else {
+        const errText = await res.text();
+        console.warn(`[Imagen 3 API Error on ${url.split("?")[0]}]:`, res.status, errText);
+      }
     }
   } catch (err: any) {
     console.warn("[Imagen 3 API Exception]:", err?.message || err);
@@ -209,7 +205,7 @@ async function generateImagen3Image(prompt: string, style: "hyperrealistic" | "c
   return null;
 }
 
-// Generates a clean synthetic system card image buffer for screenshot / marketing styles
+// Generates a clean synthetic system card image buffer for fallback / marketing styles
 async function generateSystemCardBuffer(specialty: string, topic: string, style: "screenshot" | "marketing"): Promise<Buffer> {
   const isScreenshot = style === "screenshot";
   
@@ -338,10 +334,21 @@ async function generateSinglePostWithSelfHealing(
 
   // 4. Generate base image buffer according to selected style
   let baseBuffer: Buffer | null = null;
-  if (selectedStyle === "hyperrealistic" || selectedStyle === "cartoon") {
+
+  if (selectedStyle === "screenshot") {
+    const baseUrl = process.env.MEDSYSVE_APP_URL || "https://www.medsysve.com";
+    const botUser = (await getSecret("IG_SYSTEM_USER")) || "marketing@medsysve.com";
+    const botPass = (await getSecret("IG_SYSTEM_PASS")) || "Marketing2026!";
+
+    const shotResult = await captureLiveSystemScreenshot(baseUrl, botUser, botPass);
+    if (shotResult) {
+      baseBuffer = shotResult.buffer;
+    }
+  } else if (selectedStyle === "hyperrealistic" || selectedStyle === "cartoon") {
     baseBuffer = await generateImagen3Image(aiCopy.imagePrompt, selectedStyle);
   }
 
+  // Fallback to system card SVG if image generation / screenshot unavailable
   if (!baseBuffer) {
     baseBuffer = await generateSystemCardBuffer(
       selectedSpec,
