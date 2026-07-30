@@ -286,6 +286,65 @@ export async function ensureDbSchema() {
       );
       CREATE INDEX IF NOT EXISTS "BotLead_status_idx" ON "BotLead"("status");
       CREATE INDEX IF NOT EXISTS "BotLead_channel_idx" ON "BotLead"("channel");
+
+      -- ORL Tables
+      CREATE TABLE IF NOT EXISTS "OrlAudiometry" (
+          "id" TEXT NOT NULL,
+          "encounterId" TEXT NOT NULL,
+          "patientRegistrationId" TEXT NOT NULL,
+          "workspaceId" TEXT NOT NULL,
+          "airOd" TEXT,
+          "airOi" TEXT,
+          "boneOd" TEXT,
+          "boneOi" TEXT,
+          "logoaudioOd" INTEGER,
+          "logoaudioOi" INTEGER,
+          "srtcOd" INTEGER,
+          "srtcOi" INTEGER,
+          "tympanogramOd" TEXT,
+          "tympanogramOi" TEXT,
+          "observaciones" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "OrlAudiometry_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "OrlAudiometry_encounterId_idx" ON "OrlAudiometry"("encounterId");
+      CREATE INDEX IF NOT EXISTS "OrlAudiometry_patientRegistrationId_idx" ON "OrlAudiometry"("patientRegistrationId");
+      CREATE INDEX IF NOT EXISTS "OrlAudiometry_workspaceId_idx" ON "OrlAudiometry"("workspaceId");
+
+      CREATE TABLE IF NOT EXISTS "OrlEndoscopyReport" (
+          "id" TEXT NOT NULL,
+          "encounterId" TEXT NOT NULL,
+          "patientRegistrationId" TEXT NOT NULL,
+          "workspaceId" TEXT NOT NULL,
+          "tipoProcedimiento" TEXT NOT NULL,
+          "hallazgosFosasNasales" TEXT,
+          "hallazgosRinofaringe" TEXT,
+          "hallazgosLaringe" TEXT,
+          "hallazgosCuerdasVocales" TEXT,
+          "imagenesUrl" TEXT[] DEFAULT ARRAY[]::TEXT[],
+          "conclusion" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "OrlEndoscopyReport_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "OrlEndoscopyReport_encounterId_idx" ON "OrlEndoscopyReport"("encounterId");
+      CREATE INDEX IF NOT EXISTS "OrlEndoscopyReport_patientRegistrationId_idx" ON "OrlEndoscopyReport"("patientRegistrationId");
+      CREATE INDEX IF NOT EXISTS "OrlEndoscopyReport_workspaceId_idx" ON "OrlEndoscopyReport"("workspaceId");
+
+      CREATE TABLE IF NOT EXISTS "OrlDiagramPin" (
+          "id" TEXT NOT NULL,
+          "encounterId" TEXT NOT NULL,
+          "region" TEXT NOT NULL,
+          "xPct" DOUBLE PRECISION NOT NULL,
+          "yPct" DOUBLE PRECISION NOT NULL,
+          "titulo" TEXT NOT NULL,
+          "hallazgo" TEXT NOT NULL,
+          "gravedad" TEXT NOT NULL DEFAULT 'LEVE',
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "OrlDiagramPin_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "OrlDiagramPin_encounterId_idx" ON "OrlDiagramPin"("encounterId");
     `)
   } catch (err) {
     console.warn("[ensureDbSchema] Auto-migration execution note:", err)

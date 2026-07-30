@@ -2,6 +2,7 @@ import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import { audit } from "@/lib/audit"
+import { ensureDbSchema } from "@/lib/db"
 
 export const orlRouter = router({
   // ─── 1. AUDIOMETRÍA & TIMPANOMETRÍA ───
@@ -30,10 +31,16 @@ export const orlRouter = router({
         }
       }
 
-      const record = await ctx.db.orlAudiometry.findFirst({
-        where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
-      })
-      return record ?? null
+      await ensureDbSchema()
+      try {
+        const record = await ctx.db.orlAudiometry.findFirst({
+          where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
+        })
+        return record ?? null
+      } catch (err) {
+        console.warn("[orl.getAudiometry] Fallback null:", err)
+        return null
+      }
     }),
 
   saveAudiometry: protectedProcedure
@@ -59,6 +66,7 @@ export const orlRouter = router({
         return { ok: true, id: "sandbox-demo-audio" }
       }
 
+      await ensureDbSchema()
       const existing = await ctx.db.orlAudiometry.findFirst({
         where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
       })
@@ -127,9 +135,15 @@ export const orlRouter = router({
         }
       }
 
-      return ctx.db.orlEndoscopyReport.findFirst({
-        where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
-      })
+      await ensureDbSchema()
+      try {
+        return await ctx.db.orlEndoscopyReport.findFirst({
+          where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
+        })
+      } catch (err) {
+        console.warn("[orl.getEndoscopyReport] Fallback null:", err)
+        return null
+      }
     }),
 
   saveEndoscopyReport: protectedProcedure
@@ -151,6 +165,7 @@ export const orlRouter = router({
         return { ok: true, id: "sandbox-demo-endo" }
       }
 
+      await ensureDbSchema()
       const existing = await ctx.db.orlEndoscopyReport.findFirst({
         where: { encounterId: input.encounterId, workspaceId: ctx.session.workspaceId },
       })
@@ -213,10 +228,16 @@ export const orlRouter = router({
         ]
       }
 
-      return ctx.db.orlDiagramPin.findMany({
-        where: { encounterId: input.encounterId },
-        orderBy: { createdAt: "asc" },
-      })
+      await ensureDbSchema()
+      try {
+        return await ctx.db.orlDiagramPin.findMany({
+          where: { encounterId: input.encounterId },
+          orderBy: { createdAt: "asc" },
+        })
+      } catch (err) {
+        console.warn("[orl.listDiagramPins] Fallback empty array:", err)
+        return []
+      }
     }),
 
   addDiagramPin: protectedProcedure
@@ -241,6 +262,7 @@ export const orlRouter = router({
         }
       }
 
+      await ensureDbSchema()
       return ctx.db.orlDiagramPin.create({
         data: {
           encounterId: input.encounterId,
@@ -261,6 +283,7 @@ export const orlRouter = router({
         return { ok: true }
       }
 
+      await ensureDbSchema()
       await ctx.db.orlDiagramPin.delete({
         where: { id: input.id },
       })
