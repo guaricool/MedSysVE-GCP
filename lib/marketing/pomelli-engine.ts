@@ -1,6 +1,5 @@
 import sharp from "sharp";
 import { generateVertexAIImagen3 } from "./vertex-ai";
-import { overlayMedSysVEBranding } from "./brand-overlay";
 
 export interface PomelliBusinessDNA {
   brandName: string;
@@ -32,8 +31,8 @@ async function generateFluxStudioImage(prompt: string, width = 1080, height = 10
     const seed = Math.floor(Math.random() * 100000);
     const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&nologo=true&model=flux`;
 
-    console.log(`[Pomelli FLUX.1 Engine]: Requesting studio image from ${url.substring(0, 100)}...`);
-    const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
+    console.log(`[Pomelli FLUX.1 Engine]: Requesting studio image from Pollinations FLUX.1...`);
+    const res = await fetch(url, { signal: AbortSignal.timeout(45000) });
 
     if (res.ok) {
       const arrayBuf = await res.arrayBuffer();
@@ -55,7 +54,7 @@ export async function generatePomelliBrandImage(
   style: "hyperrealistic" | "cartoon" | "marketing" | "screenshot"
 ): Promise<Buffer | null> {
   const fullPrompt = style === "cartoon"
-    ? `3D Pixar Disney style digital illustration of ${prompt}, bright vibrant colors, friendly Venezuelan medical doctor, digital medical chart tablet, clean modern studio aesthetic, high resolution, 1:1 aspect ratio`
+    ? `3D Pixar Disney style digital illustration of ${prompt}, 3D animated character model render, friendly Venezuelan medical doctor, digital medical chart tablet, clean vibrant studio aesthetic, 8k resolution, 1:1 square format`
     : `Hyper-realistic 8k studio cinematic photograph of ${prompt}, Venezuelan medical doctor context, modern clean clinic setting, professional studio lighting, 1:1 square format`;
 
   // 1st Priority: Google Imagen 3 (Vertex AI / Google AI Studio)
@@ -69,7 +68,7 @@ export async function generatePomelliBrandImage(
     console.warn("[Pomelli Brand Engine]: Imagen 3 unavailable, trying FLUX.1 Studio engine...");
   }
 
-  // 2nd Priority: FLUX.1 High-Fidelity Studio Engine (Zero API Key, 100% Uptime)
+  // 2nd Priority: FLUX.1 High-Fidelity Studio Engine (45s Timeout, Zero API Key)
   try {
     const fluxBuf = await generateFluxStudioImage(fullPrompt);
     if (fluxBuf && fluxBuf.length > 5000) {
