@@ -29,8 +29,8 @@ export const db = globalForPrisma.prisma ?? createPrismaClient()
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db
 
 let migrationCheckDone = false
-export async function ensureDbSchema() {
-  if (migrationCheckDone) return
+export async function ensureDbSchema(force = false) {
+  if (migrationCheckDone && !force) return
   migrationCheckDone = true
   try {
     // 1. Doctor columns

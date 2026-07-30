@@ -80,7 +80,7 @@ Incluye:
 
 export async function seedKnowledgeBase() {
   console.log("[SeedKnowledge] Asegurando esquema de base de datos...")
-  await ensureDbSchema()
+  await ensureDbSchema(true)
 
   console.log("[SeedKnowledge] Indexando bloques de conocimiento para los agentes...")
   for (const item of KNOWLEDGE_ITEMS) {

@@ -153,32 +153,81 @@ export async function upsertKnowledgeChunk(opts: {
   const vector = await generateTextEmbedding(`${opts.title}\n${opts.content}`)
   const vectorJson = JSON.stringify(vector)
 
-  const existing = await prisma.knowledgeChunk.findFirst({
-    where: {
-      source: opts.source,
-      title: opts.title,
-    },
-  })
+  try {
+    const existing = await prisma.knowledgeChunk.findFirst({
+      where: {
+        source: opts.source,
+        title: opts.title,
+      },
+    })
 
-  if (existing) {
-    return await prisma.knowledgeChunk.update({
-      where: { id: existing.id },
+    if (existing) {
+      return await prisma.knowledgeChunk.update({
+        where: { id: existing.id },
+        data: {
+          category: opts.category,
+          content: opts.content,
+          vectorJson,
+          updatedAt: new Date(),
+        },
+      })
+    }
+
+    return await prisma.knowledgeChunk.create({
       data: {
+        source: opts.source,
         category: opts.category,
+        title: opts.title,
         content: opts.content,
         vectorJson,
-        updatedAt: new Date(),
+      },
+    })
+  } catch (err: any) {
+    console.warn("[RAG] Tabla KnowledgeChunk no encontrada o error DB, ejecutando DDL auto-healing:", err?.message)
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "KnowledgeChunk" (
+          "id" TEXT NOT NULL,
+          "source" TEXT NOT NULL,
+          "category" TEXT NOT NULL,
+          "title" TEXT NOT NULL,
+          "content" TEXT NOT NULL,
+          "vectorJson" TEXT,
+          "metadata" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "KnowledgeChunk_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "KnowledgeChunk_category_idx" ON "KnowledgeChunk"("category");
+      CREATE INDEX IF NOT EXISTS "KnowledgeChunk_source_idx" ON "KnowledgeChunk"("source");
+    `).catch(() => null)
+
+    const existing = await prisma.knowledgeChunk.findFirst({
+      where: {
+        source: opts.source,
+        title: opts.title,
+      },
+    }).catch(() => null)
+
+    if (existing) {
+      return await prisma.knowledgeChunk.update({
+        where: { id: existing.id },
+        data: {
+          category: opts.category,
+          content: opts.content,
+          vectorJson,
+          updatedAt: new Date(),
+        },
+      })
+    }
+
+    return await prisma.knowledgeChunk.create({
+      data: {
+        source: opts.source,
+        category: opts.category,
+        title: opts.title,
+        content: opts.content,
+        vectorJson,
       },
     })
   }
-
-  return await prisma.knowledgeChunk.create({
-    data: {
-      source: opts.source,
-      category: opts.category,
-      title: opts.title,
-      content: opts.content,
-      vectorJson,
-    },
-  })
 }
