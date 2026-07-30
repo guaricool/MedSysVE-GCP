@@ -6,6 +6,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { join, resolve } from "path";
 import { overlayMedSysVEBranding } from "@/lib/marketing/brand-overlay";
 import { captureLiveSystemScreenshot } from "@/lib/marketing/screenshot-capturer";
+import { generateVertexAICopy, generateVertexAIImagen3 } from "@/lib/marketing/vertex-ai";
 import sharp from "sharp";
 
 const ADMIN_EMAIL = "cpierluissis@gmail.com";
@@ -96,73 +97,9 @@ const CAMPAIGN_CONCEPTS = [
   },
 ];
 
-async function generateGeminiMarketingCopy(
-  topic: string,
-  keyBenefits: string,
-  specialty: string
-): Promise<{ caption: string; hashtags: string; imagePrompt: string }> {
+async function generateImagen3FallbackKey(prompt: string, style: "hyperrealistic" | "cartoon"): Promise<Buffer | null> {
   const apiKey = await getSecret("GEMINI_API_KEY");
-
-  if (!apiKey) {
-    return {
-      caption: `🩺 Atención especial para ${specialty} en Venezuela: ${topic}. Optimiza tu consultorio con MedSysVE, registra historias clínicas en formato SOAP, emite recetas infalsificables con QR y administra tus pagos con la tasa oficial BCV. ¡Pruébalo gratis hoy en www.medsysve.com! 🚀🇻🇪`,
-      hashtags: `#MedSysVE #SaludVenezuela #DoctorVenezolano #${specialty.replace(/[\s\(\)]+/g, "")} #HistoriaClinica #BCV`,
-      imagePrompt: `A professional Venezuelan doctor specialized in ${specialty} in a modern bright medical office using a sleek digital tablet with medical software, 8k resolution, cinematic lighting`,
-    };
-  }
-
-  try {
-    const ai = new GoogleGenAI({ apiKey });
-    const prompt = `Eres el Director de Marketing y Copywriter Senior de MedSysVE, la plataforma SaaS médica líder en Venezuela (www.medsysve.com).
-Crea un post sumamente persuasivo, profesional y atractivo para Instagram y Facebook dirigido a médicos especialistas en "${specialty}".
-
-Tema del Post: "${topic}"
-Beneficios Claves del Sistema: "${keyBenefits}"
-
-Requisitos:
-1. "caption": Un texto persuasivo de 120 a 200 palabras enfocado en aportar valor al doctor en su día a día en Venezuela. Utiliza emojicraft moderado, párrafos cortos y termina con un llamado a la acción (CTA) invitándolos a registrarse en www.medsysve.com.
-2. "hashtags": De 6 a 10 hashtags relevantes combinando el producto (#MedSysVE), la medicina en Venezuela (#MedicinaVenezuela #SaludVenezuela #DoctorVenezolano) y la especialidad (#${specialty.replace(/[\s\(\)]+/g, "")}).
-3. "imagePrompt": Un prompt detallado en inglés para generar una imagen cuadrada 1:1 en Imagen 3 enfocada en la especialidad médica "${specialty}" y la tecnología médica de MedSysVE.
-
-Responde ÚNICAMENTE en formato JSON válido con la estructura:
-{
-  "caption": "...",
-  "hashtags": "...",
-  "imagePrompt": "..."
-}`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
-
-    const jsonText = response?.text || "{}";
-    const parsed = JSON.parse(jsonText);
-
-    return {
-      caption: parsed.caption || `🩺 Optimiza tu consulta de ${specialty} con MedSysVE. ${topic}. Registra historias clínicas SOAP e imprime recetas con código QR. Visita www.medsysve.com`,
-      hashtags: parsed.hashtags || `#MedSysVE #MedicinaVenezuela #${specialty.replace(/[\s\(\)]+/g, "")}`,
-      imagePrompt: parsed.imagePrompt || `A professional ${specialty} doctor in Venezuela using modern digital health software on a tablet, 8k, cinematic photo`,
-    };
-  } catch (err: any) {
-    console.warn("[Gemini 2.0 Flash Marketing Copy Fallback]:", err?.message || err);
-    return {
-      caption: `🩺 Consulta médica de ${specialty} en Venezuela: ${topic}. Con MedSysVE optimizas tu tiempo, emites recetas seguras con código QR y controlas la facturación a tasa oficial BCV. ¡Pruébalo gratis en www.medsysve.com! 🇻🇪✨`,
-      hashtags: `#MedSysVE #SaludVenezuela #DoctoresVenezuela #${specialty.replace(/[\s\(\)]+/g, "")} #HistoriaClinica`,
-      imagePrompt: `A high quality photo of a doctor in a modern clinic holding a digital tablet, 8k`,
-    };
-  }
-}
-
-async function generateImagen3Image(prompt: string, style: "hyperrealistic" | "cartoon"): Promise<Buffer | null> {
-  const apiKey = await getSecret("GEMINI_API_KEY");
-  if (!apiKey) {
-    console.warn("[Imagen 3 API]: GEMINI_API_KEY not found in process.env or Secret Manager.");
-    return null;
-  }
+  if (!apiKey) return null;
 
   try {
     const fullPrompt = style === "cartoon"
@@ -191,16 +128,11 @@ async function generateImagen3Image(prompt: string, style: "hyperrealistic" | "c
       if (res.ok) {
         const data = await res.json();
         const b64 = data?.predictions?.[0]?.bytesBase64;
-        if (b64) {
-          return Buffer.from(b64, "base64");
-        }
-      } else {
-        const errText = await res.text();
-        console.warn(`[Imagen 3 API Error on ${url.split("?")[0]}]:`, res.status, errText);
+        if (b64) return Buffer.from(b64, "base64");
       }
     }
   } catch (err: any) {
-    console.warn("[Imagen 3 API Exception]:", err?.message || err);
+    console.warn("[Imagen 3 API Key Fallback Exception]:", err?.message || err);
   }
   return null;
 }
@@ -325,8 +257,8 @@ async function generateSinglePostWithSelfHealing(
   const styles = ["hyperrealistic", "cartoon", "screenshot", "marketing"] as const;
   const selectedStyle = overrideStyle || styles[Math.floor(Math.random() * styles.length)];
 
-  // 3. Generate custom copywriting using Gemini 2.0 Flash
-  const aiCopy = await generateGeminiMarketingCopy(
+  // 3. Generate custom copywriting using Vertex AI (Gemini 2.0 / 1.5)
+  const aiCopy = await generateVertexAICopy(
     selectedConcept.topic,
     selectedConcept.keyBenefits,
     selectedSpec
@@ -345,7 +277,13 @@ async function generateSinglePostWithSelfHealing(
       baseBuffer = shotResult.buffer;
     }
   } else if (selectedStyle === "hyperrealistic" || selectedStyle === "cartoon") {
-    baseBuffer = await generateImagen3Image(aiCopy.imagePrompt, selectedStyle);
+    // 1st Priority: Native Vertex AI Imagen 3 with GCP Service Account credentials
+    baseBuffer = await generateVertexAIImagen3(aiCopy.imagePrompt, selectedStyle);
+
+    // 2nd Priority: Google AI Studio API Key Fallback
+    if (!baseBuffer) {
+      baseBuffer = await generateImagen3FallbackKey(aiCopy.imagePrompt, selectedStyle);
+    }
   }
 
   // Fallback to system card SVG if image generation / screenshot unavailable
@@ -418,7 +356,7 @@ export async function GET(req: Request) {
     const result = await generateSinglePostWithSelfHealing();
     return NextResponse.json({
       ok: true,
-      message: "Publicación de marketing generada dinámicamente con Gemini 2.0 y marca oficial MedSysVE",
+      message: "Publicación de marketing generada dinámicamente con Vertex AI y marca oficial MedSysVE",
       post: result.post,
       attempts: result.attempts,
       verified: true,
@@ -451,7 +389,7 @@ export async function POST(req: Request) {
       const result = await generateSinglePostWithSelfHealing();
       return NextResponse.json({
         ok: true,
-        message: "Publicación de marketing generada dinámicamente con Gemini 2.0 y marca oficial MedSysVE.",
+        message: "Publicación de marketing generada dinámicamente con Vertex AI y marca oficial MedSysVE.",
         post: result.post,
         attempts: result.attempts,
         verified: true,
@@ -481,7 +419,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      message: `Lote diario de ${generatedPosts.length} publicaciones generadas exitosamente (1 Hiperrealista, 1 Cartoon, 1 Marketing, 2 Capturas de Pantalla) con marca oficial MedSysVE en formato 1080x1080px.`,
+      message: `Lote diario de ${generatedPosts.length} publicaciones generadas exitosamente (1 Hiperrealista, 1 Cartoon, 1 Marketing, 2 Capturas de Pantalla) con marca oficial MedSysVE en formato 1080x1080px via Vertex AI.`,
       posts: generatedPosts,
       count: generatedPosts.length,
       createdAt: new Date().toISOString(),
