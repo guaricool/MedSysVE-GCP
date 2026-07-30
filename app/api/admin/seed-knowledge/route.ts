@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { seedKnowledgeBase } from "@/scripts/seed-agent-knowledge"
+import { seedKnowledgeBase } from "@/lib/ai/seed-knowledge"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
