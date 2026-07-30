@@ -6,7 +6,7 @@ import { sendAppointmentReminder } from "@/lib/email"
 import { notifyAppointmentReminder } from "@/lib/whatsapp"
 import { formatDoctorName } from "@/lib/doctor-utils"
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   const auth = req.headers.get("authorization")
   const secret = process.env.CRON_SECRET
   if (!secret || auth !== `Bearer ${secret}`) {

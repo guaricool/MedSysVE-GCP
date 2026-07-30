@@ -1,4 +1,6 @@
 const { Client } = require('pg');
+const fs = require('fs');
+
 async function run() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -7,8 +9,9 @@ async function run() {
   }
   const client = new Client({ connectionString });
   await client.connect();
-  await client.query('DROP INDEX IF EXISTS "Patient_tipoIdentificacion_numeroIdentificacion_key";');
-  console.log('Index dropped');
+  console.log('Connected to Cloud SQL. Dropping schema...');
+  await client.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  console.log('Schema dropped and recreated.');
   await client.end();
 }
-run();
+run().catch(console.error);

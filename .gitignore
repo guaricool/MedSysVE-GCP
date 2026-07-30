@@ -73,3 +73,11 @@ scripts/smoke/mint-jwt-*.mjs
 
 # MSMTP configuration template
 config/msmtprc
+
+# Archivos locales de entorno y dumps
+.env.*.local
+*.dump
+*.sql
+sa-key.json
+clean_token.txt
+ig_token*.txt

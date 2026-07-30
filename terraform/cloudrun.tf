@@ -52,6 +52,56 @@ resource "google_cloud_run_v2_service" "medsysve_service" {
       ports {
         container_port = 3000
       }
+
+      env {
+        name = "DATABASE_URL"
+        value_source {
+          secret_key_ref {
+            secret  = "medsysve-database-url"
+            version = "latest"
+          }
+        }
+      }
+
+      env {
+        name = "AUTH_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = "medsysve-auth-secret"
+            version = "latest"
+          }
+        }
+      }
+
+      env {
+        name = "FIELD_ENCRYPTION_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = "medsysve-field-encryption-key"
+            version = "latest"
+          }
+        }
+      }
+
+      env {
+        name = "STRIPE_SECRET_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = "medsysve-stripe-secret-key"
+            version = "latest"
+          }
+        }
+      }
+
+      env {
+        name = "CRON_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = "medsysve-cron-secret"
+            version = "latest"
+          }
+        }
+      }
     }
   }
 }

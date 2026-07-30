@@ -2,7 +2,11 @@ import { Client } from "pg"
 
 async function main() {
   console.log("=== Adding hasVoiceAddon column to Doctor table in PostgreSQL ===")
-  const dbUrl = "postgresql://postgres:86930cc4ac0272b2120e8087532b7206@34.23.154.130:5432/medsysve"
+  const dbUrl = process.env.DATABASE_URL
+  if (!dbUrl) {
+    console.error("❌ ERROR: DATABASE_URL environment variable is missing!")
+    process.exit(1)
+  }
   const client = new Client({ connectionString: dbUrl })
   await client.connect()
 

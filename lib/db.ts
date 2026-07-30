@@ -7,11 +7,15 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function createPrismaClient() {
-  const dbUrl =
-    process.env.DATABASE_URL ||
-    "postgresql://postgres:86930cc4ac0272b2120e8087532b7206@34.23.154.130:5432/medsysve"
+  const dbUrl = process.env.DATABASE_URL
+  if (!dbUrl) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("CRITICAL: DATABASE_URL environment variable is missing!")
+    }
+    console.warn("[lib/db] Warning: DATABASE_URL is not set.")
+  }
   const pool = new Pool({
-    connectionString: dbUrl,
+    connectionString: dbUrl || "",
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
@@ -225,10 +229,73 @@ export async function ensureDbSchema() {
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           CONSTRAINT "DicomStudy_pkey" PRIMARY KEY ("id")
       );
+
+      -- Bot System Tables
+      CREATE TABLE IF NOT EXISTS "BotConfig" (
+          "id" TEXT NOT NULL,
+          "workspaceId" TEXT,
+          "botType" TEXT NOT NULL,
+          "isEnabled" BOOLEAN NOT NULL DEFAULT true,
+          "systemPrompt" TEXT,
+          "welcomeMessage" TEXT,
+          "metaPhoneNumber" TEXT,
+          "metaPageId" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "BotConfig_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "BotConfig_workspaceId_idx" ON "BotConfig"("workspaceId");
+      CREATE INDEX IF NOT EXISTS "BotConfig_botType_idx" ON "BotConfig"("botType");
+
+      CREATE TABLE IF NOT EXISTS "BotConversation" (
+          "id" TEXT NOT NULL,
+          "workspaceId" TEXT,
+          "channel" TEXT NOT NULL,
+          "senderId" TEXT NOT NULL,
+          "senderName" TEXT,
+          "botType" TEXT NOT NULL,
+          "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+          "lastMessageAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "BotConversation_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "BotConversation_workspaceId_idx" ON "BotConversation"("workspaceId");
+      CREATE INDEX IF NOT EXISTS "BotConversation_status_idx" ON "BotConversation"("status");
+
+      CREATE TABLE IF NOT EXISTS "BotMessage" (
+          "id" TEXT NOT NULL,
+          "conversationId" TEXT NOT NULL,
+          "role" TEXT NOT NULL,
+          "content" TEXT NOT NULL,
+          "metaMessageId" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "BotMessage_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "BotMessage_conversationId_createdAt_idx" ON "BotMessage"("conversationId", "createdAt");
+
+      CREATE TABLE IF NOT EXISTS "BotLead" (
+          "id" TEXT NOT NULL,
+          "name" TEXT,
+          "phone" TEXT,
+          "email" TEXT,
+          "specialty" TEXT,
+          "status" TEXT NOT NULL DEFAULT 'NEW',
+          "channel" TEXT NOT NULL,
+          "notes" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "BotLead_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "BotLead_status_idx" ON "BotLead"("status");
+      CREATE INDEX IF NOT EXISTS "BotLead_channel_idx" ON "BotLead"("channel");
     `)
   } catch (err) {
     console.warn("[ensureDbSchema] Auto-migration execution note:", err)
   }
 }
 
-ensureDbSchema().catch(() => {})
+ensureDbSchema().catch((err) => {
+  console.error("[ensureDbSchema] CRITICAL Error executing auto-migration DDL:", err)
+})
+

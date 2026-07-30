@@ -22,9 +22,17 @@ if (process.env.NODE_ENV === "production") {
  * If you change the JWT callback in lib/auth.ts (e.g. add/remove token
  * fields), mirror the changes here so the edge decoder knows about them.
  */
+const getEdgeAuthSecret = () => {
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("CRITICAL: AUTH_SECRET or NEXTAUTH_SECRET environment variable is missing!")
+  }
+  return secret || "dev-only-fallback-secret-do-not-use-in-prod"
+}
+
 export const authConfig: NextAuthConfig = {
   trustHost: true,
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "medsysve-gcp-production-auth-secret-key-2026-carlos-pierluissi-secret",
+  secret: getEdgeAuthSecret(),
   providers: [],
   session: {
     strategy: "jwt",

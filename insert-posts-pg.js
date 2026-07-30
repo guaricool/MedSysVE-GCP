@@ -1,5 +1,6 @@
 const { Client } = require('pg');
-async function run() {
+
+async function main() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     console.error("❌ ERROR: DATABASE_URL environment variable is missing!");
@@ -7,8 +8,13 @@ async function run() {
   }
   const client = new Client({ connectionString });
   await client.connect();
-  await client.query('DROP INDEX IF EXISTS "Patient_tipoIdentificacion_numeroIdentificacion_key";');
-  console.log('Index dropped');
+
+  await client.query(`
+    UPDATE "MarketingPost" SET "imageUrl" = 'https://storage.googleapis.com/medsysve-bot-temp/hyperrealistic_v3.png' WHERE "id" = 'cld9v3m10000';
+  `);
+
+  console.log('Updated successfully');
   await client.end();
 }
-run();
+
+main().catch(console.error);
