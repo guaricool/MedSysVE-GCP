@@ -13,15 +13,11 @@ async function main() {
     const igToken = await getSecret("IG_ACCESS_TOKEN");
     const igAccountId = await getSecret("IG_ACCOUNT_ID");
     const geminiApiKey = await getSecret("GEMINI_API_KEY");
-    
-    // GCP project config for Vertex AI
-    const projectId = "medsysve-gcp"; 
-    const location = "us-central1";
 
     let imageBuffer: Buffer;
     let captionContext: string;
 
-    const postStyle = process.env.POST_STYLE || "screenshot";
+    const postStyle = (process.env.POST_STYLE || "screenshot") as "hyperrealistic" | "cartoon" | "screenshot";
 
     if (postStyle === "hyperrealistic") {
       console.log("2. Route A: Generating spectacular AI Image (Hyper-realistic)...");
@@ -32,7 +28,7 @@ async function main() {
       const selectedPrompt = aiPrompts[Math.floor(Math.random() * aiPrompts.length)];
       console.log(`Selected AI Prompt: ${selectedPrompt}`);
       
-      imageBuffer = await generateAIImage(selectedPrompt, projectId, location);
+      imageBuffer = await generateAIImage(selectedPrompt, geminiApiKey, "hyperrealistic");
       captionContext = "Una imagen generada con IA hiperrealista que representa la modernidad y tecnología de la nueva era de la medicina en Venezuela gracias a MedSysVE.";
     } else if (postStyle === "cartoon") {
       console.log("2. Route B: Generating spectacular AI Image (Cartoon/Illustration)...");
@@ -43,7 +39,7 @@ async function main() {
       const selectedPrompt = aiPrompts[Math.floor(Math.random() * aiPrompts.length)];
       console.log(`Selected AI Prompt: ${selectedPrompt}`);
       
-      imageBuffer = await generateAIImage(selectedPrompt, projectId, location);
+      imageBuffer = await generateAIImage(selectedPrompt, geminiApiKey, "cartoon");
       captionContext = "Una ilustración animada y creativa que destaca lo fácil y divertido que es gestionar tu consultorio con MedSysVE.";
     } else {
       console.log("2. Route C: Taking screenshot via Puppeteer...");
@@ -52,7 +48,7 @@ async function main() {
       captionContext = moduleDescription;
     }
     
-    console.log("3. Generating caption with Google AI Studio (Gemini 3 Preview)...");
+    console.log("3. Generating caption with Google AI Studio (Gemini 2.0)...");
     const { caption, hashtags } = await generateContentForImage(imageBuffer, geminiApiKey, captionContext);
     
     console.log("Caption generated:", caption);
@@ -74,7 +70,6 @@ async function main() {
     const apiSecret = process.env.BOT_API_SECRET || "marketing-bot-secret-123";
 
     try {
-      // Import axios if not already imported (it's not imported at the top, so we require it here)
       const axios = require("axios");
       await axios.post(`${appUrl}/api/admin/marketing/save-post`, {
         imageUrl,
