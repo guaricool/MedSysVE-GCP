@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { GoogleGenAI } from "@google/genai";
 import { writeFile, mkdir } from "fs/promises";
 import { join, resolve } from "path";
 import { overlayMedSysVEBranding } from "@/lib/marketing/brand-overlay";
 import { captureLiveSystemScreenshot } from "@/lib/marketing/screenshot-capturer";
-import { generateVertexAICopy, generateVertexAIImagen3 } from "@/lib/marketing/vertex-ai";
+import { generateVertexAICopy } from "@/lib/marketing/vertex-ai";
+import { generateSparkMarketingSuite } from "@/lib/marketing/spark-engine";
+import { generatePomelliBrandImage } from "@/lib/marketing/pomelli-engine";
 import sharp from "sharp";
 
 const ADMIN_EMAIL = "cpierluissis@gmail.com";
@@ -96,46 +97,6 @@ const CAMPAIGN_CONCEPTS = [
     keyBenefits: "Búsqueda instantánea de medicamentos con posología, alertas de interacciones farmacológicas y emisión de récipes digitalizados e infalsificables.",
   },
 ];
-
-async function generateImagen3FallbackKey(prompt: string, style: "hyperrealistic" | "cartoon"): Promise<Buffer | null> {
-  const apiKey = await getSecret("GEMINI_API_KEY");
-  if (!apiKey) return null;
-
-  try {
-    const fullPrompt = style === "cartoon"
-      ? `3D Pixar Disney style digital illustration of ${prompt}, bright vibrant colors, friendly Venezuelan medical doctor, digital medical chart tablet, clean modern aesthetic, 1:1 aspect ratio, high resolution`
-      : `Hyper-realistic 8k cinematic photograph of ${prompt}, Venezuelan medical doctor context, modern clean clinic setting, professional studio lighting, 1:1 square format`;
-
-    const modelEndpoints = [
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`,
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-fast-generate-001:predict?key=${apiKey}`,
-    ];
-
-    for (const url of modelEndpoints) {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instances: [{ prompt: fullPrompt }],
-          parameters: {
-            sampleCount: 1,
-            aspectRatio: "1:1",
-            outputMimeType: "image/png",
-          },
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const b64 = data?.predictions?.[0]?.bytesBase64;
-        if (b64) return Buffer.from(b64, "base64");
-      }
-    }
-  } catch (err: any) {
-    console.warn("[Imagen 3 API Key Fallback Exception]:", err?.message || err);
-  }
-  return null;
-}
 
 // Generates a clean synthetic system card image buffer for fallback / marketing styles
 async function generateSystemCardBuffer(specialty: string, topic: string, style: "screenshot" | "marketing"): Promise<Buffer> {
@@ -257,14 +218,13 @@ async function generateSinglePostWithSelfHealing(
   const styles = ["hyperrealistic", "cartoon", "screenshot", "marketing"] as const;
   const selectedStyle = overrideStyle || styles[Math.floor(Math.random() * styles.length)];
 
-  // 3. Generate custom copywriting using Vertex AI (Gemini 2.0 / 1.5)
-  const aiCopy = await generateVertexAICopy(
-    selectedConcept.topic,
-    selectedConcept.keyBenefits,
-    selectedSpec
+  // 3. Generate custom copywriting suite using Gemini Spark
+  const sparkSuite = await generateSparkMarketingSuite(
+    selectedSpec,
+    selectedConcept.topic
   );
 
-  // 4. Generate base image buffer according to selected style
+  // 4. Generate base image buffer using Google Pomelli Brand Engine (Imagen 3 + FLUX.1 Studio)
   let baseBuffer: Buffer | null = null;
 
   if (selectedStyle === "screenshot") {
@@ -276,14 +236,13 @@ async function generateSinglePostWithSelfHealing(
     if (shotResult) {
       baseBuffer = shotResult.buffer;
     }
-  } else if (selectedStyle === "hyperrealistic" || selectedStyle === "cartoon") {
-    // 1st Priority: Native Vertex AI Imagen 3 with GCP Service Account credentials
-    baseBuffer = await generateVertexAIImagen3(aiCopy.imagePrompt, selectedStyle);
+  }
 
-    // 2nd Priority: Google AI Studio API Key Fallback
-    if (!baseBuffer) {
-      baseBuffer = await generateImagen3FallbackKey(aiCopy.imagePrompt, selectedStyle);
-    }
+  if (!baseBuffer) {
+    baseBuffer = await generatePomelliBrandImage(
+      sparkSuite.imagePrompt,
+      selectedStyle
+    );
   }
 
   // Fallback to system card SVG if image generation / screenshot unavailable
@@ -312,8 +271,8 @@ async function generateSinglePostWithSelfHealing(
       const newPost = await db.marketingPost.create({
         data: {
           imageUrl: savedImageUrl,
-          caption: aiCopy.caption,
-          hashtags: aiCopy.hashtags,
+          caption: sparkSuite.feedCaption,
+          hashtags: sparkSuite.hashtags,
           style: selectedStyle,
           status: "PENDING_APPROVAL",
         },
@@ -356,7 +315,7 @@ export async function GET(req: Request) {
     const result = await generateSinglePostWithSelfHealing();
     return NextResponse.json({
       ok: true,
-      message: "Publicación de marketing generada dinámicamente con Vertex AI y marca oficial MedSysVE",
+      message: "Publicación de marketing generada dinámicamente con Google Pomelli Brand Engine y marca oficial MedSysVE",
       post: result.post,
       attempts: result.attempts,
       verified: true,
@@ -389,7 +348,7 @@ export async function POST(req: Request) {
       const result = await generateSinglePostWithSelfHealing();
       return NextResponse.json({
         ok: true,
-        message: "Publicación de marketing generada dinámicamente con Vertex AI y marca oficial MedSysVE.",
+        message: "Publicación de marketing generada dinámicamente con Google Pomelli Brand Engine y marca oficial MedSysVE.",
         post: result.post,
         attempts: result.attempts,
         verified: true,
@@ -419,7 +378,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      message: `Lote diario de ${generatedPosts.length} publicaciones generadas exitosamente (1 Hiperrealista, 1 Cartoon, 1 Marketing, 2 Capturas de Pantalla) con marca oficial MedSysVE en formato 1080x1080px via Vertex AI.`,
+      message: `Lote diario de ${generatedPosts.length} publicaciones generadas exitosamente (1 Hiperrealista, 1 Cartoon, 1 Marketing, 2 Capturas de Pantalla) con marca oficial MedSysVE en formato 1080x1080px via Google Pomelli Brand Engine.`,
       posts: generatedPosts,
       count: generatedPosts.length,
       createdAt: new Date().toISOString(),
