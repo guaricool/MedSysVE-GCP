@@ -387,6 +387,116 @@ export async function ensureDbSchema(force = false) {
       );
       CREATE INDEX IF NOT EXISTS "KnowledgeChunk_category_idx" ON "KnowledgeChunk"("category");
       CREATE INDEX IF NOT EXISTS "KnowledgeChunk_source_idx" ON "KnowledgeChunk"("source");
+
+      CREATE TABLE IF NOT EXISTS "CirugiaCardiovascularEval" (
+          "id" TEXT NOT NULL,
+          "encounterId" TEXT NOT NULL,
+          "patientRegistrationId" TEXT NOT NULL,
+          "workspaceId" TEXT NOT NULL,
+          "euroScoreII" DOUBLE PRECISION,
+          "stsScoreMortality" DOUBLE PRECISION,
+          "stsScoreMorbidity" DOUBLE PRECISION,
+          "nyhaClass" TEXT,
+          "ccsClass" TEXT,
+          "frailtyScore" INTEGER,
+          "dominanciaCoronaria" TEXT,
+          "stenosisTci" DOUBLE PRECISION,
+          "stenosisDa" DOUBLE PRECISION,
+          "stenosisCx" DOUBLE PRECISION,
+          "stenosisCd" DOUBLE PRECISION,
+          "syntaxScore" DOUBLE PRECISION,
+          "fevi" DOUBLE PRECISION,
+          "gradienteMedioAortico" DOUBLE PRECISION,
+          "gradientePicoAortico" DOUBLE PRECISION,
+          "areaValvularAortica" DOUBLE PRECISION,
+          "areaValvularMitral" DOUBLE PRECISION,
+          "psap" DOUBLE PRECISION,
+          "derramePericardico" TEXT,
+          "diametroAortaAscendente" DOUBLE PRECISION,
+          "diametroArcoAortico" DOUBLE PRECISION,
+          "diametroAortaDescendente" DOUBLE PRECISION,
+          "diametroAortaAbdominal" DOUBLE PRECISION,
+          "diametroIliofemoral" DOUBLE PRECISION,
+          "testAllenDerecho" TEXT,
+          "testAllenIzquierdo" TEXT,
+          "calidadSafena" TEXT,
+          "estabilidadEsternal" TEXT,
+          "cicatrizEsternotomia" TEXT,
+          "escalaAsepsis" INTEGER,
+          "inrObjetivoMin" DOUBLE PRECISION,
+          "inrObjetivoMax" DOUBLE PRECISION,
+          "inrActual" DOUBLE PRECISION,
+          "esquemaAnticoagulante" TEXT,
+          "diasSuspensionAntiagregantes" INTEGER,
+          "protocoloTraslapeHeparina" TEXT,
+          "procedimientoPropuesto" TEXT,
+          "tipoCanulacion" TEXT,
+          "tipoCardioplejia" TEXT,
+          "gradoHipotermia" TEXT,
+          "planCellSaver" BOOLEAN NOT NULL DEFAULT true,
+          "diaPosoperatorio" INTEGER,
+          "usoFajaEsternal" BOOLEAN NOT NULL DEFAULT true,
+          "complicacionesPosop" TEXT,
+          "indicacionRehabilitacionCardiaca" BOOLEAN NOT NULL DEFAULT true,
+          "observacionesQuirurgicas" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "CirugiaCardiovascularEval_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "CirugiaCardiovascularEval_encounterId_idx" ON "CirugiaCardiovascularEval"("encounterId");
+      CREATE INDEX IF NOT EXISTS "CirugiaCardiovascularEval_patientRegistrationId_idx" ON "CirugiaCardiovascularEval"("patientRegistrationId");
+      CREATE INDEX IF NOT EXISTS "CirugiaCardiovascularEval_workspaceId_idx" ON "CirugiaCardiovascularEval"("workspaceId");
+
+      CREATE TABLE IF NOT EXISTS "CirugiaCardiovascularProtesis" (
+          "id" TEXT NOT NULL,
+          "encounterId" TEXT NOT NULL,
+          "patientRegistrationId" TEXT NOT NULL,
+          "workspaceId" TEXT NOT NULL,
+          "tipo" TEXT NOT NULL,
+          "posicion" TEXT NOT NULL,
+          "tipoMaterial" TEXT NOT NULL,
+          "marcaModelo" TEXT NOT NULL,
+          "tamanoMm" DOUBLE PRECISION,
+          "numeroSerieLote" TEXT,
+          "fechaImplante" TIMESTAMP(3),
+          "estadoProtesis" TEXT DEFAULT 'Normofuncionante',
+          "observaciones" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "CirugiaCardiovascularProtesis_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "CirugiaCardiovascularProtesis_encounterId_idx" ON "CirugiaCardiovascularProtesis"("encounterId");
+      CREATE INDEX IF NOT EXISTS "CirugiaCardiovascularProtesis_patientRegistrationId_idx" ON "CirugiaCardiovascularProtesis"("patientRegistrationId");
+      CREATE INDEX IF NOT EXISTS "CirugiaCardiovascularProtesis_workspaceId_idx" ON "CirugiaCardiovascularProtesis"("workspaceId");
+
+      CREATE TABLE IF NOT EXISTS "CirugiaCardiovascularPulsos" (
+          "id" TEXT NOT NULL,
+          "encounterId" TEXT NOT NULL,
+          "patientRegistrationId" TEXT NOT NULL,
+          "workspaceId" TEXT NOT NULL,
+          "carotideoDer" INTEGER DEFAULT 2,
+          "carotideoIzquierdo" INTEGER DEFAULT 2,
+          "subclavioDer" INTEGER DEFAULT 2,
+          "subclavioIzquierdo" INTEGER DEFAULT 2,
+          "braquialDer" INTEGER DEFAULT 2,
+          "braquialIzquierdo" INTEGER DEFAULT 2,
+          "radialDer" INTEGER DEFAULT 2,
+          "radialIzquierdo" INTEGER DEFAULT 2,
+          "femoralDer" INTEGER DEFAULT 2,
+          "femoralIzquierdo" INTEGER DEFAULT 2,
+          "popliteoDer" INTEGER DEFAULT 2,
+          "popliteoIzquierdo" INTEGER DEFAULT 2,
+          "tibialPosteriorDer" INTEGER DEFAULT 2,
+          "tibialPosteriorIzquierdo" INTEGER DEFAULT 2,
+          "pedioDer" INTEGER DEFAULT 2,
+          "pedioIzquierdo" INTEGER DEFAULT 2,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "CirugiaCardiovascularPulsos_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "CirugiaCardiovascularPulsos_encounterId_idx" ON "CirugiaCardiovascularPulsos"("encounterId");
+      CREATE INDEX IF NOT EXISTS "CirugiaCardiovascularPulsos_patientRegistrationId_idx" ON "CirugiaCardiovascularPulsos"("patientRegistrationId");
+      CREATE INDEX IF NOT EXISTS "CirugiaCardiovascularPulsos_workspaceId_idx" ON "CirugiaCardiovascularPulsos"("workspaceId");
     `)
   } catch (err) {
     console.warn("[ensureDbSchema] Auto-migration execution note:", err)

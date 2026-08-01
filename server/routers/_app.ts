@@ -70,8 +70,10 @@ import { hemaRouter } from "./hema"
 import { allergyRouter } from "./allergy"
 import { physiatryRouter } from "./physiatry"
 import { dicomRouter } from "./dicom"
+import { cirugiaCardiovascularRouter } from "./cirugiaCardiovascular"
 
 export const appRouter = router({
+  cirugiaCardiovascular: cirugiaCardiovascularRouter,
   dicom: dicomRouter,
   physiatry: physiatryRouter,
   allergy: allergyRouter,

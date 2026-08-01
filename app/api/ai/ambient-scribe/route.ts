@@ -16,11 +16,11 @@ REGLAS DE FILTRADO E INTELIGENCIA:
    - El médico NO dirá "sección antecedentes". Debes inferir automáticamente el contexto:
    - 'motivoConsulta': Qué trajo al paciente hoy a la consulta (queja principal).
    - 'enfermedadActual': Historia del padecimiento actual o historia clínica (cuándo empezó, intensidad, síntomas asociados).
-   - 'antecedentesPersonales': Enfermedades previas del paciente, cirugías pasadas, alergias conocidas, hábitos.
-   - 'antecedentesFamiliares': Enfermedades en padres, abuelos o hermanos (diabetes, hipertensión, cáncer, etc.).
-   - 'examenFisico': Hallazgos del examen físico expresados por el médico durante la evaluación (ej. tensión arterial, auscultación, faringe, abdomen).
-   - 'impresionesDiagnosticas': Arreglo de diagnósticos clínicos inferidos o mencionados por el doctor.
-   - 'planTratamiento': Indicaciones, medicamentos con dosis, exámenes solicitados o reposo.
+   - 'antecedentesPersonales': Enfermedades previas del paciente, cirugías pasadas (ej. CABG, sustitución valvular, stent), prótesis e implantes, alergias conocidas, hábitos.
+   - 'antecedentesFamiliares': Enfermedades en padres, abuelos o hermanos (diabetes, hipertensión, cardiopatías, etc.).
+   - 'examenFisico': Hallazgos del examen físico expresados por el médico (ej. tensión arterial, auscultación de soplos/clics valvulares, mapa de pulsos periféricos, esternotomía, FEVI, gradientes, EuroSCORE II, INR).
+   - 'impresionesDiagnosticas': Arreglo de diagnósticos clínicos o quirúrgicos inferidos o mencionados por el doctor.
+   - 'planTratamiento': Indicaciones, plan de CEC/canulación, esquema de anticoagulación/INR, dosis de medicamentos, exámenes o reposo.
 
 3. FORMATO DE SALIDA (ESTRICTAMENTE JSON VÁLIDO):
 Responde ÚNICAMENTE con un objeto JSON sin bloques markdown extras:

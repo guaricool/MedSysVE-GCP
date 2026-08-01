@@ -54,6 +54,7 @@ import { CirugiaPlasticaForm } from "./cirugia-plastica-form"
 import { HematologiaForm } from "./hematologia-form"
 import { AlergologiaForm } from "./alergologia-form"
 import { FisiatriaForm } from "./fisiatria-form"
+import { CirugiaCardiovascularForm } from "./cirugia-cardiovascular-form"
 import { EncounterAllergiesModal } from "./encounter-allergies-modal"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import type { Vitales } from "@/lib/clinical/vitals-alerts"
@@ -94,6 +95,7 @@ type SectionId =
   | "obstetricia"
   | "oncologia"
   | "cardiologia"
+  | "cirugia-cardiovascular"
   | "neumonologia"
   | "pediatria"
   | "gastroenterologia"
@@ -187,6 +189,7 @@ const ALL_SPECIALTY_SECTIONS: SectionId[] = [
   "obstetricia",
   "oncologia",
   "cardiologia",
+  "cirugia-cardiovascular",
   "neumonologia",
   "pediatria",
   "gastroenterologia",
@@ -220,6 +223,7 @@ function getSectionForSpecialty(especialidad: string): SectionId | null {
   if (norm.includes("traumat") || norm.includes("ortoped")) return "traumatologia"
   if (norm.includes("obstet") || norm.includes("ginecolog")) return "obstetricia"
   if (norm.includes("oncol")) return "oncologia"
+  if (norm.includes("cardiovascular")) return "cirugia-cardiovascular"
   if (norm.includes("cardiol")) return "cardiologia"
   if (norm.includes("neumonol") || norm.includes("neumol")) return "neumonologia"
   if (norm.includes("pediatr") || norm.includes("puericultura")) return "pediatria"
@@ -432,6 +436,7 @@ function getSectionForSpecialty(especialidad: string): SectionId | null {
     }
     else if (especialidad === "Ginecología y Obstetricia" || especialidad === "Obstetricia y Ginecología" || especialidad === "Obstetricia") core.push({ id: "obstetricia", label: "Obstetricia", icon: "🤰" })
     else if (especialidad === "Oncología" || especialidad === "Oncología Médica") core.push({ id: "oncologia", label: "Oncología", icon: "🎗️" })
+    else if (especialidad === "Cirugía Cardiovascular") core.push({ id: "cirugia-cardiovascular", label: "Cirugía Cardiovascular", icon: "🫀" })
     else if (especialidad === "Cardiología") core.push({ id: "cardiologia", label: "Cardiología", icon: "❤️" })
     else if (especialidad === "Neumología" || especialidad === "Neumonología") core.push({ id: "neumonologia", label: "Neumonología", icon: "🫁" })
     else if (especialidad === "Pediatría" || especialidad === "Pediatría y Puericultura") core.push({ id: "pediatria", label: "Pediatría", icon: "👶" })
@@ -970,6 +975,25 @@ function getSectionForSpecialty(especialidad: string): SectionId | null {
           >
             <OncologiaForm
               encounterId={encounterId}
+              disabled={locked}
+              initialData={enc?.datosEspecialidad || {}}
+            />
+          </Section>
+        )}
+
+        {visibleSections.has("cirugia-cardiovascular") && (
+          <Section
+            id="cirugia-cardiovascular"
+            key="cirugia-cardiovascular"
+            title="Evaluación de Cirugía Cardiovascular"
+            icon="🫀"
+            collapsible
+            open={openSections.has("cirugia-cardiovascular")}
+            onToggle={() => toggleSection("cirugia-cardiovascular")}
+          >
+            <CirugiaCardiovascularForm
+              encounterId={encounterId}
+              patientRegistrationId={enc?.patientRegistrationId || ""}
               disabled={locked}
               initialData={enc?.datosEspecialidad || {}}
             />

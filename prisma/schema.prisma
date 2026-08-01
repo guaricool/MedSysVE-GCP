@@ -478,6 +478,9 @@ model PatientRegistration {
   ophthoRefractions       OphthoRefractionVisualAcuity[]
   ophthoGlaucomas         OphthoGlaucomaRetinopathy[]
   ophthoFindings          OphthoEyeFindings[]
+  cardioSurgEvals         CirugiaCardiovascularEval[]
+  cardioSurgProtesis      CirugiaCardiovascularProtesis[]
+  cardioSurgPulsos        CirugiaCardiovascularPulsos[]
   rheumaJoints            RheumaJointMapper[]
   rheumaScores            RheumaActivityScores[]
   rheumaPostVirals        RheumaPostViralArthritis[]
@@ -648,6 +651,9 @@ model Encounter {
   ophthoRefractions       OphthoRefractionVisualAcuity[]
   ophthoGlaucomas         OphthoGlaucomaRetinopathy[]
   ophthoFindings          OphthoEyeFindings[]
+  cardioSurgEvals         CirugiaCardiovascularEval[]
+  cardioSurgProtesis      CirugiaCardiovascularProtesis[]
+  cardioSurgPulsos        CirugiaCardiovascularPulsos[]
   rheumaJoints            RheumaJointMapper[]
   rheumaScores            RheumaActivityScores[]
   rheumaPostVirals        RheumaPostViralArthritis[]
@@ -4085,5 +4091,150 @@ model KnowledgeChunk {
   @@index([category])
   @@index([source])
 }
+
+// ============================================================================
+// CIRUGÍA CARDIOVASCULAR - MODELOS ESPECIALIZADOS
+// ============================================================================
+
+model CirugiaCardiovascularEval {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  // Escalas de Riesgo Quirúrgico
+  euroScoreII       Float?
+  stsScoreMortality Float?
+  stsScoreMorbidity Float?
+  nyhaClass         String? // I, II, III, IV
+  ccsClass          String? // I, II, III, IV
+  frailtyScore      Int? // 1-9 Clinical Frailty Scale
+
+  // Anatomía Coronaria & Cateterismo
+  dominanciaCoronaria String? // Derecha, Izquierda, Codominante
+  stenosisTci         Float? // % Estenosis Tronco Coronario Izquierdo
+  stenosisDa          Float? // % Estenosis Descendente Anterior
+  stenosisCx          Float? // % Estenosis Circunfleja
+  stenosisCd          Float? // % Estenosis Coronaria Derecha
+  syntaxScore         Float?
+
+  // Ecocardiografía Quirúrgica
+  fevi                  Float? // % Fracción de eyección
+  gradienteMedioAortico Float? // mmHg
+  gradientePicoAortico  Float? // mmHg
+  areaValvularAortica   Float? // cm2
+  areaValvularMitral    Float? // cm2
+  psap                  Float? // mmHg Presión sistólica arteria pulmonar
+  derramePericardico    String? // Ausente, Leve, Moderado, Severo
+
+  // AngioTAC de Aorta & Vasos Periféricos
+  diametroAortaAscendente Float? // mm
+  diametroArcoAortico     Float? // mm
+  diametroAortaDescendente Float? // mm
+  diametroAortaAbdominal  Float? // mm
+  diametroIliofemoral     Float? // mm
+
+  // Examen Físico Quirúrgico & Herida
+  testAllenDerecho     String? // Normal (<6s), Anormal (>=6s)
+  testAllenIzquierdo   String? // Normal (<6s), Anormal (>=6s)
+  calidadSafena        String? // Apta, Varicosa, Fleboextracción previa
+  estabilidadEsternal  String? // Firme, Dehiscencia, Clic / Crepitación
+  cicatrizEsternotomia String? // Sana, Eritematosa, Dehiscente, Secreción
+  escalaAsepsis        Int? // ASEPSIS score 0-60
+
+  // Anticoagulación & Medicación
+  inrObjetivoMin               Float?
+  inrObjetivoMax               Float?
+  inrActual                    Float?
+  esquemaAnticoagulante        String? @db.Text
+  diasSuspensionAntiagregantes Int?
+  protocoloTraslapeHeparina    String?
+
+  // Plan Quirúrgico & CEC
+  procedimientoPropuesto String?
+  tipoCanulacion         String? // Aórtica/Auricular, Femoral, Axilar
+  tipoCardioplejia       String? // Del Nido, Sangre tibia/fría, Cristaloide
+  gradoHipotermia        String? // Normotermia, Moderada (28-32°C), Profunda (<20°C)
+  planCellSaver          Boolean @default(true)
+
+  // Posoperatorio & Rehabilitación
+  diaPosoperatorio                  Int? // DPO
+  usoFajaEsternal                   Boolean @default(true)
+  complicacionesPosop               String? @db.Text // FA postop, mediastinitis, ACV, IRA
+  indicacionRehabilitacionCardiaca Boolean @default(true)
+  observacionesQuirurgicas          String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model CirugiaCardiovascularProtesis {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  tipo            String // Prótesis Valvular, Injerto Aórtico, Anillo de Plastía
+  posicion        String // Aórtica, Mitral, Tricúspide, Pulmonar, Aorta Ascendente
+  tipoMaterial    String // Mecánica, Biológica, Sintética (Dacron/PTFE)
+  marcaModelo     String // Ej: Carpentier-Edwards Magna Ease, St. Jude Regent
+  tamanoMm        Float? // mm
+  numeroSerieLote String? // Lote / Serial de trazabilidad
+  fechaImplante   DateTime?
+  estadoProtesis  String? @default("Normofuncionante") // Normofuncionante, Disfunción, Fuga, Calcificación
+  observaciones   String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
+model CirugiaCardiovascularPulsos {
+  id                    String @id @default(cuid())
+  encounterId           String
+  patientRegistrationId String
+  workspaceId           String
+
+  carotideoDer          Int? @default(2)
+  carotideoIzquierdo    Int? @default(2)
+  subclavioDer          Int? @default(2)
+  subclavioIzquierdo    Int? @default(2)
+  braquialDer           Int? @default(2)
+  braquialIzquierdo     Int? @default(2)
+  radialDer             Int? @default(2)
+  radialIzquierdo       Int? @default(2)
+  femoralDer            Int? @default(2)
+  femoralIzquierdo      Int? @default(2)
+  popliteoDer           Int? @default(2)
+  popliteoIzquierdo     Int? @default(2)
+  tibialPosteriorDer    Int? @default(2)
+  tibialPosteriorIzquierdo Int? @default(2)
+  pedioDer              Int? @default(2)
+  pedioIzquierdo        Int? @default(2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encounter           Encounter           @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patientRegistration PatientRegistration @relation(fields: [patientRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientRegistrationId])
+  @@index([workspaceId])
+}
+
 
 
