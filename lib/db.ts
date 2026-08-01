@@ -30,6 +30,7 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db
 
 let migrationCheckDone = false
 export async function ensureDbSchema(force = false) {
+  if (process.env.SKIP_AUTO_MIGRATION === "true") return
   if (migrationCheckDone && !force) return
   migrationCheckDone = true
   try {

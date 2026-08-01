@@ -3,6 +3,7 @@ import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import { audit } from "@/lib/audit"
 import { ensureDbSchema } from "@/lib/db"
+import { safeJsonStringSchema } from "@/lib/json-schema-utils"
 
 export const allergyRouter = router({
   // ─── 1. PRUEBAS CUTÁNEAS PRICK TEST / ALÉRGENOS ───
@@ -45,11 +46,11 @@ export const allergyRouter = router({
         patientRegistrationId: z.string(),
         histamineControlMm: z.number().min(0),
         salineControlMm: z.number().min(0),
-        dustMitesJson: z.string().optional().nullable(),
-        moldsFungiJson: z.string().optional().nullable(),
-        epitheliaAnimalJson: z.string().optional().nullable(),
-        pollensFoodsJson: z.string().optional().nullable(),
-        customItemsJson: z.string().optional().nullable(),
+        dustMitesJson: safeJsonStringSchema(32000),
+        moldsFungiJson: safeJsonStringSchema(32000),
+        epitheliaAnimalJson: safeJsonStringSchema(32000),
+        pollensFoodsJson: safeJsonStringSchema(32000),
+        customItemsJson: safeJsonStringSchema(32000),
         positiveReactionsCount: z.number().int().min(0),
       }),
     )
@@ -137,7 +138,7 @@ export const allergyRouter = router({
         fechaLectura: z.string().optional().nullable(),
         diagnostico: z.string().optional().nullable(),
         comentarios: z.string().optional().nullable(),
-        itemsJson: z.string().optional().nullable(),
+        itemsJson: safeJsonStringSchema(32000),
         positiveCount: z.number().int().min(0),
       }),
     )

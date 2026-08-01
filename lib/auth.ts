@@ -54,9 +54,11 @@ const getAuthSecret = () => {
       process.env.NEXT_BUILD === "1" ||
       Boolean(process.env.NEXT_PHASE)
     if (process.env.NODE_ENV === "production" && !isBuildPhase) {
-      console.warn("[auth] Warning: AUTH_SECRET or NEXTAUTH_SECRET is missing at runtime. Using fallback secret.")
+      throw new Error(
+        "[FATAL] AUTH_SECRET or NEXTAUTH_SECRET environment variable is missing at runtime in production! Stopping process for security.",
+      )
     }
-    return "medsysve-fallback-auth-secret-production-safe"
+    return "medsysve-fallback-auth-secret-development-only"
   }
   return secret
 }

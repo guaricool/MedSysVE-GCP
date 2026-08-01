@@ -2,6 +2,7 @@ import { z } from "zod"
 import { router, protectedProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import { audit } from "@/lib/audit"
+import { safeJsonStringSchema } from "@/lib/json-schema-utils"
 
 export const rheumaRouter = router({
   // ─── 1. HOMÚNCULO ARTICULAR (28-JOINT MAPPER TJC28/SJC28) ───
@@ -41,7 +42,7 @@ export const rheumaRouter = router({
         swollenJointCount28: z.number().int().min(0).max(28),
         patientGlobalVasMm: z.number().int().min(0).max(100),
         evaluatorGlobalVasMm: z.number().int().min(0).max(100).optional().nullable(),
-        jointDetailsJson: z.string().optional().nullable(),
+        jointDetailsJson: safeJsonStringSchema(32000),
       }),
     )
     .mutation(async ({ ctx, input }) => {
