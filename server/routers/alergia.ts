@@ -8,6 +8,21 @@ export const alergiaRouter = router({
     .input(z.object({ patientRegistrationId: z.string() }))
     .query(async ({ ctx, input }) => {
       await ensureDbSchema()
+      if (input.patientRegistrationId.startsWith("sandbox-demo")) {
+        return [
+          {
+            id: "sandbox-alergia-1",
+            workspaceId: ctx.session.workspaceId,
+            patientRegistrationId: input.patientRegistrationId,
+            sustancia: "Penicilina",
+            reaccion: "Urticaria y rash cutáneo",
+            categoria: "FARMACO",
+            gravedad: "SEVERA" as const,
+            activa: true,
+            createdAt: new Date(),
+          },
+        ]
+      }
       try {
         const reg = await ctx.db.patientRegistration.findFirst({
           where: { id: input.patientRegistrationId, workspaceId: ctx.session.workspaceId },
@@ -34,6 +49,21 @@ export const alergiaRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       await ensureDbSchema()
+
+      if (input.patientRegistrationId.startsWith("sandbox-demo")) {
+        return {
+          id: "sandbox-alergia-" + Date.now(),
+          workspaceId: ctx.session.workspaceId,
+          patientRegistrationId: input.patientRegistrationId,
+          sustancia: input.sustancia,
+          reaccion: input.reaccion ?? null,
+          categoria: input.categoria ?? null,
+          gravedad: input.gravedad,
+          activa: true,
+          createdAt: new Date(),
+        }
+      }
+
       const reg = await ctx.db.patientRegistration.findFirst({
         where: { id: input.patientRegistrationId, workspaceId: ctx.session.workspaceId },
         select: { id: true },
@@ -82,6 +112,9 @@ export const alergiaRouter = router({
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await ensureDbSchema()
+      if (input.id.startsWith("sandbox-alergia")) {
+        return { id: input.id }
+      }
       try {
         const al = await ctx.db.alergia.findFirst({
           where: { id: input.id, workspaceId: ctx.session.workspaceId },
