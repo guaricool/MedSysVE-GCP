@@ -32,7 +32,6 @@ let migrationCheckDone = false
 export async function ensureDbSchema(force = false) {
   if (process.env.SKIP_AUTO_MIGRATION === "true") return
   if (migrationCheckDone && !force) return
-  migrationCheckDone = true
   try {
     // 1. Doctor columns
     await db.$executeRawUnsafe(`
@@ -499,6 +498,7 @@ export async function ensureDbSchema(force = false) {
       CREATE INDEX IF NOT EXISTS "CirugiaCardiovascularPulsos_patientRegistrationId_idx" ON "CirugiaCardiovascularPulsos"("patientRegistrationId");
       CREATE INDEX IF NOT EXISTS "CirugiaCardiovascularPulsos_workspaceId_idx" ON "CirugiaCardiovascularPulsos"("workspaceId");
     `)
+    migrationCheckDone = true
   } catch (err) {
     console.warn("[ensureDbSchema] Auto-migration execution note:", err)
   }

@@ -23,11 +23,17 @@ export function AllergiesClient({ patientRegistrationId }: { patientRegistration
 
   function handleAdd() {
     if (!sustancia.trim()) return
-    add.mutate({ patientRegistrationId, sustancia: sustancia.trim(), reaccion: reaccion || undefined, gravedad })
-    setSustancia("")
-    setReaccion("")
-    setGravedad("LEVE")
-    setShowForm(false)
+    add.mutate(
+      { patientRegistrationId, sustancia: sustancia.trim(), reaccion: reaccion || undefined, gravedad },
+      {
+        onSuccess: () => {
+          setSustancia("")
+          setReaccion("")
+          setGravedad("LEVE")
+          setShowForm(false)
+        },
+      }
+    )
   }
 
   const activas = alergias.filter((a) => a.activa)
@@ -103,6 +109,9 @@ export function AllergiesClient({ patientRegistrationId }: { patientRegistration
           <button onClick={() => setShowForm(false)} className="text-xs text-slate-500 hover:text-slate-300">
             Cancelar
           </button>
+          {add.isError && (
+            <p className="w-full text-xs text-red-400 mt-1">{add.error.message}</p>
+          )}
         </div>
       )}
     </div>
