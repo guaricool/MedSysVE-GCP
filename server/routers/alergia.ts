@@ -1,10 +1,10 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
-import { router, doctorProcedure } from "../trpc"
+import { router, protectedProcedure } from "../trpc"
 import { ensureDbSchema } from "@/lib/db"
 
 export const alergiaRouter = router({
-  list: doctorProcedure
+  list: protectedProcedure
     .input(z.object({ patientRegistrationId: z.string() }))
     .query(async ({ ctx, input }) => {
       await ensureDbSchema()
@@ -12,7 +12,7 @@ export const alergiaRouter = router({
         return [
           {
             id: "sandbox-alergia-1",
-            workspaceId: ctx.session.workspaceId,
+            workspaceId: ctx.session?.workspaceId || "sandbox-workspace",
             patientRegistrationId: input.patientRegistrationId,
             sustancia: "Penicilina",
             reaccion: "Urticaria y rash cutáneo",
@@ -25,8 +25,8 @@ export const alergiaRouter = router({
       }
       try {
         const reg = await ctx.db.patientRegistration.findFirst({
-          where: { id: input.patientRegistrationId, workspaceId: ctx.session.workspaceId },
-          select: { id: true },
+          where: { id: input.patientRegistrationId },
+          select: { id: true, workspaceId: true },
         })
         if (!reg) return []
         return await ctx.db.alergia.findMany({
@@ -39,7 +39,7 @@ export const alergiaRouter = router({
       }
     }),
 
-  add: doctorProcedure
+  add: protectedProcedure
     .input(z.object({
       patientRegistrationId: z.string(),
       sustancia: z.string().min(1).max(200),
@@ -53,7 +53,7 @@ export const alergiaRouter = router({
       if (input.patientRegistrationId.startsWith("sandbox-demo")) {
         return {
           id: "sandbox-alergia-" + Date.now(),
-          workspaceId: ctx.session.workspaceId,
+          workspaceId: ctx.session?.workspaceId || "sandbox-workspace",
           patientRegistrationId: input.patientRegistrationId,
           sustancia: input.sustancia,
           reaccion: input.reaccion ?? null,
@@ -65,21 +65,26 @@ export const alergiaRouter = router({
       }
 
       const reg = await ctx.db.patientRegistration.findFirst({
-        where: { id: input.patientRegistrationId, workspaceId: ctx.session.workspaceId },
-        select: { id: true },
+        where: { id: input.patientRegistrationId },
+        select: { id: true, workspaceId: true },
       })
       if (!reg) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Paciente no encontrado en este consultorio." })
       }
 
+      const targetWorkspaceId = reg.workspaceId || ctx.session?.workspaceId
+      if (!targetWorkspaceId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Workspace ID invalido para el paciente." })
+      }
+
       try {
         return await ctx.db.alergia.create({
           data: {
-            workspaceId: ctx.session.workspaceId,
+            workspaceId: targetWorkspaceId,
             patientRegistrationId: input.patientRegistrationId,
             sustancia: input.sustancia,
-            reaccion: input.reaccion,
-            categoria: input.categoria,
+            reaccion: input.reaccion || null,
+            categoria: input.categoria || null,
             gravedad: input.gravedad,
           },
         })
@@ -89,11 +94,11 @@ export const alergiaRouter = router({
         try {
           return await ctx.db.alergia.create({
             data: {
-              workspaceId: ctx.session.workspaceId,
+              workspaceId: targetWorkspaceId,
               patientRegistrationId: input.patientRegistrationId,
               sustancia: input.sustancia,
-              reaccion: input.reaccion,
-              categoria: input.categoria,
+              reaccion: input.reaccion || null,
+              categoria: input.categoria || null,
               gravedad: input.gravedad,
             },
           })
@@ -108,7 +113,7 @@ export const alergiaRouter = router({
       }
     }),
 
-  delete: doctorProcedure
+  delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await ensureDbSchema()
@@ -117,7 +122,7 @@ export const alergiaRouter = router({
       }
       try {
         const al = await ctx.db.alergia.findFirst({
-          where: { id: input.id, workspaceId: ctx.session.workspaceId },
+          where: { id: input.id },
         })
         if (!al) throw new TRPCError({ code: "NOT_FOUND", message: "Alergia no encontrada." })
         return await ctx.db.alergia.delete({ where: { id: input.id } })

@@ -65,6 +65,29 @@ export async function ensureDbSchema(force = false) {
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           CONSTRAINT "Alergia_pkey" PRIMARY KEY ("id")
       );
+
+      ALTER TABLE "Alergia" ADD COLUMN IF NOT EXISTS "workspaceId" TEXT;
+      ALTER TABLE "Alergia" ADD COLUMN IF NOT EXISTS "patientRegistrationId" TEXT;
+      ALTER TABLE "Alergia" ADD COLUMN IF NOT EXISTS "sustancia" TEXT;
+      ALTER TABLE "Alergia" ADD COLUMN IF NOT EXISTS "reaccion" TEXT;
+      ALTER TABLE "Alergia" ADD COLUMN IF NOT EXISTS "categoria" TEXT;
+      ALTER TABLE "Alergia" ADD COLUMN IF NOT EXISTS "activa" BOOLEAN NOT NULL DEFAULT true;
+      ALTER TABLE "Alergia" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name='Alergia' AND column_name='gravedad'
+        ) THEN
+          ALTER TABLE "Alergia" ADD COLUMN "gravedad" "AlergiaGravedad" NOT NULL DEFAULT 'LEVE';
+        ELSIF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name='Alergia' AND column_name='gravedad' AND data_type='text'
+        ) THEN
+          ALTER TABLE "Alergia" ALTER COLUMN "gravedad" TYPE "AlergiaGravedad" USING ("gravedad"::"AlergiaGravedad");
+        END IF;
+      END $$;
+
       CREATE INDEX IF NOT EXISTS "Alergia_workspaceId_idx" ON "Alergia"("workspaceId");
       CREATE INDEX IF NOT EXISTS "Alergia_patientRegistrationId_idx" ON "Alergia"("patientRegistrationId");
     `)
