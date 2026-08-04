@@ -176,10 +176,10 @@ export function RecetaForm({ encounterId, disabled }: Props) {
         prescriptionId: finalPrescId,
         item: {
           medicationId: draft.med.id,
-          concentracion: draft.concentracion,
-          dosis: draft.dosis,
-          frecuencia: draft.frecuencia,
-          duracion: draft.duracion,
+          concentracion: draft.concentracion || "",
+          dosis: draft.dosis || "",
+          frecuencia: draft.frecuencia || "",
+          duracion: draft.duracion || "",
           indicacionesEspeciales: draft.indicacionesEspeciales || undefined,
           overrideAlerta: false,
         },
@@ -188,6 +188,9 @@ export function RecetaForm({ encounterId, disabled }: Props) {
       if (error.message && error.message.includes("overrideAlerta=true")) {
         setInteractionWarning(error.message.replace(" Reenvía con overrideAlerta=true si confirmas la indicación.", ""))
         setPendingAdd({ prescId: finalPrescId, type: "allergy" })
+      } else if (error.message) {
+        setInteractionWarning(error.message)
+        setPendingAdd({ prescId: finalPrescId, type: "ai" })
       }
     }
   }
@@ -206,10 +209,10 @@ export function RecetaForm({ encounterId, disabled }: Props) {
       prescriptionId: pendingAdd.prescId,
       item: {
         medicationId: draft.med.id,
-        concentracion: draft.concentracion,
-        dosis: draft.dosis,
-        frecuencia: draft.frecuencia,
-        duracion: draft.duracion,
+        concentracion: draft.concentracion || "",
+        dosis: draft.dosis || "",
+        frecuencia: draft.frecuencia || "",
+        duracion: draft.duracion || "",
         indicacionesEspeciales: finalIndicaciones || undefined,
         overrideAlerta: true,
       },
