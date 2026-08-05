@@ -20,19 +20,16 @@ const TIPO_LABEL: Record<string, string> = {
 }
 
 async function getNextIdDisplay(db: any, workspaceId: string): Promise<string> {
-  const last = await db.patientRegistration.findFirst({
-    where: { 
-      workspaceId,
-      NOT: [
-        { idDisplay: { startsWith: "REF-" } },
-        { idDisplay: { contains: "NaN" } }
-      ]
-    },
-    orderBy: { idDisplay: "desc" },
+  const regs = await db.patientRegistration.findMany({
+    where: { workspaceId },
     select: { idDisplay: true },
   })
-  const next = last ? parseInt(last.idDisplay, 10) + 1 : 1
-  return String(next).padStart(6, "0")
+  const maxNum = regs.reduce((max: number, r: { idDisplay: string }) => {
+    if (!r.idDisplay || r.idDisplay.startsWith("REF-") || r.idDisplay.includes("NaN")) return max
+    const num = parseInt(r.idDisplay, 10)
+    return !isNaN(num) ? Math.max(max, num) : max
+  }, 0)
+  return String(maxNum + 1).padStart(6, "0")
 }
 
 export const documentRouter = router({

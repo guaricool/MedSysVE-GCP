@@ -64,19 +64,16 @@ async function getNextIdDisplay(
   tx: Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">,
   workspaceId: string
 ): Promise<string> {
-  const last = await tx.patientRegistration.findFirst({
-    where: { 
-      workspaceId,
-      NOT: [
-        { idDisplay: { startsWith: "REF-" } },
-        { idDisplay: { contains: "NaN" } }
-      ]
-    },
-    orderBy: { idDisplay: "desc" },
+  const regs = await tx.patientRegistration.findMany({
+    where: { workspaceId },
     select: { idDisplay: true },
   })
-  const next = last ? parseInt(last.idDisplay, 10) + 1 : 1
-  return String(next).padStart(6, "0")
+  const maxNum = regs.reduce((max, r) => {
+    if (!r.idDisplay || r.idDisplay.startsWith("REF-") || r.idDisplay.includes("NaN")) return max
+    const num = parseInt(r.idDisplay, 10)
+    return !isNaN(num) ? Math.max(max, num) : max
+  }, 0)
+  return String(maxNum + 1).padStart(6, "0")
 }
 
 const representanteSchema = z.object({
@@ -220,8 +217,10 @@ export const patientRouter = router({
         email?: string | null
       } | null = null
 
-      if (!input.sinCedula && input.numeroIdentificacion && input.tipoIdentificacion) {
-        const hmac = hmacIndex(input.numeroIdentificacion)
+      const cleanCedula = input.numeroIdentificacion?.trim()
+
+      if (!input.sinCedula && cleanCedula && input.tipoIdentificacion) {
+        const hmac = hmacIndex(cleanCedula)
         const match = await ctx.db.patient.findFirst({
           where: {
             hmacCedula: hmac,
@@ -259,12 +258,9 @@ export const patientRouter = router({
             metadata: { hmacCedulaPrefix: hmac.slice(0, 8) },
           })
         }
-      }
 
-      // Check if THIS workspace already has a Patient with this cédula.
-      // If so, short-circuit with CONFLICT instead of creating a duplicate.
-      if (autofill && !input.sinCedula && input.numeroIdentificacion) {
-        const hmac = hmacIndex(input.numeroIdentificacion)
+        // Check if THIS workspace already has a Patient with this cédula.
+        // Unconditional on autofill — if already in this workspace, short-circuit CONFLICT.
         const ownPatient = await ctx.db.patient.findFirst({
           where: {
             workspaceId,
@@ -291,7 +287,7 @@ export const patientRouter = router({
       // patient can be looked up again.
       const cedulaPack = await packPatientCedula({
         tipoIdentificacion: input.tipoIdentificacion,
-        numeroIdentificacion: input.numeroIdentificacion,
+        numeroIdentificacion: cleanCedula,
         sinCedula: input.sinCedula,
       })
 
@@ -378,17 +374,22 @@ export const patientRouter = router({
 
           return registration
         } catch (err) {
-          // P2002 = Prisma unique constraint violation
-          const isPrismaConflict =
+          // Re-raise TRPCError as-is so the client sees validation/conflict errors directly.
+          if (err instanceof TRPCError) throw err
+
+          // P2002 = Prisma unique constraint violation.
+          // Only retry if it is an idDisplay collision.
+          const targetFields = typeof err === "object" && err !== null ? (err as any).meta?.target : null
+          const isIdDisplayConflict =
             typeof err === "object" &&
             err !== null &&
-            (err as { code?: string }).code === "P2002"
-          if (isPrismaConflict) {
+            (err as { code?: string }).code === "P2002" &&
+            (Array.isArray(targetFields) ? targetFields.includes("idDisplay") : true)
+
+          if (isIdDisplayConflict) {
             lastError = err
             continue
           }
-          // Re-raise TRPCError as-is so the client sees the validation message.
-          if (err instanceof TRPCError) throw err
           throw err
         }
       }

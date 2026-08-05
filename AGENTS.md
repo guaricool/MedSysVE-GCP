@@ -12,10 +12,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
-## Estado actual (2026-07-28)
+## Estado actual (2026-08-04)
 
-- **HEAD:** `e6ca330` (fix(alergologia): clear hardcoded mock data for real patient encounters and add safe query fallbacks)
-- **Cambios recientes (2026-07-28):**
+- **Cambios recientes (2026-08-04):**
+  - **Fix Error 500 en Registro de Pacientes (`patient.register` & `getNextIdDisplay`):**
+    - Corregido el check pre-existencia en `patient.register` haciendo el chequeo de paciente propio incondicional a `autofill` e inmune a espacios en blanco en la cédula.
+    - Filtrado de excepciones en el loop de retries para capturar exclusivamente colisiones de `idDisplay` y devolver `409 CONFLICT` limpio en duplicados en lugar de enmascarar errores como `500 Internal Server Error`.
+    - Actualizado `getNextIdDisplay` en `server/routers/patient.ts` y `server/routers/document.ts` para usar cálculo numérico `Math.max` en lugar de ordenamiento lexiográfico de strings.
   - **Autocuración DDL de Base de Datos en Producción (`ensureDbSchema` en `lib/db.ts`):**
     - Implementación de DDL resiliente `CREATE TABLE IF NOT EXISTS` y `ALTER TABLE IF NOT EXISTS` que se ejecuta directamente desde Node.js en PostgreSQL al iniciar el servidor o consultar routers.
     - Se agregaron auto-creaciones para `Doctor.extraWorkspacesCount` y tablas de las 27 especialidades médicas.
