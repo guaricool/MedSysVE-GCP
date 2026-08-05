@@ -108,7 +108,7 @@ export function Sidebar({ role, nombre, apellido, workspaceNombre, workspaceLogo
       )}
     >
       {/* Header */}
-      <div className="p-4 border-b border-slate-800">
+      <div className="pt-7 pb-4 px-4 lg:p-4 border-b border-slate-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {workspaceLogoUrl ? (

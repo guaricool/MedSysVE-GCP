@@ -572,50 +572,57 @@ function getSectionForSpecialty(especialidad: string): SectionId | null {
   return (
     <div className="pb-32">
       {/* ─── Sticky top bar: timer + progreso + paciente ─── */}
-      <div className="sticky top-14 lg:top-0 z-20 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-2">
+      <div className="sticky top-14 lg:top-0 z-20 border-b border-slate-800 bg-slate-950/95 backdrop-blur max-w-full overflow-x-hidden">
+        <div className="mx-auto flex max-w-[1400px] flex-col md:flex-row md:items-center justify-between gap-2 md:gap-4 px-3 sm:px-4 py-2">
           {/* Patient context (always visible) */}
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-sm font-bold text-white">
-              {patientNombre.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+          <div className="flex items-center justify-between min-w-0 w-full md:w-auto">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-xs font-bold text-white">
+                {patientNombre.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">{patientNombre}</p>
+                <p className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap">
+                  <span>{patientEdad} años</span>
+                  <span>·</span>
+                  {patientAlergias.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setAllergiesModalOpen(true)}
+                      className="inline-flex items-center rounded bg-red-900/50 hover:bg-red-900/80 border border-red-700/60 px-1.5 py-0.5 text-[10px] font-bold text-red-300 transition-all cursor-pointer shadow-xs"
+                      title="Ver y editar alergias del paciente"
+                    >
+                      ⚠ {patientAlergias.length} alergia{patientAlergias.length > 1 ? "s" : ""}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setAllergiesModalOpen(true)}
+                      className="inline-flex items-center rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-1.5 py-0.5 text-[10px] font-semibold text-slate-300 transition-all cursor-pointer"
+                      title="Registrar alergia para este paciente"
+                    >
+                      + Alergia
+                    </button>
+                  )}
+                  {patientCronicos.length > 0 && (
+                    <span className="inline-flex items-center rounded bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-medium text-amber-350">
+                      {patientCronicos.length} crónico{patientCronicos.length > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{patientNombre}</p>
-              <p className="text-xs text-slate-400">
-                {patientEdad} años · {patientAlergias.length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setAllergiesModalOpen(true)}
-                    className="mr-2 inline-flex items-center rounded bg-red-900/50 hover:bg-red-900/80 border border-red-700/60 px-1.5 py-0.5 text-[10px] font-bold text-red-300 transition-all cursor-pointer shadow-xs"
-                    title="Ver y editar alergias del paciente"
-                  >
-                    ⚠ {patientAlergias.length} alergia{patientAlergias.length > 1 ? "s" : ""}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setAllergiesModalOpen(true)}
-                    className="mr-2 inline-flex items-center rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-1.5 py-0.5 text-[10px] font-semibold text-slate-300 transition-all cursor-pointer"
-                    title="Registrar alergia para este paciente"
-                  >
-                    + Alergia
-                  </button>
-                )}
-                {patientCronicos.length > 0 && (
-                  <span className="inline-flex items-center rounded bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-medium text-amber-350">
-                    {patientCronicos.length} crónico{patientCronicos.length > 1 ? "s" : ""}
-                  </span>
-                )}
-              </p>
+
+            {/* Timer on mobile */}
+            <div className="md:hidden shrink-0">
+              <WorkspaceTimer
+                startedAt={enc?.createdAt ? new Date(enc.createdAt) : new Date()}
+                stopped={locked}
+              />
             </div>
           </div>
 
-          {/* Progreso SOAP — los 5 badges S/O/O/A/P son también toggles para
-              decidir qué secciones se incluyen en el INFORME médico
-              generado al cerrar la consulta. Verde = incluido, gris =
-              excluido. La selección es por-consulta (state local) y
-              se persiste cuando el doctor genera el informe desde el
-              modal "Personalizar este informe" (deploy posterior). */}
+          {/* Progreso SOAP (Desktop) */}
           <div className="hidden items-center gap-2 md:flex">
             {SECTIONS.map((s) => {
               const done = (completed.sections as any)[s.id]
@@ -649,89 +656,93 @@ function getSectionForSpecialty(especialidad: string): SectionId | null {
             </div>
           </div>
 
-          {/* Dynamic Specialty Switcher (only rendered if doctor has >= 2 specialties) */}
-          {allSpecialties.length > 1 && (
-            <div className="flex items-center gap-1.5 bg-blue-950/70 border border-blue-800/80 rounded-lg px-2.5 py-1.5 shadow-sm">
-              <Stethoscope className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-              <span className="text-[11px] text-blue-300 font-semibold hidden lg:inline">Especialidad:</span>
-              <select
-                value={especialidad || ""}
-                onChange={(e) => setSelectedSpecialty(e.target.value)}
-                className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-0.5 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-              >
-                {allSpecialties.map((esp) => (
-                  <option key={esp} value={esp}>
-                    {esp}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Action controls row */}
+          <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto flex-wrap">
+            {/* Dynamic Specialty Switcher (only rendered if doctor has >= 2 specialties) */}
+            {allSpecialties.length > 1 && (
+              <div className="flex items-center gap-1.5 bg-blue-950/70 border border-blue-800/80 rounded-lg px-2 py-1 shadow-sm shrink-0">
+                <Stethoscope className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <select
+                  value={especialidad || ""}
+                  onChange={(e) => setSelectedSpecialty(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-1.5 py-0.5 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer max-w-[140px] truncate"
+                >
+                  {allSpecialties.map((esp) => (
+                    <option key={esp} value={esp}>
+                      {esp}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-          {/* Voice AI Scribe Buttons */}
-          {!locked && (
-            <div className="flex items-center gap-2">
-              {/* Realtime Auto-Fill Toggle */}
-              <button
-                onClick={() => {
-                  if (!hasAddon) {
-                    setShowUpsellModal(true)
-                  } else {
-                    setIsRealtimeScribeEnabled((prev) => !prev)
+            {/* Voice AI Scribe Buttons */}
+            {!locked && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* Realtime Auto-Fill Toggle */}
+                <button
+                  onClick={() => {
+                    if (!hasAddon) {
+                      setShowUpsellModal(true)
+                    } else {
+                      setIsRealtimeScribeEnabled((prev) => !prev)
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all shadow-md ${
+                    isRealtimeScribeEnabled
+                      ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white ring-2 ring-emerald-400 animate-pulse"
+                      : "bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white"
+                  }`}
+                  title={
+                    !hasAddon
+                      ? "Desbloquear Escriba de Voz IA ($10/mes)"
+                      : isRealtimeScribeEnabled
+                      ? "Auto-llenado en tiempo real activo. Haz clic para pausar."
+                      : "Activar auto-llenado en tiempo real con IA mientras hablas"
                   }
-                }}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all shadow-md ${
-                  isRealtimeScribeEnabled
-                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white ring-2 ring-emerald-400 animate-pulse"
-                    : "bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white"
-                }`}
-                title={
-                  !hasAddon
-                    ? "Desbloquear Escriba de Voz IA ($10/mes)"
-                    : isRealtimeScribeEnabled
-                    ? "Auto-llenado en tiempo real activo. Haz clic para pausar."
-                    : "Activar auto-llenado en tiempo real con IA mientras hablas"
-                }
-              >
-                {!hasAddon ? (
-                  <>
-                    <Lock className="w-3.5 h-3.5 text-purple-400" />
-                    <span>⚡ Autocompletar con Voz</span>
-                    <span className="bg-purple-500/20 text-purple-300 text-[10px] font-extrabold px-1.5 py-0.5 rounded border border-purple-500/30 ml-0.5">PRO</span>
-                  </>
-                ) : (
-                  <>
-                    <Radio className={`w-3.5 h-3.5 ${isRealtimeScribeEnabled ? "text-emerald-300 animate-ping" : "text-slate-400"}`} />
-                    <span>
-                      {isRealtimeScribeEnabled ? "🔴 Auto-llenado IA Activo" : "⚡ Autocompletar con Voz"}
-                    </span>
-                  </>
-                )}
-              </button>
+                >
+                  {!hasAddon ? (
+                    <>
+                      <Lock className="w-3.5 h-3.5 text-purple-400" />
+                      <span className="truncate">⚡ Autocompletar</span>
+                      <span className="bg-purple-500/20 text-purple-300 text-[10px] font-extrabold px-1.5 py-0.5 rounded border border-purple-500/30 ml-0.5">PRO</span>
+                    </>
+                  ) : (
+                    <>
+                      <Radio className={`w-3.5 h-3.5 ${isRealtimeScribeEnabled ? "text-emerald-300 animate-ping" : "text-slate-400"}`} />
+                      <span className="truncate">
+                        {isRealtimeScribeEnabled ? "🔴 IA Activo" : "⚡ Voz IA"}
+                      </span>
+                    </>
+                  )}
+                </button>
 
-              {/* Manual Scribe Modal trigger */}
-              <button
-                onClick={() => {
-                  if (!hasAddon) {
-                    setShowUpsellModal(true)
-                  } else {
-                    setShowScribeModal(true)
-                  }
-                }}
-                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-sky-600 hover:from-purple-500 hover:to-sky-500 px-3 py-1.5 text-xs font-bold text-white shadow-md transition-all"
-                title="Ver panel completo del Escriba de Voz"
-              >
-                <Mic className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Panel Escriba</span>
-              </button>
+                {/* Manual Scribe Modal trigger */}
+                <button
+                  onClick={() => {
+                    if (!hasAddon) {
+                      setShowUpsellModal(true)
+                    } else {
+                      setShowScribeModal(true)
+                    }
+                  }}
+                  className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-purple-600 to-sky-600 hover:from-purple-500 hover:to-sky-500 px-2.5 py-1.5 text-xs font-bold text-white shadow-md transition-all shrink-0"
+                  title="Ver panel completo del Escriba de Voz"
+                >
+                  <Mic className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Panel Escriba</span>
+                </button>
+              </div>
+            )}
+
+            {/* Timer on Desktop */}
+            <div className="hidden md:block">
+              <WorkspaceTimer
+                startedAt={enc?.createdAt ? new Date(enc.createdAt) : new Date()}
+                stopped={locked}
+              />
             </div>
-          )}
-
-          {/* Timer — freezes once the consultation is signed/amended. */}
-          <WorkspaceTimer
-            startedAt={enc?.createdAt ? new Date(enc.createdAt) : new Date()}
-            stopped={locked}
-          />
+          </div>
         </div>
       </div>
 
