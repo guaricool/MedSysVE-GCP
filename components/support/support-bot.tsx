@@ -76,7 +76,7 @@ export function SupportBot() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? "Cerrar soporte" : "Abrir soporte"}
-        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-40 inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-900 shadow-2xl shadow-amber-500/30 transition-colors"
+        className="fixed bottom-4 right-4 max-md:bottom-20 max-md:right-3 md:bottom-6 md:right-6 z-40 inline-flex items-center justify-center w-12 h-12 md:w-14 md:h-14 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-900 shadow-2xl shadow-amber-500/30 transition-colors"
       >
         {open ? (
           <span aria-hidden className="text-2xl leading-none">×</span>

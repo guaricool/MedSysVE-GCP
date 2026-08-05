@@ -1,0 +1,17 @@
+{
+  "name": "medsysve-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MedSysVE Mobile App",
+  "scripts": {
+    "cap:sync": "cap sync",
+    "cap:open:android": "cap open android",
+    "cap:build:android": "cap build android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.1",
+    "@capacitor/cli": "^7.0.1",
+    "@capacitor/core": "^7.0.1",
+    "@capacitor/status-bar": "^7.0.6"
+  }
+}

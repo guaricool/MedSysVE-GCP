@@ -21,7 +21,7 @@ export function CrossWorkspaceViewer({ encounterId, open, onClose }: CrossWorksp
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 md:p-8 backdrop-blur-sm overflow-y-auto">
       <div className="bg-slate-950 w-full max-w-3xl rounded-xl shadow-2xl border border-slate-800 overflow-hidden text-white my-auto flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-800 bg-slate-900/50 sticky top-0 z-10">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-800 bg-slate-900/50 sticky top-14 lg:top-0 z-10">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
               <Building2 className="h-5 w-5 text-blue-400" />

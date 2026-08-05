@@ -572,7 +572,7 @@ function getSectionForSpecialty(especialidad: string): SectionId | null {
   return (
     <div className="pb-32">
       {/* ─── Sticky top bar: timer + progreso + paciente ─── */}
-      <div className="sticky top-0 z-30 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
+      <div className="sticky top-14 lg:top-0 z-20 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-2">
           {/* Patient context (always visible) */}
           <div className="flex min-w-0 items-center gap-3">

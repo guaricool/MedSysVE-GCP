@@ -16,7 +16,7 @@ export function EncounterHeader({
   grupoSanguineo,
 }: EncounterHeaderProps) {
   return (
-    <div className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/95 px-6 py-3 backdrop-blur">
+    <div className="sticky top-14 lg:top-0 z-20 border-b border-slate-800 bg-slate-950/95 px-6 py-3 backdrop-blur">
       <div className="flex flex-wrap items-center gap-4">
         <div>
           <span className="text-lg font-semibold text-white">{nombre}</span>
