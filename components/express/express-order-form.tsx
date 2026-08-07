@@ -3,13 +3,21 @@
 import { useState } from "react"
 import { trpc } from "@/lib/trpc-client"
 import { useRouter } from "next/navigation"
-import { Plus, Trash2, FileText, FlaskConical, Scan } from "lucide-react"
+import { Plus, Trash2, FileText, FlaskConical, Scan, Share2, ExternalLink, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { sharePdfFile } from "@/lib/utils"
+import { toast } from "sonner"
 
 type Tipo = "RECETA" | "LABORATORIO" | "IMAGEN"
+
+const tipoLabelMap: Record<Tipo, string> = {
+  RECETA: "Receta Médica",
+  LABORATORIO: "Orden de Laboratorio",
+  IMAGEN: "Orden de Imagenología",
+}
 
 interface RecetaItem {
   medicamento: string
@@ -40,6 +48,7 @@ export function ExpressOrderForm() {
   const [pacienteSexo, setPacienteSexo] = useState("")
   const [diagnosticos, setDiagnosticos] = useState("")
   const [indicaciones, setIndicaciones] = useState("")
+  const [createdOrder, setCreatedOrder] = useState<{ id: string; tipo: Tipo; pacienteNombre: string; pacienteApellido: string } | null>(null)
 
   const [recetaItems, setRecetaItems] = useState<RecetaItem[]>([
     { medicamento: "", dosis: "", frecuencia: "", duracion: "", notas: "" },
@@ -53,7 +62,12 @@ export function ExpressOrderForm() {
   const create = (trpc.expressOrder.create as any).useMutation({
     onSuccess: (data: { id: string }) => {
       window.open(`/api/pdf/express/${data.id}`, "_blank")
-      router.push("/doctor/express")
+      setCreatedOrder({
+        id: data.id,
+        tipo,
+        pacienteNombre: pacienteNombre.trim(),
+        pacienteApellido: pacienteApellido.trim(),
+      })
     },
   }) as ExpressMutation
 
@@ -84,6 +98,79 @@ export function ExpressOrderForm() {
     { label: "Laboratorio", value: "LABORATORIO", icon: <FlaskConical size={14} /> },
     { label: "Imagenología", value: "IMAGEN", icon: <Scan size={14} /> },
   ]
+
+  if (createdOrder) {
+    const label = `${tipoLabelMap[createdOrder.tipo]} - ${createdOrder.pacienteNombre} ${createdOrder.pacienteApellido}`
+    const pdfUrl = `/api/pdf/express/${createdOrder.id}`
+
+    return (
+      <div className="rounded-xl border border-emerald-500/30 bg-slate-900/90 p-6 space-y-6 text-center shadow-xl">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <CheckCircle2 size={30} />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-white">¡Documento Express Generado!</h2>
+          <p className="text-sm text-slate-300">
+            {tipoLabelMap[createdOrder.tipo]} para{" "}
+            <span className="font-semibold text-white">{createdOrder.pacienteNombre} {createdOrder.pacienteApellido}</span>
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Button
+            size="lg"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white gap-2 font-medium px-6 shadow-md"
+            onClick={async () => {
+              const promise = sharePdfFile(pdfUrl, `${label}.pdf`, label)
+              toast.promise(promise, {
+                loading: "Preparando PDF para compartir...",
+                success: "Menú de compartir abierto",
+                error: "No se pudo compartir el PDF",
+              })
+            }}
+          >
+            <Share2 size={16} />
+            Compartir PDF (WhatsApp / Email)
+          </Button>
+
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full sm:w-auto border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white gap-2"
+            onClick={() => window.open(pdfUrl, "_blank")}
+          >
+            <ExternalLink size={16} />
+            Ver / Imprimir PDF
+          </Button>
+        </div>
+
+        <div className="border-t border-slate-800 pt-4 flex items-center justify-between text-xs text-slate-400">
+          <button
+            type="button"
+            className="hover:text-white flex items-center gap-1.5 transition-colors"
+            onClick={() => {
+              setCreatedOrder(null)
+              setPacienteNombre("")
+              setPacienteApellido("")
+              setPacienteCedula("")
+              setPacienteEdad("")
+              setDiagnosticos("")
+              setIndicaciones("")
+            }}
+          >
+            <Plus size={14} /> Crear otra orden express
+          </button>
+          <button
+            type="button"
+            className="hover:text-white flex items-center gap-1 text-blue-400 hover:underline transition-colors font-medium"
+            onClick={() => router.push("/doctor/express")}
+          >
+            Ver listado de órdenes →
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

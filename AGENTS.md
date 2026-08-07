@@ -12,9 +12,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
-## Estado actual (2026-08-04)
+## Estado actual (2026-08-07)
 
-- **Cambios recientes (2026-08-04):**
+- **Cambios recientes (2026-08-07):**
+  - **Botón de Compartir PDF en Órdenes Express (`ExpressOrderList` & `ExpressOrderForm`):**
+    - Integración de `sharePdfFile` con `navigator.share` y Web Share API nativa para enviar recetas/órdenes express como adjunto PDF directo por WhatsApp, Email o guardar en dispositivo.
+    - Se agregó el botón **Compartir** (`Share2`) con feedback visual `sonner` en cada item del listado en `/doctor/express`.
+    - Al crear una nueva orden express en `/doctor/express/nueva`, se despliega una pantalla de confirmación exitosa con accesos directos a "Compartir PDF (WhatsApp / Email)" y "Ver / Imprimir PDF".
   - **Fix Error 500 en Registro de Pacientes (`patient.register` & `getNextIdDisplay`):**
     - Corregido el check pre-existencia en `patient.register` haciendo el chequeo de paciente propio incondicional a `autofill` e inmune a espacios en blanco en la cédula.
     - Filtrado de excepciones en el loop de retries para capturar exclusivamente colisiones de `idDisplay` y devolver `409 CONFLICT` limpio en duplicados en lugar de enmascarar errores como `500 Internal Server Error`.
